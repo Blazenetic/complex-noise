@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#6B3FA0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Complex Noise by Complex State — Seamless brown noise for deep rest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Complex Noise | Complex State</title>
+  <style>
+    :root {
+      --bg: #0B0B0F;
+      --surface: #15151C;
+      --surface-elevated: #1E1E28;
+      --titanium: #3A3A48;
+      --text-primary: #D0D0D8;
+      --text-secondary: #9898A6;
+      --text-muted: #6A6A78;
+      --purple: #6B3FA0;
+      --purple-deep: #4A2870;
+      --purple-bright: #9B6BFF;
+      --purple-glow: rgba(107, 63, 160, 0.5);
+      --border: rgba(255, 255, 255, 0.07);
+      --radius: 16px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(24px + var(--safe-top)) 20px calc(24px + var(--safe-bottom));
+      min-height: 100dvh;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .logo {
+      font-size: 1.75rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .byline {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+
+    .tagline {
+      margin-top: 12px;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 420px;
+      gap: 36px;
+    }
+
+    /* Play button */
+    .play-wrap {
+      position: relative;
+    }
+
+    #playBtn {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      border: none;
+      background: var(--purple-deep);
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.25s, transform 0.2s, box-shadow 0.3s;
+      box-shadow: 0 0 0 0 var(--purple-glow);
+    }
+
+    #playBtn:active {
+      transform: scale(0.96);
+    }
+
+    #playBtn.playing {
+      background: var(--purple);
+      box-shadow: 0 0 32px 8px var(--purple-glow);
+      animation: pulse 3.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 28px 6px var(--purple-glow); }
+      50% { transform: scale(1.03); box-shadow: 0 0 40px 12px var(--purple-glow); }
+    }
+
+    /* Type selector */
+    .types {
+      display: flex;
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+      width: 100%;
+      border: 1px solid var(--border);
+    }
+
+    .type-btn {
+      flex: 1;
+      padding: 14px 8px;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      font-weight: 550;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .type-btn.active {
+      background: var(--purple);
+      color: white;
+      box-shadow: 0 2px 12px var(--purple-glow);
+    }
+
+    /* Controls */
+    .controls {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .control-group {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Volume */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--titanium);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--purple-bright);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--purple-glow);
+      border: 2px solid var(--bg);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--purple-bright);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+    }
+
+    /* Timer select */
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text-primary);
+      font-size: 1rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--purple);
+    }
+
+    .status {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      width: 100%;
+      max-width: 420px;
+    }
+
+    footer span {
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Complex Noise</div>
+    <div class="byline">by Complex State</div>
+    <div class="tagline">Seamless noise for deep rest</div>
+  </header>
+
+  <main>
+    <div class="play-wrap">
+      <button id="playBtn" aria-label="Play noise">▶</button>
+    </div>
+
+    <div class="types" role="group" aria-label="Noise type">
+      <button class="type-btn active" data-type="brown">Brown</button>
+      <button class="type-btn" data-type="pink">Pink</button>
+      <button class="type-btn" data-type="white">White</button>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.4" />
+      </div>
+
+      <div class="control-group">
+        <label for="timer">Sleep timer</label>
+        <select id="timer">
+          <option value="0">Off</option>
+          <option value="1">1 hour</option>
+          <option value="2">2 hours</option>
+          <option value="4">4 hours</option>
+          <option value="8">8 hours</option>
+          <option value="10">10 hours</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="status" id="status">Ready</div>
+  </main>
+
+  <footer>
+    <span>Procedural · Infinite · Offline</span><br />
+    Complex State
+  </footer>
+
+  <script>
+    // ============================================================
+    // Complex Noise by Complex State
+    // Procedural seamless noise generator (Web Audio API)
+    // Optimized for long sleep sessions on mobile browsers
+    // ============================================================
+
+    const BUFFER_DURATION = 12; // seconds — long enough for inaudible loop seams
+    const FADE_TIME = 0.9;
+
+    let audioCtx = null;
+    let gainNode = null;
+    let sourceNode = null;
+    let currentType = localStorage.getItem('complexNoise_type') || 'brown';
+    let currentVolume = parseFloat(localStorage.getItem('complexNoise_volume')) || 0.4;
+    let isPlaying = false;
+    let timerId = null;
+    let wakeLock = null;
+
+    // DOM
+    const playBtn = document.getElementById('playBtn');
+    const volumeSlider = document.getElementById('volume');
+    const timerSelect = document.getElementById('timer');
+    const statusEl = document.getElementById('status');
+    const typeButtons = document.querySelectorAll('.type-btn');
+
+    // Restore UI
+    volumeSlider.value = currentVolume;
+    typeButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.type === currentType);
+    });
+    const savedTimer = localStorage.getItem('complexNoise_timer');
+    if (savedTimer) timerSelect.value = savedTimer;
+
+    // ----------------------------------------------------------
+    // Noise generation (proven algorithms from noisehack / Paul Kellet)
+    // ----------------------------------------------------------
+    function generateNoiseBuffer(ctx, type, durationSec = BUFFER_DURATION) {
+      const sampleRate = ctx.sampleRate;
+      const length = Math.floor(sampleRate * durationSec);
+      const buffer = ctx.createBuffer(1, length, sampleRate);
+      const data = buffer.getChannelData(0);
+
+      if (type === 'white') {
+        for (let i = 0; i < length; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.5; // mild scale to match others better
+        }
+      } else if (type === 'brown') {
+        let lastOut = 0.0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          lastOut = (lastOut + (0.02 * white)) / 1.02;
+          data[i] = lastOut * 3.5;
+        }
+      } else if (type === 'pink') {
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+          b6 = white * 0.115926;
+        }
+      }
+      return buffer;
+    }
+
+    // ----------------------------------------------------------
+    // Audio engine
+    // ----------------------------------------------------------
+    async function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0;
+        gainNode.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+    }
+
+    function startSource() {
+      if (sourceNode) {
+        try { sourceNode.stop(); } catch (e) {}
+        sourceNode.disconnect();
+      }
+      const buffer = generateNoiseBuffer(audioCtx, currentType);
+      sourceNode = audioCtx.createBufferSource();
+      sourceNode.buffer = buffer;
+      sourceNode.loop = true;
+      sourceNode.connect(gainNode);
+      sourceNode.start();
+    }
+
+    async function play() {
+      await ensureAudio();
+      startSource();
+
+      const now = audioCtx.currentTime;
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+      gainNode.gain.linearRampToValueAtTime(currentVolume, now + FADE_TIME);
+
+      isPlaying = true;
+      playBtn.classList.add('playing');
+      playBtn.innerHTML = '⏸';
+      playBtn.setAttribute('aria-label', 'Pause noise');
+      statusEl.textContent = currentType.charAt(0).toUpperCase() + currentType.slice(1) + ' noise playing';
+
+      requestWakeLock();
+      scheduleTimer();
+    }
+
+    function stop(fade = true) {
+      if (!audioCtx || !isPlaying) return;
+
+      const now = audioCtx.currentTime;
+      if (fade) {
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + FADE_TIME);
+        setTimeout(() => {
+          if (sourceNode) {
+            try { sourceNode.stop(); } catch (e) {}
+            sourceNode.disconnect();
+            sourceNode = null;
+          }
+        }, FADE_TIME * 1000 + 50);
+      } else {
+        if (sourceNode) {
+          try { sourceNode.stop(); } catch (e) {}
+          sourceNode.disconnect();
+          sourceNode = null;
+        }
+        gainNode.gain.value = 0;
+      }
+
+      isPlaying = false;
+      playBtn.classList.remove('playing');
+      playBtn.innerHTML = '▶';
+      playBtn.setAttribute('aria-label', 'Play noise');
+      statusEl.textContent = 'Paused';
+      clearTimer();
+      releaseWakeLock();
+    }
+
+    function setType(type) {
+      if (type === currentType) return;
+      currentType = type;
+      localStorage.setItem('complexNoise_type', type);
+
+      typeButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+      });
+
+      if (isPlaying) {
+        // Quick restart with short fade for smoothness
+        const now = audioCtx.currentTime;
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.15);
+        setTimeout(() => {
+          startSource();
+          gainNode.gain.linearRampToValueAtTime(currentVolume, audioCtx.currentTime + 0.25);
+          statusEl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' noise playing';
+        }, 160);
+      }
+    }
+
+    function setVolume(v) {
+      currentVolume = v;
+      localStorage.setItem('complexNoise_volume', v);
+      if (isPlaying && gainNode) {
+        gainNode.gain.linearRampToValueAtTime(v, audioCtx.currentTime + 0.05);
+      }
+    }
+
+    // ----------------------------------------------------------
+    // Sleep timer
+    // ----------------------------------------------------------
+    function scheduleTimer() {
+      clearTimer();
+      const hours = parseFloat(timerSelect.value);
+      if (hours <= 0) return;
+
+      const ms = hours * 3600 * 1000;
+      timerId = setTimeout(() => {
+        statusEl.textContent = 'Timer ended — fading out…';
+        stop(true);
+      }, ms);
+
+      statusEl.textContent = `Playing · timer ${hours}h`;
+    }
+
+    function clearTimer() {
+      if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    }
+
+    // ----------------------------------------------------------
+    // Wake Lock (optional, helps keep screen on)
+    // ----------------------------------------------------------
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            // can re-request if still playing and visible
+          });
+        }
+      } catch (err) {
+        // Battery, permissions, or unsupported — ignore silently
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isPlaying) {
+        requestWakeLock();
+      }
+    });
+
+    // ----------------------------------------------------------
+    // Event listeners
+    // ----------------------------------------------------------
+    playBtn.addEventListener('click', () => {
+      if (isPlaying) stop(true);
+      else play();
+    });
+
+    typeButtons.forEach(btn => {
+      btn.addEventListener('click', () => setType(btn.dataset.type));
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      setVolume(parseFloat(e.target.value));
+    });
+
+    timerSelect.addEventListener('change', () => {
+      localStorage.setItem('complexNoise_timer', timerSelect.value);
+      if (isPlaying) scheduleTimer();
+    });
+
+    // Prevent accidental zoom / scroll issues on some Android browsers
+    document.addEventListener('gesturestart', e => e.preventDefault());
+  </script>
+</body>
+</html>

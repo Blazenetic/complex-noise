@@ -141,6 +141,8 @@ let stillFieldSpeed = clamp(
   STILL_SPEED_MIN,
   STILL_SPEED_MAX,
 );
+let stillFieldNerd = readBool(STORAGE_KEYS.stillFieldNerd, DEFAULTS.stillFieldNerd);
+let stillFieldTexture = readBool(STORAGE_KEYS.stillFieldTexture, DEFAULTS.stillFieldTexture);
 
 // --- Runtime ---
 let stillFieldNodes = [];
@@ -180,19 +182,54 @@ const reducedMotionQuery = typeof window !== 'undefined' && window.matchMedia
   : null;
 let reducedMotion = reducedMotionQuery ? reducedMotionQuery.matches : false;
 
+/** Most info labels drawn at once. */
+const MAX_LABELS = 4;
+/** Energy a node must exceed before it earns a label. */
+const LABEL_ENERGY_GATE = 0.55;
+/**
+ * Width of the fade band just above the gate. Without it a node hovering on the
+ * threshold blinks its label on and off frame to frame, which is the last thing
+ * you want on a screen you are falling asleep to.
+ */
+const LABEL_ENERGY_BAND = 0.08;
+const LABEL_FONT = '10px system-ui, -apple-system, sans-serif';
+/**
+ * Keep-out band for label placement. The world plane is sized so the *far*
+ * plane fills the viewport, which means near nodes legitimately project past
+ * the edges — and those are exactly the nodes a nearest-first pick favours. An
+ * off-screen label costs a `fillText` and shows nothing, so they never become
+ * candidates. Wide enough for a centred "0.00" plus its offset above the node.
+ */
+const LABEL_EDGE_X = 18;
+const LABEL_EDGE_Y = 26;
+
+// Pre-sized label candidate indices (no allocation in render loop)
+const labelCandidates = new Int16Array(MAX_LABELS);
+
+/**
+ * Energy readouts, pre-rendered to two decimals. `toFixed` allocates a fresh
+ * string every call, and four labels at 30 fps is a quarter of a million
+ * throwaway strings an hour — the same reason the colour ramps are quantised
+ * into palettes rather than built per node.
+ */
+const LABEL_TEXT = new Array(101);
+for (let i = 0; i <= 100; i++) LABEL_TEXT[i] = (i / 100).toFixed(2);
+
 // ----------------------------------------------------------
 // Subscriptions (mirrors the pattern in audio.js)
 // ----------------------------------------------------------
 const listeners = new Set();
 
 /**
- * @returns {{enabled: boolean, intensity: number, speed: number}}
+ * @returns {{enabled: boolean, intensity: number, speed: number, nerd: boolean, texture: boolean}}
  */
 export function getState() {
   return {
     enabled: stillFieldEnabled,
     intensity: stillFieldIntensity,
     speed: stillFieldSpeed,
+    nerd: stillFieldNerd,
+    texture: stillFieldTexture,
   };
 }
 
@@ -222,6 +259,14 @@ export function getStillFieldIntensity() {
 
 export function getStillFieldSpeed() {
   return stillFieldSpeed;
+}
+
+export function getStillFieldNerd() {
+  return stillFieldNerd;
+}
+
+export function getStillFieldTexture() {
+  return stillFieldTexture;
 }
 
 export function getStillEnergy() {
@@ -392,6 +437,9 @@ function resizeStillField() {
   stillFieldCanvas.style.width = stillFieldW + 'px';
   stillFieldCanvas.style.height = stillFieldH + 'px';
   stillFieldCtx.setTransform(stillFieldDpr, 0, 0, stillFieldDpr, 0, 0);
+  // Sizing the canvas resets every context property, so the label font is set
+  // here rather than in the draw loop: assigning `ctx.font` reparses the shorthand.
+  stillFieldCtx.font = LABEL_FONT;
 
   measureWorld();
 
@@ -680,6 +728,10 @@ function draw(adt) {
   drawLinks(ctx, nodes, n, intensity, adt);
   drawNodes(ctx, nodes, n, intensity);
 
+  if (stillFieldNerd) {
+    drawNerdLabels(ctx, nodes, n);
+  }
+
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
 }
@@ -769,18 +821,36 @@ function drawNodes(ctx, nodes, n, intensity) {
   // Two passes: everything flat first, then the few brightest nodes again with
   // a shadow. Setting shadowBlur is a pipeline change on most canvas backends,
   // so doing it 8 times beats doing it 32.
+  // Shell residual: alive nodes keep a visible stroke-circle outline even as
+  // the fill fades, so they never fully vanish while still alive (life < 1).
   for (let pass = 0; pass < 2; pass++) {
     if (pass === 1) {
       if (reducedMotion) break;
       ctx.shadowColor = glowColor;
     }
 
+    // Bright nodes are handed to the glow pass — but only the ones that pass
+    // will actually reach. It stops at MAX_GLOW_NODES and never runs at all
+    // under reduced motion, so deferring every bright node unconditionally
+    // deletes the highest-energy nodes from the field outright. Counting them
+    // here in the same index order pass 1 uses tells us which ones to draw flat.
+    let brightSeen = 0;
+
     for (let i = 0; i < n; i++) {
       const node = nodes[i];
+      // `fade` is the lifecycle envelope, and it is the only honest test for
+      // "is this node worth drawing". Testing `life` instead cannot work:
+      // update() respawns a node the moment its life reaches 1, so by the time
+      // draw runs every node is always mid-life, and a birth or a death would
+      // pop on and off at full shell opacity instead of easing.
       if (node.fade <= 0) continue;
 
       const bright = node.energy > GLOW_THRESHOLD;
-      if (pass === 0 && bright) continue;      // drawn in the glow pass instead
+      if (pass === 0 && bright) {
+        const willGlow = !reducedMotion && brightSeen < MAX_GLOW_NODES;
+        brightSeen++;
+        if (willGlow) continue;                // drawn in the glow pass instead
+      }
       if (pass === 1) {
         if (!bright) continue;
         if (glowed >= MAX_GLOW_NODES) break;
@@ -798,15 +868,87 @@ function drawNodes(ctx, nodes, n, intensity) {
       );
 
       const shade = clamp(Math.pow(node.energy, 1.35), 0, 1);
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (shade * COLOR_STEPS) | 0)];
+      const color = nodePalette[Math.min(COLOR_STEPS - 1, (shade * COLOR_STEPS) | 0)];
+
+      // Stroke-circle shell: a residual outline so a node stays legible when
+      // its *energy* is low, which is what would otherwise make the far half of
+      // the field disappear into the background. Scaled by `fade` so it still
+      // obeys the birth and death envelope — the floor is against dimness, not
+      // against the lifecycle.
+      const shellAlpha = clamp(0.14 * nearness * alphaScale, 0.05, 0.28) * node.fade;
+
+      // One path, used by both the outline and the fill. Rebuilding the arc for
+      // each would double per-node path construction for 44 nodes a frame.
       ctx.beginPath();
       ctx.arc(node.sx, node.sy, radius, 0, Math.PI * 2);
-      ctx.fill();
+
+      // The glow pass already carries shadowBlur, the single most expensive
+      // thing on this canvas. Bright nodes are well above the shell floor
+      // anyway, so stroking them would buy nothing and pay for the blur twice.
+      if (pass === 0 && shellAlpha > alpha) {
+        ctx.globalAlpha = shellAlpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(0.7, node.scale);
+        ctx.stroke();
+      }
+
+      if (alpha > 0.004) {
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
     }
   }
 
   ctx.shadowBlur = 0;
+}
+
+/**
+ * Sparse energy-gated labels — at most MAX_LABELS, on the nodes nearest the
+ * viewer. Allocates nothing: candidates land in a pre-sized index array and the
+ * readouts come from a pre-built string table.
+ */
+function drawNerdLabels(ctx, nodes, n) {
+  // Keep the nearest MAX_LABELS of everything that clears the gate. Selecting
+  // the *first* few in array order instead would hand the labels to the same
+  // low-index nodes every frame, however far back in the volume they sit.
+  let count = 0;
+  for (let i = 0; i < n; i++) {
+    const node = nodes[i];
+    if (node.fade <= 0 || node.energy <= LABEL_ENERGY_GATE) continue;
+    if (node.sx < LABEL_EDGE_X || node.sx > stillFieldW - LABEL_EDGE_X) continue;
+    if (node.sy < LABEL_EDGE_Y || node.sy > stillFieldH) continue;
+
+    const scale = node.scale;
+    if (count === MAX_LABELS && scale <= nodes[labelCandidates[count - 1]].scale) continue;
+
+    let b = count < MAX_LABELS ? count++ : count - 1;
+    while (b > 0 && nodes[labelCandidates[b - 1]].scale < scale) {
+      labelCandidates[b] = labelCandidates[b - 1];
+      b--;
+    }
+    labelCandidates[b] = i;
+  }
+
+  if (count === 0) return;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+
+  for (let k = 0; k < count; k++) {
+    const node = nodes[labelCandidates[k]];
+    const nearness = (node.scale - MIN_SCALE) / (1 - MIN_SCALE);
+    const radius = (2.1 + node.energy * 1.9) * node.scale * (0.85 + stillFieldIntensity * 0.25);
+    // Ramp in across the band above the gate, and follow the node's own
+    // lifecycle, so a label never snaps into view at a readable opacity.
+    const gate = Math.min(1, (node.energy - LABEL_ENERGY_GATE) / LABEL_ENERGY_BAND);
+    const alpha = clamp(0.2 + nearness * 0.35, 0, 0.55) * gate * node.fade;
+    if (alpha < 0.01) continue;
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (Math.pow(node.energy, 1.35) * COLOR_STEPS) | 0)];
+    ctx.fillText(LABEL_TEXT[clamp(node.energy * 100 + 0.5, 0, 100) | 0], node.sx, node.sy - radius - 3);
+  }
 }
 
 function stopLoop() {
@@ -885,6 +1027,26 @@ export function setStillFieldIntensity(v) {
 export function setStillFieldSpeed(v) {
   stillFieldSpeed = clamp(v, STILL_SPEED_MIN, STILL_SPEED_MAX);
   write(STORAGE_KEYS.stillFieldSpeed, stillFieldSpeed);
+  emit();
+}
+
+/**
+ * Toggle the nerd / info labels layer. Persists the choice.
+ * @param {boolean} on
+ */
+export function setStillFieldNerd(on) {
+  stillFieldNerd = Boolean(on);
+  write(STORAGE_KEYS.stillFieldNerd, stillFieldNerd);
+  emit();
+}
+
+/**
+ * Toggle the secondary background texture. Persists the choice.
+ * @param {boolean} on
+ */
+export function setStillFieldTexture(on) {
+  stillFieldTexture = Boolean(on);
+  write(STORAGE_KEYS.stillFieldTexture, stillFieldTexture);
   emit();
 }
 

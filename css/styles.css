@@ -711,6 +711,12 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
   background: var(--purple);
 }
 
+/* Matches the disabled range sliders, so a switch that cannot act looks it. */
+.still-switch:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .still-switch:focus-visible {
   outline: none;
 }

@@ -1,8 +1,8 @@
 # Meet the Lab
 
-Complex Noise was built by a small Australian research lab that somehow keeps shipping calm, reliable sleep tools while the internal chat looks like a late-night crossover episode.
+Complex Noise was built by a small Australian research lab that somehow keeps shipping calm, reliable sleep tools while the internal chat looks like a late-night crossover episode written at 2 a.m.
 
-This page is the friendly visitor version. For the full style rules that govern every changelog and README framing, see [LAB_VOICE.md](./LAB_VOICE.md).
+This page is the friendly visitor version. The full Lab Voice style guide lives in the project Google Drive and stays there — it is the authority for every changelog and README framing, but it does not belong in the public repository.
 
 ---
 
@@ -10,7 +10,7 @@ This page is the friendly visitor version. For the full style rules that govern 
 
 ### Blazenetic
 Lead systems architect.  
-Dry, precise, mildly contemptuous of edge cases. Invents the hard maths, then complains about having to invent it. The sarcasm is surgical.
+Dry, precise, mildly contemptuous of the multiverse of edge cases. Invents the hard maths, then complains about having to invent it. The sarcasm is surgical.
 
 > “I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome.”
 
@@ -48,6 +48,8 @@ There is an absolute separation between narrative docs and agent docs.
 - **AGENTS.md, CLAUDE.md, architecture, code comments** → completely professional. Zero role-play.
 
 The software stays calm. The documentation gets to be chaotic. That is the deal.
+
+Break the wall and the sleep timer will eventually break too.
 
 ---
 

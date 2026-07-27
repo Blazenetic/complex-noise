@@ -2,7 +2,7 @@
 
 All notable changes to Complex Noise are documented here.
 
-The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section written in full Lab Voice (style guide lives in the project Google Drive).
+The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section written in full Lab Voice. The style guide lives in the project Google Drive (not in this repository).
 
 ---
 
@@ -70,19 +70,19 @@ First public release after intensive iterative development (26–28 July 2026).
 
 ### Lab Log
 
-**Melchett:** Gentlemen! In the space of three days we have struck a series of decisive blows against the forces of sleeplessness! Perspective depth! Retracting links! Ultra glass! A continuous timer slider! The war is as good as won! BBAAAHHH!
+**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The war is as good as won! BBAAAHHH!
 
-**Darling:** It is a product that helps people sleep, Melchett. Not a campaign.
+**Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.
 
-**Blazenetic:** I spent four hours making the nodes breathe in three dimensions so the residual outlines have a proper floor. You’re welcome. Also the sleep timer still works. I checked it myself this time.
+**Blazenetic:** I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
 
-**Arty:** I moved the analyser *before* the gain node, fixed the fade race, guarded every localStorage throw, and ran the full suite twice. The labels no longer draw under the cards on phones. Please don’t yell.
+**Arty:** Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. I fixed the fade race, guarded every localStorage throw, and ran the full suite twice. The labels no longer draw under the cards on phones. Please don’t yell.
 
-**Baldrick:** I have a cunning plan, sir. What if we just wait for all the nodes to die and then the audio stops? That way the Still Field *is* the sleep timer.
+**Baldrick:** I have a cunning plan, sir. What if the Still Field *is* the sleep timer? We just wait for all the nodes to die and then the audio stops. Cunning as a fox who’s just been appointed Professor of Cunning at Oxford University.
 
 **Darling:** No.
 
-**Baldrick:** Or we could replace the entire equaliser with a single potato—
+**Baldrick:** Or we could replace the entire equaliser with a single potato. Hear me out—
 
 **Darling:** Still no. Arty, ignore him. Blazenetic, stop encouraging him. I will handle the accessibility labels myself.
 
@@ -90,7 +90,9 @@ First public release after intensive iterative development (26–28 July 2026).
 
 **Darling:** That is a CSS variable, Melchett. Sit down.
 
+**Blazenetic:** The software stays calm. The documentation gets to be chaotic. That is the deal.
+
 ---
 
 Made in a small Australian lab.  
-Sleep well.
+Sleep well. (Or don’t. We’re not your parents.)

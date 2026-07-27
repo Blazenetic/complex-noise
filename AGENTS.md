@@ -105,14 +105,22 @@ once; `tests/run.mjs` now guards against it.
 - **Field visualisation** toggle (default on)
 - **Intensity** and **Speed** sliders (speed practical range **0.7 – 4.8**, default 2.0)
 - **Info labels** (nerd layer) — default on, one toggle governing two things:
-  - Sparse, energy-gated per-node energy readouts on the canvas. At most four at
-    a time, on the nearest qualifying nodes, only where the label lands on
-    screen, and only clear of the interface (see the keep-out note below).
-  - A stats panel (`#nerdHud`) in the top-left: frame rate, node and link
-    counts, live label count, field energy, low/mid/high band levels, noise
-    colour and sample rate, drift speed and intensity, playback uptime.
-    Rendered by `app.js` on a 250 ms interval — *not* in the render loop — and
+  - Stable lifetime node IDs with energy-gated diagnostic callouts. Detail
+    rotates every eight seconds through energy/phase, world position, velocity,
+    projection/lifecycle and local wave phase. The cap is six on a wide
+    viewport and four on a phone, reduced by screen bounds, interface keep-outs
+    and callout collision checks. Dynamic strings refresh once a second rather
+    than at canvas frame rate.
+  - Up to three deterministic edge annotations, gathered inside the existing
+    link pass, showing the true 3D distance and projected angle. Do not add a
+    second graph scan or per-frame sorting.
+  - One top-left panel (`#nerdHud`) with keyboard-navigable **Live**, **Math**
+    and **Code** views. Live carries frame rate/work, graph topology, callout
+    mode, wave phase/vector, analyser meters, source, drift and uptime. Math and
+    Code expose verified renderer equations/operations. Dynamic DOM values are
+    rendered by `app.js` on a 250 ms interval — *not* in the render loop — and
     the interval is cleared whenever the page is hidden or the layer is off.
+    Values are ordinary text, never live regions or `<output>` elements.
 
   Both are disabled alongside the sliders when the field is off. Toggle in the
   Still Field card.
@@ -206,6 +214,15 @@ noise rather than the listening volume.
   honest consequence is that on a phone with the interface up there is nowhere
   for the labels to go, so none are drawn; minimise the interface and they
   appear. The stats panel carries the numbers in the meantime.
+- **Richer callouts still need a hard allocation budget.** Node detail strings
+  are cached on the node and refreshed once a second; edge distance/angle text
+  comes from quantised lookup tables. Candidate and collision coordinates live
+  in pre-sized typed arrays. Do not turn those paths back into template-string,
+  object, or array creation at 30 fps.
+- **Graph telemetry belongs inside `drawLinks()`.** Pair checks, painted edges
+  and the deterministic edge sample reuse values already computed by the
+  renderer. A second O(n²) scan, sorting by strength, or building an edge list
+  would turn an information feature into an overnight battery regression.
 - **The Still Field canvas must stay transparent.** Its trail effect subtracts
   alpha with `destination-out`. Filling with a background colour instead drives
   the canvas opaque within seconds and buries the background gradient and the

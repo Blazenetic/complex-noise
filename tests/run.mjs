@@ -488,15 +488,16 @@ test('Info labels are drawn on screen, and only while the toggle is on', async p
 
   const drawn = await page.evaluate(() => window.__labels);
   assert(drawn.length > 0, 'labels should be drawn with the toggle on and the field energised');
+  const nodeLabels = drawn.filter(l => /^n\d+ · /.test(l.text));
+  assert(nodeLabels.length > 0, 'stable node IDs and diagnostic callouts should be drawn');
 
   const size = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
   const offscreen = drawn.filter(l => l.x < 0 || l.x > size.w || l.y < 0 || l.y > size.h);
   assertEqual(offscreen.length, 0, `every label should land inside the viewport, ${offscreen.length}/${drawn.length} did not`);
 
-  // Two decimals, and never built with toFixed in the loop — the readouts come
-  // from a pre-quantised table, so every one of them must be in that table.
-  const malformed = drawn.filter(l => !/^[01]\.\d{2}$/.test(l.text));
-  assertEqual(malformed.length, 0, `readouts should be two-decimal energies, saw ${JSON.stringify(malformed.slice(0, 3))}`);
+  const malformed = nodeLabels.filter(l =>
+    !/^n\d+ · (E \d\.\d{2} · φ \d+°|xyz -?\d+, -?\d+, \d\.\d{2}|v \d+\.\d · θ -?\d+°|s \d\.\d{2} · life \d+%|wave \d+°)$/.test(l.text));
+  assertEqual(malformed.length, 0, `node callouts should use the documented rotating formats, saw ${JSON.stringify(malformed.slice(0, 3))}`);
 
   // Restore the interface to reach the switch, turn the layer off, then open the
   // field back up — otherwise "nothing was drawn" would pass for the wrong
@@ -593,18 +594,38 @@ test('the info stats readout tracks the field and follows the labels toggle', as
 
   const stats = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
   assert(stats.fps > 10 && stats.fps < 45, `frame rate should read as a real 30 fps target, got ${stats.fps}`);
+  assert(stats.frameMs > 0 && stats.frameMs < 34, `renderer work should be measured below one frame, got ${stats.frameMs}ms`);
   assert(stats.nodes >= 26 && stats.nodes <= 44, `node count should sit in the configured bounds, got ${stats.nodes}`);
   assert(stats.edges > 0, 'links should be counted while the field is drawing');
+  assertEqual(stats.pairChecks, stats.nodes * (stats.nodes - 1) / 2, 'pair count should derive from the existing link scan');
+  assert(Math.abs(stats.meanDegree - stats.edges * 2 / stats.nodes) < 0.001, 'mean degree should derive from live edges');
+  assert(stats.density > 0 && stats.density <= 1, 'graph density should be normalised');
+  assert(stats.waveAngle > 58 && stats.waveAngle < 59, 'wave vector angle should match the renderer constants');
 
   // The values reach the DOM, not just the accessor.
   const shown = await page.evaluate(() => ({
     nodes: document.getElementById('nerdNodes').textContent,
+    pairs: document.getElementById('nerdPairs').textContent,
     source: document.getElementById('nerdSource').textContent,
     uptime: document.getElementById('nerdUptime').textContent,
+    health: document.getElementById('nerdHud').dataset.health,
   }));
   assertEqual(shown.nodes, String(stats.nodes), 'readout should show the live node count');
+  assertEqual(shown.pairs, String(stats.pairChecks), 'readout should show the pair-test count');
   assert(/Brown/.test(shown.source), `readout should name the noise colour, got "${shown.source}"`);
   assert(/^\d{2}:\d{2}$/.test(shown.uptime), `uptime should be counting, got "${shown.uptime}"`);
+  assert(['nominal', 'loaded', 'strained'].includes(shown.health), `readout should publish renderer health, got "${shown.health}"`);
+
+  // The richer views stay inside the existing HUD and use an accessible tab
+  // pattern, including arrow-key movement rather than mouse-only controls.
+  await page.click('#nerdTabMath');
+  assert(!(await page.isVisible('#nerdViewLive')), 'Live view should hide after selecting Math');
+  assert(await page.isVisible('#nerdViewMath'), 'Math view should be visible');
+  assert(/0\.75z/.test(await page.textContent('#nerdViewMath')), 'Math view should expose the real perspective coefficient');
+  await page.keyboard.press('ArrowRight');
+  assertEqual(await page.getAttribute('#nerdTabCode', 'aria-selected'), 'true', 'ArrowRight should select Code');
+  assert(await page.isVisible('#nerdViewCode'), 'Code view should be visible');
+  assert(/1\.35/.test(await page.textContent('#nerdViewCode')), 'Code view should match the renderer shade exponent');
 
   // One toggle governs the whole info layer — canvas labels and readout alike.
   await page.click('#stillFieldNerdToggle');

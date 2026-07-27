@@ -13,7 +13,7 @@ This folder holds product requirements, implementation context, and visitor-faci
 
 The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications.
 
-The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries) lives in the project Google Drive and is the authority for narrative docs.
+The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries) lives in the project Google Drive and is the authority for narrative docs. It is deliberately kept out of the public repository.
 
 For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running, testing, architecture) and the [README](../README.md).  
 For what shipped and the Lab’s reaction to it, see **[CHANGELOG.md](../CHANGELOG.md)**.

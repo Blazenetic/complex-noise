@@ -1,1 +1,1 @@
-PLACEHOLDER_WILL_REPLACE
+See local 34k file with shell + nerd + texture state

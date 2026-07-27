@@ -184,15 +184,25 @@ let reducedMotion = reducedMotionQuery ? reducedMotionQuery.matches : false;
 
 /** Most info labels drawn at once. */
 const MAX_LABELS = 4;
-/** Energy a node must exceed before it earns a label. */
-const LABEL_ENERGY_GATE = 0.55;
+/**
+ * Energy a node must exceed before it earns a label.
+ *
+ * This has to sit below the *silent* ceiling, and that ceiling is not 1. With
+ * nothing playing `getStillAudioMetrics()` reports zeros, so `audioBoost` is 0
+ * and `computeNodeEnergy` tops out at `0.3 + 0.24 = 0.54` — the procedural
+ * layers alone. A gate at 0.55 was therefore unreachable whenever the audio was
+ * paused, and the whole layer silently drew nothing however long you watched
+ * it. The field is deliberately alive while paused (see computeNodeEnergy), so
+ * the labels have to be too. Keep this comfortably under 0.54.
+ */
+const LABEL_ENERGY_GATE = 0.42;
 /**
  * Width of the fade band just above the gate. Without it a node hovering on the
  * threshold blinks its label on and off frame to frame, which is the last thing
  * you want on a screen you are falling asleep to.
  */
 const LABEL_ENERGY_BAND = 0.08;
-const LABEL_FONT = '10px system-ui, -apple-system, sans-serif';
+const LABEL_FONT = '11px system-ui, -apple-system, sans-serif';
 /**
  * Keep-out band for label placement. The world plane is sized so the *far*
  * plane fills the viewport, which means near nodes legitimately project past
@@ -203,8 +213,48 @@ const LABEL_FONT = '10px system-ui, -apple-system, sans-serif';
 const LABEL_EDGE_X = 18;
 const LABEL_EDGE_Y = 26;
 
+/**
+ * Half-width and height of the box a label occupies above its node. Used to
+ * test the label against the keep-out rectangle, so the test covers the text
+ * rather than the node it belongs to.
+ */
+const LABEL_BOX_HALF_W = 14;
+const LABEL_BOX_H = 30;
+
+/**
+ * Screen rectangles the labels must stay out of, in CSS px. Empty means none.
+ *
+ * The canvas is painted *behind* the controls, so a label that lands under a
+ * card is a `fillText` that renders into a surface nobody can see — and on a
+ * phone, where the control column spans the viewport, that was every single
+ * one of them. app.js measures the chrome and pushes it here on resize, on
+ * scroll and whenever the interface is minimised or restored; measuring it in
+ * this module would mean a `getBoundingClientRect` per frame, which forces
+ * layout exactly like the `getComputedStyle` call the header warns about.
+ *
+ * Kept as separate rectangles rather than one union: the header, the control
+ * column and the stats readout sit in different corners, and a bounding box
+ * around all three would swallow the whole viewport.
+ */
+let labelKeepOuts = [];
+
 // Pre-sized label candidate indices (no allocation in render loop)
 const labelCandidates = new Int16Array(MAX_LABELS);
+
+// --- Live statistics for the info layer's HUD ---
+/** Smoothing rate (per second) for the displayed frame rate. */
+const FPS_SMOOTH = 3;
+let measuredFps = 0;
+let lastEdgeCount = 0;
+let lastLabelCount = 0;
+/**
+ * Reused snapshot object. `getStillFieldStats()` is polled a few times a second
+ * by the HUD, and handing back a fresh object each time would allocate for no
+ * reason — the same argument as the pre-quantised palettes.
+ */
+const statsSnapshot = {
+  fps: 0, nodes: 0, edges: 0, labels: 0, energy: 0, speed: 0, intensity: 0, reducedMotion: false,
+};
 
 /**
  * Energy readouts, pre-rendered to two decimals. `toFixed` allocates a fresh
@@ -267,6 +317,51 @@ export function getStillFieldNerd() {
 
 export function getStillFieldTexture() {
   return stillFieldTexture;
+}
+
+/**
+ * Live field statistics for the info layer's readout.
+ *
+ * Returns a shared object that is overwritten on each call — read what you need
+ * immediately rather than holding on to it.
+ *
+ * @returns {{fps: number, nodes: number, edges: number, labels: number,
+ *   energy: number, speed: number, intensity: number, reducedMotion: boolean}}
+ */
+export function getStillFieldStats() {
+  statsSnapshot.fps = measuredFps;
+  statsSnapshot.nodes = stillFieldNodes.length;
+  statsSnapshot.edges = lastEdgeCount;
+  statsSnapshot.labels = lastLabelCount;
+  statsSnapshot.energy = stillEnergy;
+  statsSnapshot.speed = stillFieldSpeed;
+  statsSnapshot.intensity = stillFieldIntensity;
+  statsSnapshot.reducedMotion = reducedMotion;
+  return statsSnapshot;
+}
+
+/**
+ * Declare the screen rectangles that info labels must avoid, in CSS px. Pass an
+ * empty array (or nothing) to clear them. Called by app.js — this module never
+ * measures the document itself (see the note on `labelKeepOuts`).
+ *
+ * Copied into plain objects rather than retained: the caller hands over live
+ * `DOMRect`s, which keep their element alive and go stale the moment anything
+ * reflows.
+ *
+ * @param {Array<{left: number, top: number, right: number, bottom: number}>} [rects]
+ */
+export function setLabelKeepOuts(rects) {
+  if (!rects || rects.length === 0) {
+    labelKeepOuts = [];
+    return;
+  }
+  labelKeepOuts = rects.map(r => ({
+    left: r.left,
+    top: r.top,
+    right: r.right,
+    bottom: r.bottom,
+  }));
 }
 
 export function getStillEnergy() {
@@ -630,6 +725,11 @@ function frame(nowMs) {
   lastDrawMs = nowMs;
   if (dt <= 0) return;
 
+  // Measured from real elapsed time, not the speed-scaled clock, so the readout
+  // reports the frame rate rather than the drift rate.
+  const fpsK = 1 - Math.exp(-FPS_SMOOTH * dt);
+  measuredFps += (1 / dt - measuredFps) * fpsK;
+
   const speed = reducedMotion ? stillFieldSpeed * 0.35 : stillFieldSpeed;
   const adt = dt * speed;   // the animation clock advances at the user's speed
   clockS += adt;
@@ -729,7 +829,9 @@ function draw(adt) {
   drawNodes(ctx, nodes, n, intensity);
 
   if (stillFieldNerd) {
-    drawNerdLabels(ctx, nodes, n);
+    lastLabelCount = drawNerdLabels(ctx, nodes, n);
+  } else {
+    lastLabelCount = 0;
   }
 
   ctx.globalAlpha = 1;
@@ -744,6 +846,8 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
   // once per frame rather than once per pair.
   const attackK = 1 - Math.exp(-LINK_ATTACK * adt);
   const releaseK = 1 - Math.exp(-LINK_RELEASE * adt);
+
+  let drawn = 0;
 
   for (let i = 0; i < n; i++) {
     const a = nodes[i];
@@ -807,8 +911,11 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
       ctx.moveTo(ax, ay);
       ctx.lineTo(bx, by);
       ctx.stroke();
+      drawn++;
     }
   }
+
+  lastEdgeCount = drawn;
 }
 
 function drawNodes(ctx, nodes, n, intensity) {
@@ -904,9 +1011,27 @@ function drawNodes(ctx, nodes, n, intensity) {
 }
 
 /**
+ * Would a label anchored on this node overlap any keep-out rectangle? The box
+ * tested is the text's, not the node's — the readout is drawn centred above the
+ * node, so those are not the same place.
+ */
+function hitsKeepOut(sx, sy) {
+  for (let i = 0; i < labelKeepOuts.length; i++) {
+    const r = labelKeepOuts[i];
+    if (sx + LABEL_BOX_HALF_W > r.left
+      && sx - LABEL_BOX_HALF_W < r.right
+      && sy > r.top
+      && sy - LABEL_BOX_H < r.bottom) return true;
+  }
+  return false;
+}
+
+/**
  * Sparse energy-gated labels — at most MAX_LABELS, on the nodes nearest the
  * viewer. Allocates nothing: candidates land in a pre-sized index array and the
  * readouts come from a pre-built string table.
+ *
+ * @returns {number} how many labels were drawn, for the stats readout
  */
 function drawNerdLabels(ctx, nodes, n) {
   // Keep the nearest MAX_LABELS of everything that clears the gate. Selecting
@@ -918,6 +1043,7 @@ function drawNerdLabels(ctx, nodes, n) {
     if (node.fade <= 0 || node.energy <= LABEL_ENERGY_GATE) continue;
     if (node.sx < LABEL_EDGE_X || node.sx > stillFieldW - LABEL_EDGE_X) continue;
     if (node.sy < LABEL_EDGE_Y || node.sy > stillFieldH) continue;
+    if (hitsKeepOut(node.sx, node.sy)) continue;
 
     const scale = node.scale;
     if (count === MAX_LABELS && scale <= nodes[labelCandidates[count - 1]].scale) continue;
@@ -930,11 +1056,12 @@ function drawNerdLabels(ctx, nodes, n) {
     labelCandidates[b] = i;
   }
 
-  if (count === 0) return;
+  if (count === 0) return 0;
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
 
+  let drawn = 0;
   for (let k = 0; k < count; k++) {
     const node = nodes[labelCandidates[k]];
     const nearness = (node.scale - MIN_SCALE) / (1 - MIN_SCALE);
@@ -942,13 +1069,19 @@ function drawNerdLabels(ctx, nodes, n) {
     // Ramp in across the band above the gate, and follow the node's own
     // lifecycle, so a label never snaps into view at a readable opacity.
     const gate = Math.min(1, (node.energy - LABEL_ENERGY_GATE) / LABEL_ENERGY_BAND);
-    const alpha = clamp(0.2 + nearness * 0.35, 0, 0.55) * gate * node.fade;
+    // Readability floor. These sit on a near-black background at 11px, and the
+    // old 0.2–0.55 window put a typical label around alpha 0.3 — measurably
+    // drawn, and invisible in practice.
+    const alpha = clamp(0.42 + nearness * 0.38, 0, 0.86) * gate * node.fade;
     if (alpha < 0.01) continue;
 
     ctx.globalAlpha = alpha;
     ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (Math.pow(node.energy, 1.35) * COLOR_STEPS) | 0)];
     ctx.fillText(LABEL_TEXT[clamp(node.energy * 100 + 0.5, 0, 100) | 0], node.sx, node.sy - radius - 3);
+    drawn++;
   }
+
+  return drawn;
 }
 
 function stopLoop() {
@@ -956,6 +1089,11 @@ function stopLoop() {
     cancelAnimationFrame(stillFieldRaf);
     stillFieldRaf = null;
   }
+  // Nothing is being drawn any more, so the readout should say so rather than
+  // freeze on the last rate it happened to see.
+  measuredFps = 0;
+  lastEdgeCount = 0;
+  lastLabelCount = 0;
 }
 
 export function startStillFieldLoop() {

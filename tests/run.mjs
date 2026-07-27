@@ -478,6 +478,12 @@ test('Info labels are drawn on screen, and only while the toggle is on', async p
   await page.click('.type-btn[data-type="white"]');
   await clickPlay(page);
   await setRange(page, 'stillFieldIntensity', 1);
+
+  // This suite runs at a phone viewport, where the control column covers the
+  // field and labels are deliberately suppressed rather than drawn into a
+  // surface nobody can see. Minimise the interface so there is somewhere for
+  // them to land — that is the state a phone user actually watches the field in.
+  await page.click('#uiChromeMinimise');
   await page.waitForTimeout(3000);
 
   const drawn = await page.evaluate(() => window.__labels);
@@ -492,10 +498,122 @@ test('Info labels are drawn on screen, and only while the toggle is on', async p
   const malformed = drawn.filter(l => !/^[01]\.\d{2}$/.test(l.text));
   assertEqual(malformed.length, 0, `readouts should be two-decimal energies, saw ${JSON.stringify(malformed.slice(0, 3))}`);
 
+  // Restore the interface to reach the switch, turn the layer off, then open the
+  // field back up — otherwise "nothing was drawn" would pass for the wrong
+  // reason, because the controls cover the field either way.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
   await page.click('#stillFieldNerdToggle');
+  await page.click('#uiChromeMinimise');
   await page.evaluate(() => { window.__labels.length = 0; });
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1500);
   assertEqual((await page.evaluate(() => window.__labels.length)), 0, 'no labels should be drawn once the toggle is off');
+});
+
+test('Info labels appear with the audio paused, not only during playback', async page => {
+  // Regression: the energy gate sat at 0.55, but with nothing playing
+  // `audioBoost` is 0 and computeNodeEnergy tops out at 0.3 + 0.24 = 0.54. The
+  // layer was therefore unreachable whenever the app was paused — the toggle
+  // read "on" and drew nothing, for as long as you cared to watch it.
+  await page.addInitScript(() => {
+    window.__labels = [];
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function fillText(text, x, y) {
+      window.__labels.push({ text, x, y });
+      return original.call(this, text, x, y);
+    };
+  });
+  await page.reload({ waitUntil: 'load' });
+
+  // Deliberately no clickPlay() — this is the silent case. Minimise so the
+  // field has open background at this suite's phone viewport; the gate, not the
+  // placement, is what is under test here.
+  await page.click('#uiChromeMinimise');
+  await page.waitForTimeout(3000);
+
+  const state = await audioState(page);
+  assertEqual(state.isPlaying, false, 'this test must run with the audio stopped');
+
+  const drawn = await page.evaluate(() => window.__labels.length);
+  assert(drawn > 0, 'labels must be reachable while paused — the field is alive without audio');
+});
+
+test('Info labels keep out of the interface they would be hidden behind', async page => {
+  // The canvas paints behind the controls, so a label under a card is a draw
+  // into a surface nobody can see. On a phone the control column spans the
+  // viewport, and every single label used to land there.
+  await page.addInitScript(() => {
+    window.__labels = [];
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function fillText(text, x, y) {
+      window.__labels.push({ text, x, y });
+      return original.call(this, text, x, y);
+    };
+  });
+  await page.reload({ waitUntil: 'load' });
+  await clickPlay(page);
+  await page.waitForTimeout(3000);
+
+  /** Count labels sitting inside whichever chrome is currently on screen. */
+  const occludedCount = () => page.evaluate(() => {
+    const rects = ['header', 'main', 'footer', '.nerd-hud', '.minimised-chrome']
+      .map(sel => document.querySelector(sel))
+      .filter(el => el && !el.hidden && getComputedStyle(el).opacity > 0.05)
+      .map(el => el.getBoundingClientRect());
+    return window.__labels.filter(l =>
+      rects.some(r => l.x >= r.left && l.x <= r.right && l.y >= r.top && l.y <= r.bottom),
+    ).length;
+  });
+
+  // At a phone viewport with the controls up there is no open background left,
+  // so the correct behaviour is to draw nothing rather than draw underneath.
+  assertEqual(await occludedCount(), 0, 'no label may be drawn under the full interface');
+
+  // Minimise, and the field opens up — now they must actually appear, and still
+  // dodge the floating cluster and the stats readout.
+  await page.click('#uiChromeMinimise');
+  await page.evaluate(() => { window.__labels.length = 0; });
+  await page.waitForTimeout(3000);
+
+  const total = await page.evaluate(() => window.__labels.length);
+  assert(total > 0, 'labels should appear once the interface is minimised');
+  assertEqual(await occludedCount(), 0, `labels landed under the minimised chrome (${total} drawn)`);
+});
+
+test('the info stats readout tracks the field and follows the labels toggle', async page => {
+  const hudVisible = () => page.evaluate(() => {
+    const el = document.getElementById('nerdHud');
+    return Boolean(el) && !el.hidden;
+  });
+
+  assert(await hudVisible(), 'readout should be visible with Info labels on by default');
+
+  await clickPlay(page);
+  await page.waitForTimeout(1500);
+
+  const stats = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+  assert(stats.fps > 10 && stats.fps < 45, `frame rate should read as a real 30 fps target, got ${stats.fps}`);
+  assert(stats.nodes >= 26 && stats.nodes <= 44, `node count should sit in the configured bounds, got ${stats.nodes}`);
+  assert(stats.edges > 0, 'links should be counted while the field is drawing');
+
+  // The values reach the DOM, not just the accessor.
+  const shown = await page.evaluate(() => ({
+    nodes: document.getElementById('nerdNodes').textContent,
+    source: document.getElementById('nerdSource').textContent,
+    uptime: document.getElementById('nerdUptime').textContent,
+  }));
+  assertEqual(shown.nodes, String(stats.nodes), 'readout should show the live node count');
+  assert(/Brown/.test(shown.source), `readout should name the noise colour, got "${shown.source}"`);
+  assert(/^\d{2}:\d{2}$/.test(shown.uptime), `uptime should be counting, got "${shown.uptime}"`);
+
+  // One toggle governs the whole info layer — canvas labels and readout alike.
+  await page.click('#stillFieldNerdToggle');
+  await page.waitForTimeout(200);
+  assert(!(await hudVisible()), 'readout should hide with the Info labels toggle');
+
+  await page.click('#stillFieldNerdToggle');
+  await page.waitForTimeout(200);
+  assert(await hudVisible(), 'readout should come back with the toggle');
 });
 
 test('Info labels toggle is disabled while the Still Field is off', async page => {

@@ -104,7 +104,7 @@ All noise is synthesized in `js/noise.js` → `generateNoiseBuffer(audioCtx, typ
 Buffers are long enough that the loop point is effectively inaudible for these stochastic signals. State (last sample / filter coefficients) is continuous *within* each buffer.
 
 **Still Field visualisation**  
-Full-viewport Canvas 2D layer behind the UI (`js/still-field.js`), 26–44 nodes
+Full-viewport Canvas 2D layer behind the UI (`js/still-field.js`), 32–58 nodes
 depending on viewport. No WebGL, no library — the depth is real perspective
 maths, not a 3D engine.
 
@@ -138,6 +138,27 @@ maths, not a 3D engine.
   few highest-energy nodes. `prefers-reduced-motion` slows it and drops the glow.
 - Colours come from `--still-field-*` custom properties, read once per theme
   change — restyling the field is a CSS edit.
+
+**Field Lab instrumentation**
+
+The **Open Field Lab** control turns the hidden maths into an inspectable
+devtool without changing the default sleep surface. While it is open:
+
+- every visible node carries a stable lifetime ID;
+- up to 12 longer-lived callouts rotate every eight seconds through energy,
+  world position, velocity and heading, perspective scale and lifecycle, and
+  travelling-wave phase;
+- a sample of live edges reports its true 3D length and projected angle;
+- the Live tab reports measured FPS and render cost, nodes, active edges, pair
+  tests, mean graph degree, density, wave phase, and analyser energy;
+- the Math and Code tabs show the equations and actual operations used by the
+  renderer.
+
+Instrumentation is session-only and opt-in. Its graph counters are collected
+inside the existing render pass and DOM updates are capped at 4 Hz, so there is
+no second O(n²) scan and no overnight cost when the lab is closed. See
+[docs/FIELD_LAB.md](./docs/FIELD_LAB.md) for metric definitions and extension
+rules.
 
 **Glass surfaces**  
 Control panels, type selector, theme toggle and EQ use translucent `rgba`

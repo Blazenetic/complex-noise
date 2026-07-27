@@ -46,6 +46,34 @@ const els = {
   fieldSpeed: document.getElementById('stillFieldSpeed'),
   glassToggle: document.getElementById('stillGlassToggle'),
   fieldCanvas: document.getElementById('stillField'),
+  fieldLab: document.getElementById('fieldLab'),
+  fieldLabToggle: document.getElementById('fieldLabToggle'),
+  fieldLabToggleText: document.querySelector('#fieldLabToggle > span:nth-child(2)'),
+  fieldLabTabs: Array.from(document.querySelectorAll('[data-field-tab]')),
+  fieldLabViews: Array.from(document.querySelectorAll('.field-lab-view')),
+  fieldLabPulse: document.getElementById('fieldLabPulse'),
+  fieldLabHealth: document.getElementById('fieldLabHealth'),
+  fieldStats: {
+    fps: document.getElementById('fieldStatFps'),
+    frame: document.getElementById('fieldStatFrame'),
+    nodes: document.getElementById('fieldStatNodes'),
+    edges: document.getElementById('fieldStatEdges'),
+    pairs: document.getElementById('fieldStatPairs'),
+    degree: document.getElementById('fieldStatDegree'),
+    density: document.getElementById('fieldStatDensity'),
+    phase: document.getElementById('fieldStatPhase'),
+    waveAngle: document.getElementById('fieldStatWaveAngle'),
+    low: document.getElementById('fieldStatLow'),
+    mid: document.getElementById('fieldStatMid'),
+    high: document.getElementById('fieldStatHigh'),
+    energy: document.getElementById('fieldStatEnergy'),
+  },
+  fieldMeters: {
+    low: document.getElementById('fieldMeterLow'),
+    mid: document.getElementById('fieldMeterMid'),
+    high: document.getElementById('fieldMeterHigh'),
+    energy: document.getElementById('fieldMeterEnergy'),
+  },
 };
 
 /** Human-readable labels for the theme toggle, keyed by theme name. */
@@ -89,8 +117,45 @@ function renderStillField(state) {
   els.fieldToggle.setAttribute('aria-checked', state.enabled ? 'true' : 'false');
   els.fieldIntensity.disabled = !state.enabled;
   els.fieldSpeed.disabled = !state.enabled;
+  els.fieldLabToggle.disabled = !state.enabled;
+  els.fieldLabToggle.setAttribute('aria-expanded', state.telemetryEnabled ? 'true' : 'false');
+  els.fieldLabToggle.classList.toggle('is-active', state.telemetryEnabled);
+  els.fieldLabToggleText.textContent = state.telemetryEnabled ? 'Close Field Lab' : 'Open Field Lab';
+  els.fieldLab.hidden = !state.telemetryEnabled;
   els.fieldIntensity.setAttribute('aria-valuetext', `${Math.round(state.intensity * 100)} percent`);
   els.fieldSpeed.setAttribute('aria-valuetext', `${state.speed.toFixed(2)} times`);
+
+  els.fieldLabTabs.forEach(tab => {
+    const active = tab.dataset.fieldTab === state.telemetryTab;
+    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    tab.tabIndex = active ? 0 : -1;
+  });
+  els.fieldLabViews.forEach(view => {
+    view.hidden = view.id !== `fieldLabView${state.telemetryTab[0].toUpperCase()}${state.telemetryTab.slice(1)}`;
+  });
+
+  if (!state.telemetryEnabled) return;
+  const t = state.telemetry;
+  const fpsStatus = t.fps >= 27 ? 'nominal' : t.fps >= 20 ? 'loaded' : 'strained';
+  els.fieldLab.dataset.health = fpsStatus;
+  els.fieldLabHealth.textContent = fpsStatus;
+  els.fieldLabPulse.title = `${t.fps.toFixed(1)} frames per second`;
+
+  els.fieldStats.fps.textContent = `${t.fps.toFixed(1)} fps`;
+  els.fieldStats.frame.textContent = `${t.frameMs.toFixed(2)} ms`;
+  els.fieldStats.nodes.textContent = String(t.nodeCount);
+  els.fieldStats.edges.textContent = String(t.activeLinks);
+  els.fieldStats.pairs.textContent = String(t.pairChecks);
+  els.fieldStats.degree.textContent = t.meanDegree.toFixed(2);
+  els.fieldStats.density.textContent = `${(t.density * 100).toFixed(2)}%`;
+  els.fieldStats.phase.textContent = `${t.wavePhase.toFixed(1)}°`;
+  els.fieldStats.waveAngle.textContent = `${t.waveAngle.toFixed(2)}°`;
+
+  ['low', 'mid', 'high', 'energy'].forEach(key => {
+    const value = Math.max(0, Math.min(1, t[key]));
+    els.fieldStats[key].textContent = value.toFixed(3);
+    els.fieldMeters[key].style.setProperty('--meter', value.toFixed(4));
+  });
 }
 
 /** @param {ReturnType<typeof theme.getState>} state */
@@ -173,6 +238,22 @@ function bindEvents() {
 
   bindSwitch(els.glassToggle, () => theme.toggleGlassMode());
 
+  els.fieldLabToggle.addEventListener('click', () => {
+    stillField.setTelemetryEnabled(!stillField.getTelemetryEnabled());
+  });
+
+  els.fieldLabTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => stillField.setTelemetryTab(tab.dataset.fieldTab));
+    tab.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const next = els.fieldLabTabs[(index + direction + els.fieldLabTabs.length) % els.fieldLabTabs.length];
+      stillField.setTelemetryTab(next.dataset.fieldTab);
+      next.focus();
+    });
+  });
+
   els.fieldIntensity.addEventListener('input', e => {
     stillField.setStillFieldIntensity(parseFloat(e.target.value));
   });
@@ -216,6 +297,8 @@ function boot() {
     getMetrics: stillField.getStillAudioMetrics,
     getAudioState: audio.getState,
     getFieldState: stillField.getState,
+    setTelemetryEnabled: stillField.setTelemetryEnabled,
+    setTelemetryTab: stillField.setTelemetryTab,
     getIsPlaying: audio.getIsPlaying,
     getCurrentType: audio.getCurrentType,
     getAudioContext: audio.getAudioContext,

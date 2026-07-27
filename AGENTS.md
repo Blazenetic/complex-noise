@@ -110,6 +110,11 @@ Themes and glass modes are independent axes on `<html>` (`data-still-theme` and
 pre-builds a quantised ramp from them. Alpha on the node and edge tokens sets
 the field's baseline opacity; mid and spark supply hue only.
 
+**Extend Field Lab** — read `docs/FIELD_LAB.md`. Telemetry state belongs to
+`still-field.js` and its DOM rendering belongs to `app.js`. Collect graph values
+inside the existing link pass, publish at no more than 4 Hz, and keep canvas
+annotations capped and opt-in.
+
 **Add a persisted setting** — add the key to `STORAGE_KEYS` in
 `js/constants.js` and read/write it through `js/storage.js`. Never call
 `localStorage` directly: it throws in Safari Private Browsing, and

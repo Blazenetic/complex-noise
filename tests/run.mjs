@@ -270,7 +270,10 @@ test('theme toggles, updates meta tags, and persists', async page => {
 const fieldPainted = page => page.evaluate(() => {
   const c = document.getElementById('stillField');
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-  for (let i = 3; i < d.length; i += 4000) if (d[i] !== 0) return true;
+  // The field is intentionally sparse. Sampling every thousandth pixel can
+  // miss every thin line in a freshly repainted frame and report a false
+  // negative, so scan the alpha channel until the first painted pixel.
+  for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return true;
   return false;
 });
 
@@ -355,6 +358,42 @@ test('Still Field intensity and speed persist', async page => {
   assertEqual(await page.inputValue('#stillFieldIntensity'), '0.85', 'intensity should restore');
   assertEqual(await page.inputValue('#stillFieldSpeed'), '0.6', 'speed should restore');
   assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 0.6, 'engine should restore the stored speed');
+});
+
+test('Field Lab reveals live graph telemetry, tabs, and aligned values', async page => {
+  assert(await page.isHidden('#fieldLab'), 'lab should stay opt-in on the sleeping surface');
+  await page.click('#fieldLabToggle');
+  await page.waitForTimeout(700); // outlast two 250 ms telemetry publications
+
+  assert(await page.isVisible('#fieldLab'), 'lab should become visible');
+  assertEqual(await page.getAttribute('#fieldLabToggle', 'aria-expanded'), 'true', 'launcher should expose expanded state');
+
+  const state = await page.evaluate(() => window.complexNoiseStill.getFieldState());
+  assert(state.telemetryEnabled, 'field state should own the telemetry toggle');
+  assert(state.telemetry.nodeCount >= 32 && state.telemetry.nodeCount <= 58, `adaptive node count should be 32–58, got ${state.telemetry.nodeCount}`);
+  assert(state.telemetry.fps > 0, 'frame-rate sample should be live');
+  assert(state.telemetry.frameMs >= 0, 'render-cost sample should be populated');
+  assertEqual(
+    state.telemetry.pairChecks,
+    state.telemetry.nodeCount * (state.telemetry.nodeCount - 1) / 2,
+    'pair counter should reflect the renderer’s O(n²) pass',
+  );
+
+  const valueAlignment = await page.evaluate(() => getComputedStyle(document.getElementById('fieldStatFps')).textAlign);
+  assertEqual(valueAlignment, 'left', 'second metric column should be left aligned');
+
+  await page.click('#fieldLabTabMath');
+  assert(await page.isVisible('#fieldLabViewMath'), 'Math tab should reveal the equations');
+  assertEqual(await page.getAttribute('#fieldLabTabMath', 'aria-selected'), 'true', 'Math tab should own selected state');
+
+  await page.focus('#fieldLabTabMath');
+  await page.keyboard.press('ArrowRight');
+  assert(await page.isVisible('#fieldLabViewCode'), 'ArrowRight should move to the Code tab');
+  assertEqual((await page.textContent('#fieldLabViewCode')).includes('scale = 1 /'), true, 'Code tab should show actual renderer operations');
+
+  await page.click('#stillFieldToggle');
+  assert(await page.isHidden('#fieldLab'), 'turning off the field should also close its instrumentation');
+  assertEqual(await page.getAttribute('#fieldLabToggle', 'aria-expanded'), 'false', 'closed instrumentation should be reflected on its launcher');
 });
 
 test('speed outside the allowed range is clamped, not trusted', async page => {

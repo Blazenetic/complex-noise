@@ -21,6 +21,65 @@
   <!-- Still Field — full-page nodes + edges visualisation -->
   <canvas id="stillField" aria-hidden="true"></canvas>
 
+  <!-- Field Lab is opt-in: the sleeping surface stays calm until someone asks
+       to see the mathematics and instrumentation driving the canvas. -->
+  <aside class="field-lab" id="fieldLab" aria-label="Still Field live telemetry" hidden>
+    <div class="field-lab-head">
+      <div>
+        <span class="field-lab-kicker">PROCEDURAL FIELD / LIVE</span>
+        <strong>Field Lab</strong>
+      </div>
+      <div class="field-lab-health">
+        <span class="field-lab-pulse" id="fieldLabPulse" aria-hidden="true"></span>
+        <span id="fieldLabHealth">sampling</span>
+      </div>
+    </div>
+    <div class="field-lab-tabs" role="tablist" aria-label="Field Lab views">
+      <button type="button" role="tab" id="fieldLabTabLive" data-field-tab="live" aria-controls="fieldLabViewLive" aria-selected="true">Live</button>
+      <button type="button" role="tab" id="fieldLabTabMath" data-field-tab="math" aria-controls="fieldLabViewMath" aria-selected="false" tabindex="-1">Math</button>
+      <button type="button" role="tab" id="fieldLabTabCode" data-field-tab="code" aria-controls="fieldLabViewCode" aria-selected="false" tabindex="-1">Code</button>
+    </div>
+
+    <section class="field-lab-view" id="fieldLabViewLive" role="tabpanel" aria-labelledby="fieldLabTabLive">
+      <div class="field-lab-grid">
+        <span>frame rate</span><span class="field-lab-value" id="fieldStatFps">—</span>
+        <span>render cost</span><span class="field-lab-value" id="fieldStatFrame">—</span>
+        <span>nodes</span><span class="field-lab-value" id="fieldStatNodes">—</span>
+        <span>live edges</span><span class="field-lab-value" id="fieldStatEdges">—</span>
+        <span>pair tests</span><span class="field-lab-value" id="fieldStatPairs">—</span>
+        <span>mean degree</span><span class="field-lab-value" id="fieldStatDegree">—</span>
+        <span>graph density</span><span class="field-lab-value" id="fieldStatDensity">—</span>
+        <span>wave phase</span><span class="field-lab-value" id="fieldStatPhase">—</span>
+      </div>
+      <div class="field-lab-spectrum" aria-label="Normalised audio analyser energy">
+        <div><span>LOW</span><i><b id="fieldMeterLow"></b></i><span class="field-lab-value" id="fieldStatLow">0.000</span></div>
+        <div><span>MID</span><i><b id="fieldMeterMid"></b></i><span class="field-lab-value" id="fieldStatMid">0.000</span></div>
+        <div><span>HIGH</span><i><b id="fieldMeterHigh"></b></i><span class="field-lab-value" id="fieldStatHigh">0.000</span></div>
+        <div><span>FIELD</span><i><b id="fieldMeterEnergy"></b></i><span class="field-lab-value" id="fieldStatEnergy">0.000</span></div>
+      </div>
+      <p class="field-lab-note"><span>θ</span> wave vector <span class="field-lab-value" id="fieldStatWaveAngle">—</span> · callouts rotate every 8 s</p>
+    </section>
+
+    <section class="field-lab-view field-lab-formulas" id="fieldLabViewMath" role="tabpanel" aria-labelledby="fieldLabTabMath" hidden>
+      <div><span>PROJECT</span><code>s(z) = 1 / (1 + 0.75z)</code><small>p′ = centre + p · s</small></div>
+      <div><span>ENERGY</span><code>E = clamp(.30b + .24w + .46a)</code><small>b: breath · w: plane wave · a: analyser</small></div>
+      <div><span>DISTANCE</span><code>d² = Δx² + Δy² + (Δz · z<sub>w</sub>)²</code><small>edges exist in world space, not screen space</small></div>
+      <div><span>ENVELOPE</span><code>s ← s + (t − s)(1 − e<sup>−λΔt</sup>)</code><small>λ = 3.2 attack / 1.1 release</small></div>
+      <div><span>R2 SEQUENCE</span><code>pᵢ = frac(½ + i / gᵏ)</code><small>g ≈ 1.324718 · low-discrepancy placement</small></div>
+      <div><span>DRIFT</span><code>v ← (v + ξJΔt)e<sup>−0.55Δt</sup></code><small>frame-rate independent stochastic damping</small></div>
+    </section>
+
+    <section class="field-lab-view field-lab-code" id="fieldLabViewCode" role="tabpanel" aria-labelledby="fieldLabTabCode" hidden>
+      <p><span>01</span><code>scale = 1 / (1 + node.z * DEPTH);</code></p>
+      <p><span>02</span><code>wave = .5 + .5 * sin(ωt − k·p);</code></p>
+      <p><span>03</span><code>target = pow(1 - sqrt(d²) / radius, .65);</code></p>
+      <p><span>04</span><code>attack = 1 - exp(-3.2 * Δt);</code></p>
+      <p><span>05</span><code>node.x += node.vx * Δt;</code></p>
+      <p><span>06</span><code>shade = clamp(energy ** 2, 0, 1);</code></p>
+      <div class="field-lab-code-foot">Actual operations from <code>js/still-field.js</code></div>
+    </section>
+  </aside>
+
   <header>
     <div class="logo">Complex Noise</div>
     <div class="byline">by Complex State</div>
@@ -84,6 +143,11 @@
           <span id="stillGlassLabel">Ultra-transparent glass</span>
           <button type="button" class="still-switch" id="stillGlassToggle" role="switch" aria-checked="false" aria-labelledby="stillGlassLabel"></button>
         </div>
+        <button type="button" class="field-lab-launch" id="fieldLabToggle" aria-expanded="false" aria-controls="fieldLab">
+          <span aria-hidden="true">⌁</span>
+          <span>Open Field Lab</span>
+          <small>nodes · edges · maths · code</small>
+        </button>
       </div>
 
       <!-- Still EQ (collapsible to keep main surface calm) -->

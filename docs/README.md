@@ -8,6 +8,7 @@ This folder holds product requirements and implementation context for Complex No
 |------|---------|
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance |
+| [FIELD_LAB.md](./FIELD_LAB.md) | Current Field Lab telemetry, equations, annotation lifecycle, accessibility, and performance contract |
 
 These two documents are **historical context**, kept because they explain why
 the app looks and behaves the way it does. They are not current specifications.

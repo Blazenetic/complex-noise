@@ -35,7 +35,8 @@
  *   force a style recalculation for the whole document.
  * - **Glow is rationed.** `shadowBlur` is the single most expensive thing on
  *   this canvas, so only the few highest-energy nodes get it, with a hard cap.
- * - O(n²) link scanning is fine at n ≤ 44 once the frame rate is halved.
+ * - O(n²) link scanning is fine at n ≤ 58 once the frame rate is halved. The
+ *   optional Field Lab instruments the pass without adding a second scan.
  */
 
 import { STORAGE_KEYS, DEFAULTS, STILL_SPEED_MIN, STILL_SPEED_MAX } from './constants.js';
@@ -69,12 +70,12 @@ const MAX_STEP_S = 0.1;
  * Node count bounds, measured against the *world* plane rather than the
  * viewport: perspective pulls distant nodes toward the centre, so a count
  * derived from screen area leaves the field looking thin. The upper bound is
- * what keeps O(n²) linking honest — 44 nodes is 946 pairs a frame, and at 30 fps
- * that is less pair-testing per second than the old 22 nodes at 60 fps.
+ * what keeps O(n²) linking honest — 58 nodes is 1,653 pairs a frame, still a
+ * small canvas workload at 30 fps and dense enough to expose the graph maths.
  */
-const MIN_NODES = 26;
-const MAX_NODES = 44;
-const AREA_PER_NODE = 30000;
+const MIN_NODES = 32;
+const MAX_NODES = 58;
+const AREA_PER_NODE = 24000;
 
 /** Node lifetime range in seconds, before the speed multiplier. */
 const LIFE_MIN_S = 70;
@@ -129,6 +130,14 @@ const PHI = 1.6180339887498949;
 /** Debounce window for resize — mobile browsers fire it on every URL-bar nudge. */
 const RESIZE_DEBOUNCE_MS = 150;
 
+/** Field Lab publishes DOM telemetry at 4 Hz, not at the canvas frame rate. */
+const TELEMETRY_INTERVAL_MS = 250;
+/** Detailed node callouts persist long enough to be read before rotating. */
+const CALLOUT_INTERVAL_S = 8;
+const MAX_NODE_CALLOUTS = 12;
+const MAX_EDGE_CALLOUTS = 7;
+const WAVE_ANGLE_DEG = Math.atan2(WAVE_KY, WAVE_KX) * 180 / Math.PI;
+
 // --- Persisted settings ---
 let stillFieldEnabled = readBool(STORAGE_KEYS.stillFieldEnabled, DEFAULTS.stillFieldEnabled);
 let stillFieldIntensity = clamp(
@@ -163,11 +172,34 @@ let linkRadius = 0;    // world units
 let zWorld = 0;        // world units a full depth traverse is worth when linking
 let stillFieldDpr = 1;
 let resizeDebounceId = null;
+let telemetryEnabled = false;
+let telemetryTab = 'live';
+let lastTelemetryMs = 0;
+let nodeSerial = 0;
+
+// Rewritten in place. Instrumentation is opt-in, and its counters piggyback on
+// work the renderer already performs rather than rescanning the graph.
+const telemetry = {
+  fps: 0,
+  frameMs: 0,
+  nodeCount: 0,
+  activeLinks: 0,
+  pairChecks: 0,
+  meanDegree: 0,
+  density: 0,
+  energy: 0,
+  wavePhase: 0,
+  waveAngle: WAVE_ANGLE_DEG,
+  low: 0,
+  mid: 0,
+  high: 0,
+};
 
 // Theme-derived colours, refreshed by refreshThemeColors()
 const nodePalette = new Array(COLOR_STEPS).fill('rgb(190,195,210)');
 const edgePalette = new Array(COLOR_STEPS).fill('rgb(160,165,180)');
 let glowColor = 'rgba(124, 58, 237, 0.55)';
+let calloutBackground = 'rgba(8, 8, 15, 0.76)';
 let baseNodeAlpha = 0.55;
 let baseEdgeAlpha = 0.22;
 
@@ -186,13 +218,16 @@ let reducedMotion = reducedMotionQuery ? reducedMotionQuery.matches : false;
 const listeners = new Set();
 
 /**
- * @returns {{enabled: boolean, intensity: number, speed: number}}
+ * @returns {{enabled: boolean, intensity: number, speed: number, telemetryEnabled: boolean, telemetryTab: string, telemetry: typeof telemetry}}
  */
 export function getState() {
   return {
     enabled: stillFieldEnabled,
     intensity: stillFieldIntensity,
     speed: stillFieldSpeed,
+    telemetryEnabled,
+    telemetryTab,
+    telemetry: { ...telemetry },
   };
 }
 
@@ -226,6 +261,11 @@ export function getStillFieldSpeed() {
 
 export function getStillEnergy() {
   return stillEnergy;
+}
+
+/** @returns {boolean} whether the opt-in Field Lab is collecting telemetry */
+export function getTelemetryEnabled() {
+  return telemetryEnabled;
 }
 
 // ----------------------------------------------------------
@@ -316,6 +356,9 @@ export function refreshThemeColors() {
   // opaque and alpha is applied per element via globalAlpha.
   baseNodeAlpha = node.a;
   baseEdgeAlpha = edge.a;
+  calloutBackground = node.r < 130
+    ? 'rgba(248, 246, 240, 0.86)'
+    : 'rgba(8, 8, 15, 0.76)';
 
   buildPalette(nodePalette, node, mid, spark);
   buildPalette(edgePalette, edge, mid, spark);
@@ -417,6 +460,8 @@ function resizeStillField() {
  */
 function respawnNode(n, seeded = false) {
   const i = spawnIndex++;
+  n.id = ++nodeSerial;
+  n.generation = (n.generation || 0) + 1;
 
   // World coordinates are centred on the origin; the camera sits on the axis.
   n.x = (((0.5 + R2_A1 * i) % 1) - 0.5) * worldW;
@@ -464,6 +509,7 @@ export function initStillFieldNodes(force = false) {
 
   for (let i = 0; i < count; i++) {
     const n = {
+      id: 0, generation: 0,
       x: 0, y: 0, z: 0, zBase: 0, zAmp: 0, zRate: 0, zPhase: 0,
       vx: 0, vy: 0, phase: 0, phaseRate: 0,
       life: 0, lifeRate: 0, energy: 0,
@@ -586,13 +632,32 @@ function frame(nowMs) {
   const adt = dt * speed;   // the animation clock advances at the user's speed
   clockS += adt;
 
+  const renderStart = telemetryEnabled ? performance.now() : 0;
   update(adt);
   draw(adt);
+
+  if (telemetryEnabled) {
+    const instantFps = 1 / dt;
+    telemetry.fps += (instantFps - telemetry.fps) * 0.18;
+    telemetry.frameMs += (performance.now() - renderStart - telemetry.frameMs) * 0.2;
+    telemetry.nodeCount = stillFieldNodes.length;
+    telemetry.energy = stillEnergy;
+    telemetry.wavePhase = ((clockS * WAVE_RATE) % (Math.PI * 2)) * 180 / Math.PI;
+    if (nowMs - lastTelemetryMs >= TELEMETRY_INTERVAL_MS) {
+      lastTelemetryMs = nowMs;
+      emit();
+    }
+  }
 }
 
 function update(adt) {
   const m = getStillAudioMetrics();
   const audioBoost = Math.min(1, (0.45 * m.overall + 0.35 * m.mid + 0.2 * m.high) * 1.6);
+  if (telemetryEnabled) {
+    telemetry.low = m.low;
+    telemetry.mid = m.mid;
+    telemetry.high = m.high;
+  }
 
   // Smoothed, intensity-scaled energy for the CSS variable the UI reacts to.
   const targetEnergy = m.overall * stillFieldIntensity * (getIsPlaying() ? 1 : 0.06);
@@ -677,6 +742,7 @@ function draw(adt) {
 
   drawLinks(ctx, nodes, n, intensity, adt);
   drawNodes(ctx, nodes, n, intensity);
+  if (telemetryEnabled) drawFieldLab(ctx, nodes, n);
 
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
@@ -690,6 +756,7 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
   // once per frame rather than once per pair.
   const attackK = 1 - Math.exp(-LINK_ATTACK * adt);
   const releaseK = 1 - Math.exp(-LINK_RELEASE * adt);
+  let activeLinks = 0;
 
   for (let i = 0; i < n; i++) {
     const a = nodes[i];
@@ -721,6 +788,7 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
       linkState[k] = strength;
 
       if (strength < LINK_EPSILON) continue;
+      activeLinks++;
 
       const depthFade = (a.scale + b.scale) * 0.5;
       const alpha = clamp(
@@ -754,6 +822,14 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
       ctx.lineTo(bx, by);
       ctx.stroke();
     }
+  }
+
+  if (telemetryEnabled) {
+    const pairChecks = n * (n - 1) / 2;
+    telemetry.activeLinks = activeLinks;
+    telemetry.pairChecks = pairChecks;
+    telemetry.meanDegree = n ? activeLinks * 2 / n : 0;
+    telemetry.density = pairChecks ? activeLinks / pairChecks : 0;
   }
 }
 
@@ -807,6 +883,92 @@ function drawNodes(ctx, nodes, n, intensity) {
   ctx.shadowBlur = 0;
 }
 
+/**
+ * Draw opt-in instrumentation after the aesthetic field. Labels deliberately
+ * persist for eight seconds: fast-changing numbers look impressive but cannot
+ * be read. Every node keeps a stable ID for its lifetime, while a rotating
+ * subset exposes different terms from the equations above.
+ */
+function drawFieldLab(ctx, nodes, n) {
+  const epoch = Math.floor(clockS / CALLOUT_INTERVAL_S);
+  const labelMode = epoch % 5;
+  let nodeCallouts = 0;
+  let edgeCallouts = 0;
+
+  ctx.save();
+  ctx.shadowBlur = 0;
+  ctx.font = '9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  ctx.textBaseline = 'middle';
+
+  // Stable identity tags make every node inspectable without turning the whole
+  // field into overlapping cards.
+  for (let i = 0; i < n; i++) {
+    const node = nodes[i];
+    if (node.fade < 0.18) continue;
+    ctx.globalAlpha = 0.34 + node.energy * 0.32;
+    ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (node.energy * COLOR_STEPS) | 0)];
+    ctx.fillText(`n${String(node.id).padStart(3, '0')}`, node.sx + 7, node.sy - 7);
+
+    if ((i + epoch * 3) % 5 !== 0 || nodeCallouts >= MAX_NODE_CALLOUTS) continue;
+    nodeCallouts++;
+    const speed = Math.hypot(node.vx, node.vy);
+    const values = [
+      `E=${node.energy.toFixed(3)}  b=sin(${node.phase.toFixed(2)})`,
+      `p=(${node.x.toFixed(0)}, ${node.y.toFixed(0)}, ${node.z.toFixed(3)})`,
+      `v=${speed.toFixed(2)}u/s  θ=${Math.atan2(node.vy, node.vx).toFixed(2)}rad`,
+      `s(z)=${node.scale.toFixed(3)}  life=${(node.life * 100).toFixed(1)}%`,
+      `wave=k·p  φ=${(clockS * WAVE_RATE - (node.x * WAVE_KX + node.y * WAVE_KY)).toFixed(2)}`,
+    ];
+    drawCallout(ctx, node.sx, node.sy, values[labelMode], node.energy);
+  }
+
+  // Annotate a deterministic sample of live edges with both projected angle
+  // and true 3D length. The values remain aligned to the lines as they drift.
+  for (let i = 0; i < n && edgeCallouts < MAX_EDGE_CALLOUTS; i++) {
+    for (let j = i + 1; j < n && edgeCallouts < MAX_EDGE_CALLOUTS; j++) {
+      const strength = linkState[i * n + j];
+      if (strength < 0.34 || (i * 7 + j + epoch) % 11 !== 0) continue;
+      const a = nodes[i];
+      const b = nodes[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dz = (b.z - a.z) * zWorld;
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const angle = Math.atan2(b.sy - a.sy, b.sx - a.sx) * 180 / Math.PI;
+      const mx = (a.sx + b.sx) * 0.5;
+      const my = (a.sy + b.sy) * 0.5;
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = edgePalette[Math.min(COLOR_STEPS - 1, ((strength * COLOR_STEPS) | 0))];
+      ctx.fillText(`d₃=${distance.toFixed(1)}  θ=${angle.toFixed(1)}°`, mx + 5, my - 6);
+      edgeCallouts++;
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawCallout(ctx, x, y, text, energy) {
+  const width = ctx.measureText(text).width + 12;
+  const right = x < stillFieldW - width - 30;
+  const tx = right ? x + 18 : x - width - 18;
+  const ty = y < 42 ? y + 25 : y - 21;
+
+  ctx.globalAlpha = 0.35 + energy * 0.35;
+  ctx.strokeStyle = edgePalette[Math.min(COLOR_STEPS - 1, (energy * COLOR_STEPS) | 0)];
+  ctx.lineWidth = 0.75;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(right ? tx - 4 : tx + width + 4, ty);
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.84;
+  ctx.fillStyle = calloutBackground;
+  ctx.fillRect(tx, ty - 9, width, 18);
+  ctx.strokeRect(tx, ty - 9, width, 18);
+  ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (energy * COLOR_STEPS) | 0)];
+  ctx.fillText(text, tx + 6, ty);
+}
+
 function stopLoop() {
   if (stillFieldRaf) {
     cancelAnimationFrame(stillFieldRaf);
@@ -848,6 +1010,7 @@ function handleVisibilityChange() {
  */
 export function setStillFieldEnabled(on) {
   stillFieldEnabled = Boolean(on);
+  if (!stillFieldEnabled) telemetryEnabled = false;
   write(STORAGE_KEYS.stillFieldEnabled, stillFieldEnabled);
   applyCanvasVisibility();
 
@@ -883,6 +1046,20 @@ export function setStillFieldIntensity(v) {
 export function setStillFieldSpeed(v) {
   stillFieldSpeed = clamp(v, STILL_SPEED_MIN, STILL_SPEED_MAX);
   write(STORAGE_KEYS.stillFieldSpeed, stillFieldSpeed);
+  emit();
+}
+
+/** Enable or hide the opt-in mathematical instrumentation. */
+export function setTelemetryEnabled(on) {
+  telemetryEnabled = Boolean(on) && stillFieldEnabled;
+  lastTelemetryMs = 0;
+  emit();
+}
+
+/** Select the Field Lab view; rendering remains owned by app.js. */
+export function setTelemetryTab(tab) {
+  if (!['live', 'math', 'code'].includes(tab)) return;
+  telemetryTab = tab;
   emit();
 }
 

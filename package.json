@@ -11,7 +11,7 @@
     "lint": "eslint js tests"
   },
   "devDependencies": {
-    "eslint": "^9.0.0",
+    "eslint": ">=9",
     "http-server": "^14.1.1",
     "playwright": "^1.56.1"
   },

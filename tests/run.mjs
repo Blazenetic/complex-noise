@@ -32,6 +32,13 @@ import { startServer } from './server.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HEADED = process.argv.includes('--headed');
 
+/**
+ * Escape hatch for sandboxes and CI images that ship a pre-provisioned Chromium
+ * rather than letting `playwright install` fetch one. Leave it unset locally and
+ * Playwright resolves its own download as usual.
+ */
+const CHROMIUM_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
+
 // ----------------------------------------------------------
 // Tiny test harness
 // ----------------------------------------------------------
@@ -73,10 +80,14 @@ test('loads with no console or page errors', async page => {
   assertEqual(booted, 'object', 'app did not boot (window.complexNoiseStill missing)');
 });
 
-test('defaults: brown noise, field off, status Ready', async page => {
+test('defaults: brown noise, field on, standard glass, status Ready', async page => {
   assertEqual(await page.getAttribute('.type-btn[data-type="brown"]', 'aria-pressed'), 'true', 'brown should be the default type');
-  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'false', 'Still Field should default to off');
-  assert(await page.isDisabled('#stillFieldIntensity'), 'intensity slider should be disabled while the field is off');
+  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'true', 'Still Field should default to on');
+  assert(!(await page.isDisabled('#stillFieldIntensity')), 'intensity slider should be live while the field is on');
+  assert(!(await page.isDisabled('#stillFieldSpeed')), 'speed slider should be live while the field is on');
+  assertEqual(await page.inputValue('#stillFieldSpeed'), '1.25', 'default drift speed');
+  assertEqual(await page.getAttribute('html', 'data-glass'), 'standard', 'glass should default to standard');
+  assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'false', 'glass switch should read unchecked');
   assertEqual((await page.textContent('#status')).trim(), 'Ready', 'initial status');
   assertEqual(await page.getAttribute('#playBtn', 'aria-label'), 'Play noise', 'initial play button label');
 });
@@ -255,51 +266,129 @@ test('theme toggles, updates meta tags, and persists', async page => {
 // Still Field
 // ==========================================================
 
-test('Still Field toggles on, paints, and toggles off', async page => {
-  await page.click('#stillFieldToggle');
+/** True when the canvas has any non-transparent pixel. */
+const fieldPainted = page => page.evaluate(() => {
+  const c = document.getElementById('stillField');
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  for (let i = 3; i < d.length; i += 4000) if (d[i] !== 0) return true;
+  return false;
+});
+
+test('Still Field paints on load, then toggles off and back on', async page => {
   await page.waitForTimeout(500);
-
-  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'true', 'switch should read checked');
-  assert(!(await page.isDisabled('#stillFieldIntensity')), 'intensity slider should enable');
-  assert(!(await page.evaluate(() => document.getElementById('stillField').classList.contains('still-field-off'))), 'canvas should be visible');
-
-  const painted = await page.evaluate(() => {
-    const c = document.getElementById('stillField');
-    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-    for (let i = 3; i < d.length; i += 4000) if (d[i] !== 0) return true;
-    return false;
-  });
-  assert(painted, 'canvas should have rendered something');
+  assert(!(await page.evaluate(() => document.getElementById('stillField').classList.contains('still-field-off'))), 'canvas should be visible by default');
+  assert(await fieldPainted(page), 'canvas should have rendered something without any interaction');
 
   await page.click('#stillFieldToggle');
   await page.waitForTimeout(300);
-  assert(await page.evaluate(() => document.getElementById('stillField').classList.contains('still-field-off')), 'canvas should hide again');
+  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'false', 'switch should read unchecked');
+  assert(await page.isDisabled('#stillFieldIntensity'), 'intensity slider should disable');
+  assert(await page.evaluate(() => document.getElementById('stillField').classList.contains('still-field-off')), 'canvas should hide');
   assertEqual(await storage(page, 'complexNoise_stillFieldEnabled'), 'false', 'field state should persist');
+
+  await page.click('#stillFieldToggle');
+  await page.waitForTimeout(400);
+  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'true', 'switch should read checked again');
+  assert(await fieldPainted(page), 'canvas should repaint after being switched back on');
+});
+
+test('Still Field stays transparent instead of painting over the background', async page => {
+  // Regression: the residual trail used to be a translucent fill of the page's
+  // own background colour, which drives the canvas to fully opaque within a few
+  // seconds and buries the background gradient and the Still Texture beneath it.
+  await page.waitForTimeout(3000);
+  const opaqueFraction = await page.evaluate(() => {
+    const c = document.getElementById('stillField');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let opaque = 0, total = 0;
+    for (let i = 3; i < d.length; i += 4000) {
+      total++;
+      if (d[i] > 250) opaque++;
+    }
+    return opaque / total;
+  });
+  assert(opaqueFraction < 0.5, `canvas should stay mostly transparent, ${Math.round(opaqueFraction * 100)}% of samples were opaque`);
+});
+
+test('Still Field stops drawing while the page is hidden', async page => {
+  // Regression guard for battery: a backgrounded tab still runs throttled
+  // animation frames, and this app sits on a locked phone for eight hours.
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(300);
+
+  const energyWhileHidden = await page.evaluate(() => window.complexNoiseStill.getEnergy());
+  await page.waitForTimeout(400);
+  assertEqual(
+    await page.evaluate(() => window.complexNoiseStill.getEnergy()),
+    energyWhileHidden,
+    'nothing should advance while the page is hidden',
+  );
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.waitForTimeout(400);
+  assert(await fieldPainted(page), 'field should resume when the page becomes visible again');
 });
 
 test('Still Field survives a resize without losing its nodes', async page => {
-  await page.click('#stillFieldToggle');
   await page.waitForTimeout(400);
   await page.setViewportSize({ width: 390, height: 700 });
   await page.waitForTimeout(500); // outlast the 150 ms resize debounce
 
   assertEqual(page.errors.length, 0, `resize should not throw: ${page.errors.join(' | ')}`);
-  const painted = await page.evaluate(() => {
-    const c = document.getElementById('stillField');
-    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-    for (let i = 3; i < d.length; i += 4000) if (d[i] !== 0) return true;
-    return false;
-  });
-  assert(painted, 'field should still render after a resize');
+  assert(await fieldPainted(page), 'field should still render after a resize');
 });
 
-test('Still Field intensity persists', async page => {
-  await page.click('#stillFieldToggle');
+test('Still Field intensity and speed persist', async page => {
   await setRange(page, 'stillFieldIntensity', 0.85);
+  await setRange(page, 'stillFieldSpeed', 0.6);
   assertEqual(await storage(page, 'complexNoise_stillFieldIntensity'), '0.85', 'intensity should persist');
+  assertEqual(await storage(page, 'complexNoise_stillFieldSpeed'), '0.6', 'speed should persist');
 
   await page.reload({ waitUntil: 'load' });
   assertEqual(await page.inputValue('#stillFieldIntensity'), '0.85', 'intensity should restore');
+  assertEqual(await page.inputValue('#stillFieldSpeed'), '0.6', 'speed should restore');
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 0.6, 'engine should restore the stored speed');
+});
+
+test('speed outside the allowed range is clamped, not trusted', async page => {
+  await page.evaluate(() => localStorage.setItem('complexNoise_stillFieldSpeed', '99'));
+  await page.reload({ waitUntil: 'load' });
+  assertEqual(page.errors.length, 0, `an out-of-range speed should not throw: ${page.errors.join(' | ')}`);
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 2, 'speed should clamp to the maximum');
+});
+
+test('ultra glass toggles, restyles the surfaces, and persists', async page => {
+  const surfaceAlpha = () => page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--surface').trim());
+
+  const standard = await surfaceAlpha();
+  await page.click('#stillGlassToggle');
+  await page.waitForTimeout(150);
+
+  assertEqual(await page.getAttribute('html', 'data-glass'), 'ultra', 'html should carry data-glass="ultra"');
+  assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'true', 'glass switch should read checked');
+  assert((await surfaceAlpha()) !== standard, 'ultra glass should actually change the --surface token');
+  assertEqual(await storage(page, 'complexNoise_stillGlassTransparent'), 'true', 'glass choice should persist');
+
+  await page.reload({ waitUntil: 'load' });
+  assertEqual(await page.getAttribute('html', 'data-glass'), 'ultra', 'glass mode should restore after reload');
+  assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'true', 'restored glass switch should read checked');
+});
+
+test('ultra glass survives a theme change', async page => {
+  await page.click('#stillGlassToggle');
+  await page.click('#stillThemeToggle');
+  await page.waitForTimeout(150);
+
+  assertEqual(await page.getAttribute('html', 'data-still-theme'), 'bone', 'theme should switch');
+  assertEqual(await page.getAttribute('html', 'data-glass'), 'ultra', 'glass mode is a separate axis and must survive');
 });
 
 // ==========================================================
@@ -366,11 +455,16 @@ test('interactive controls are labelled and reachable', async page => {
   assertEqual(small.length, 0, `touch targets under 44px: ${small.join(', ')}`);
 });
 
-test('the Still Field switch responds to the keyboard', async page => {
+test('the role="switch" controls respond to the keyboard', async page => {
   await page.focus('#stillFieldToggle');
   await page.keyboard.press('Space');
   await page.waitForTimeout(200);
-  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'true', 'Space should toggle the switch');
+  assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'false', 'Space should toggle the Still Field switch');
+
+  await page.focus('#stillGlassToggle');
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(200);
+  assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'true', 'Space should toggle the glass switch');
 });
 
 // ==========================================================
@@ -380,6 +474,7 @@ test('the Still Field switch responds to the keyboard', async page => {
 const server = await startServer(ROOT);
 const browser = await chromium.launch({
   headless: !HEADED,
+  executablePath: CHROMIUM_PATH,
   args: ['--autoplay-policy=no-user-gesture-required'],
 });
 

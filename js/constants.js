@@ -20,6 +20,9 @@ export const NOISE_TYPES = ['brown', 'pink', 'white'];
 /** Themes supported by css/styles.css via [data-still-theme] */
 export const THEMES = ['dark', 'bone'];
 
+/** Glass surface modes supported by css/styles.css via [data-glass] */
+export const GLASS_MODES = ['standard', 'ultra'];
+
 /** Defaults applied when nothing is persisted yet */
 export const DEFAULTS = {
   type: 'brown',
@@ -27,13 +30,23 @@ export const DEFAULTS = {
   timerHours: 0,
   theme: 'dark',
   eq: 0,
-  stillFieldEnabled: false,
+  stillFieldEnabled: true,
   stillFieldIntensity: 0.55,
+  stillFieldSpeed: 1.25,
+  stillGlassTransparent: false,
 };
 
 /** EQ gain range in dB — must match the slider min/max in index.html */
 export const EQ_MIN_DB = -12;
 export const EQ_MAX_DB = 12;
+
+/**
+ * Still Field drift speed multiplier — must match the slider min/max in
+ * index.html. 1 is the original slow drift; the default sits a little above it
+ * so the field reads as alive rather than frozen, without becoming busy.
+ */
+export const STILL_SPEED_MIN = 0.4;
+export const STILL_SPEED_MAX = 2.0;
 
 /** Clean SVG icons (simple paths — free to use, no external assets) */
 export const PLAY_ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -50,4 +63,6 @@ export const STORAGE_KEYS = {
   stillEqHigh: 'complexNoise_stillEqHigh',
   stillFieldEnabled: 'complexNoise_stillFieldEnabled',
   stillFieldIntensity: 'complexNoise_stillFieldIntensity',
+  stillFieldSpeed: 'complexNoise_stillFieldSpeed',
+  stillGlassTransparent: 'complexNoise_stillGlassTransparent',
 };

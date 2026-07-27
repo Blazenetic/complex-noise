@@ -37,9 +37,9 @@ there silently.)
 - Sleep timer (Off / 1h / 2h / 4h / 8h / 10h) with gentle fade-out
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
-- **Still Field**: Optional full-page nodes-and-edges graph visualisation (default **off**). Subtle silver/titanium nodes connected by soft edges that slowly drift and reconfigure. Driven gently by audio analysis. Easy on/off toggle + intensity control
+- **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders
 - **Still EQ**: Simple 3-band (low / mid / high) equaliser with calm sliders
-- **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field visualisation shows through beautifully in both themes
+- **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
 - Refined vibrant purple play button (gradient + soft glow) that remains the clear focal point
 - Clean inline SVG icons for play/pause (no external assets)
 - Large touch targets, mobile-first, improved focus rings and ARIA for accessibility
@@ -70,8 +70,8 @@ complex-noise/
 │   ├── storage.js          # Safe, typed localStorage access
 │   ├── noise.js            # generateNoiseBuffer() — white / brown / pink
 │   ├── audio.js            # AudioContext, EQ chain, play/stop, volume, timer, wake lock
-│   ├── still-field.js      # Canvas nodes+edges visualisation driven by analyser
-│   ├── theme.js            # Still Theme (dark ↔ bone) + meta updates
+│   ├── still-field.js      # Canvas 3D nodes+edges visualisation driven by analyser
+│   ├── theme.js            # Still Theme (dark ↔ bone) + glass mode + meta updates
 │   └── app.js              # DOM wiring, event listeners, boot sequence
 ├── tests/
 │   └── run.mjs             # Browser smoke tests (Playwright)
@@ -104,15 +104,48 @@ All noise is synthesized in `js/noise.js` → `generateNoiseBuffer(audioCtx, typ
 Buffers are long enough that the loop point is effectively inaudible for these stochastic signals. State (last sample / filter coefficients) is continuous *within* each buffer.
 
 **Still Field visualisation**  
-Full-viewport canvas layer behind the UI (`js/still-field.js`). Renders a calm nodes-and-edges graph:
-- Small number of nodes (~24–36) that drift very slowly
-- Soft edges appear between nearby nodes (distance-based opacity)
-- Node/edge colours are subtle silver-titanium (dark theme) or muted warm grey (bone theme)
-- Motion and connection strength are gently influenced by `AnalyserNode` frequency metrics and the intensity slider
-- Completely optional — defaults to **off** so pure audio users see nothing extra. Toggle lives in the main controls area for easy access
+Full-viewport Canvas 2D layer behind the UI (`js/still-field.js`), 26–44 nodes
+depending on viewport. No WebGL, no library — the depth is real perspective
+maths, not a 3D engine.
+
+- **Depth.** Each node carries a `z` and projects through a pinhole camera,
+  `scale = 1 / (1 + z · 0.75)`, about the screen centre. That gives genuine
+  parallax: near nodes are larger, brighter and sweep across faster than distant
+  ones. `z` follows a bounded sinusoid, so nodes breathe toward and away from
+  the viewer without any chance of drifting out of the volume overnight. The
+  world plane is sized `1 / minScale` larger than the viewport so far nodes
+  still reach the screen edges instead of leaving a bare border.
+- **Linking.** Connections are made on 3D distance, so two nodes that merely
+  overlap on screen at different depths stay unconnected. The link radius is
+  derived from mean node spacing rather than fixed in pixels, which holds the
+  graph at roughly three connections per node on a phone and a desktop alike.
+- **Lifecycle.** Nodes live 70–150 s, easing in and out. Replacements are placed
+  on the R2 low-discrepancy sequence (Roberts, 2018) instead of at random, so
+  coverage stays even without any repulsion pass. When a node fades, its links
+  retract along themselves into the surviving node.
+- **Energy.** Three layers that never line up: a per-node breath, a plane wave
+  crossing the field at an irrational angle, and the analyser's mid/high bands.
+  Energy drives size, line weight, colour along the violet → cyan ramp, and
+  glow. Silence leaves the first two, so the field still lives while paused.
+  Because the ramp is weighted toward the audio's mid and high content, brown
+  noise keeps the field violet and calm while white noise pushes it to cyan.
+- **New links pulse.** The brightness transient on a fresh connection is just
+  the error signal of the link's envelope — the gap between where a link wants
+  to be and where it is, which peaks the instant two nodes come into range.
+- **Battery.** Runs at 30 fps with motion integrated from real elapsed time (so
+  it drifts identically at 30, 60 or 120 Hz), stops the loop entirely when the
+  page is hidden, allocates nothing per frame, and rations `shadowBlur` to the
+  few highest-energy nodes. `prefers-reduced-motion` slows it and drops the glow.
+- Colours come from `--still-field-*` custom properties, read once per theme
+  change — restyling the field is a CSS edit.
 
 **Glass surfaces**  
-Control panels, type selector, theme toggle and EQ use translucent `rgba` backgrounds + `backdrop-filter: blur(...)` so the living Still Field remains visible and the whole interface feels lighter and more premium.
+Control panels, type selector, theme toggle and EQ use translucent `rgba`
+backgrounds + `backdrop-filter: blur(...)`. Transparency is a second axis
+alongside the theme, set by `data-glass` on `<html>`: `standard` (default) or
+`ultra`, which drops surface opacity far enough for the field to read through
+the panels. Both combine freely with either theme; text, the play button and the
+active noise type keep their contrast in all four combinations.
 
 **Key extension points for AI agents**
 - `js/noise.js` → add a generator to `GENERATORS` + a `data-type` button; `app.js` wires it automatically
@@ -125,7 +158,8 @@ See [AGENTS.md](./AGENTS.md#common-tasks) for step-by-step recipes.
 **State (localStorage keys)**  
 `complexNoise_type`, `complexNoise_volume`, `complexNoise_timer`,  
 `complexNoise_stillTheme`, `complexNoise_stillEqLow/Mid/High`,  
-`complexNoise_stillFieldEnabled` (default false), `complexNoise_stillFieldIntensity`
+`complexNoise_stillFieldEnabled` (default true), `complexNoise_stillFieldIntensity`,  
+`complexNoise_stillFieldSpeed` (0.4–2.0, default 1.25), `complexNoise_stillGlassTransparent`
 
 All keys are centralised in `js/constants.js` → `STORAGE_KEYS`, and read/written
 through `js/storage.js`, which degrades gracefully when storage is unavailable
@@ -141,9 +175,15 @@ npm test -- --headed
 
 `tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts
 its own static server, so nothing needs to be running first. It covers playback
-and the fade-out/restart race, the sleep timer, persistence (including corrupt
-and zero values), theming, the canvas visualisation, the spectral tilt of each
-noise colour, and basic accessibility (labels and 44px touch targets).
+and the fade-out/restart race, the sleep timer, persistence (including corrupt,
+zero and out-of-range values), theming and glass mode, the canvas visualisation
+(that it paints, stays transparent, and stops while the page is hidden), the
+spectral tilt of each noise colour, and basic accessibility (labels and 44px
+touch targets).
+
+If your environment ships a pre-provisioned Chromium rather than letting
+Playwright download one, point the suite at it with
+`PLAYWRIGHT_CHROMIUM_PATH=/path/to/chromium npm test`.
 
 CI runs the suite and ESLint on every pull request.
 

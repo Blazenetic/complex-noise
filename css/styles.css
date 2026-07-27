@@ -216,12 +216,14 @@ header {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
-  min-height: 40px;
+  /* 44px is the minimum comfortable touch target (WCAG 2.5.5) — this app is
+     tapped one-handed in the dark, so no control goes below it. */
+  min-height: 44px;
 }
 
 .still-theme-toggle.compact {
   padding: 6px 12px;
-  min-height: 36px;
+  min-height: 44px;
   font-size: 0.78rem;
 }
 

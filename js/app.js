@@ -70,8 +70,10 @@ const els = {
   fieldNerdToggle: document.getElementById('stillFieldNerdToggle'),
   fieldTextureToggle: document.getElementById('stillFieldTextureToggle'),
   stillTextureEl: document.querySelector('.still-texture'),
-  // Info layer readout
+  // Info layer readout + fold + mobile launcher
   nerdHud: document.getElementById('nerdHud'),
+  nerdFoldBtn: document.getElementById('nerdFoldBtn'),
+  nerdMobileToggle: document.getElementById('nerdMobileToggle'),
   nerdTabs: Array.from(document.querySelectorAll('[data-nerd-view]')),
   nerdViews: Array.from(document.querySelectorAll('.nerd-hud-view')),
   nerdHealth: document.getElementById('nerdHealth'),
@@ -221,7 +223,20 @@ function updateNerdHud() {
 function syncNerdHud(state) {
   const on = Boolean(state.nerd && state.enabled);
 
-  if (els.nerdHud) els.nerdHud.hidden = !on;
+  if (els.nerdHud) {
+    els.nerdHud.hidden = !on;
+    els.nerdHud.classList.toggle('nerd-hud--folded', Boolean(state.nerdFolded));
+  }
+
+  if (els.nerdFoldBtn) {
+    els.nerdFoldBtn.setAttribute('aria-expanded', state.nerdFolded ? 'false' : 'true');
+    els.nerdFoldBtn.setAttribute('aria-label', state.nerdFolded ? 'Expand stats panel' : 'Fold stats panel');
+    els.nerdFoldBtn.title = state.nerdFolded ? 'Expand' : 'Fold';
+  }
+
+  if (els.nerdMobileToggle) {
+    els.nerdMobileToggle.setAttribute('aria-pressed', state.nerd ? 'true' : 'false');
+  }
 
   const shouldRun = on && document.visibilityState !== 'hidden';
   if (shouldRun && nerdHudTimerId === null) {
@@ -337,9 +352,9 @@ function renderStillField(state) {
   els.fieldIntensity.setAttribute('aria-valuetext', `${Math.round(state.intensity * 100)} percent`);
   els.fieldSpeed.setAttribute('aria-valuetext', `${state.speed.toFixed(2)} times`);
 
-  // Package D/E — info labels + background texture toggles
+  // Stats card button (distinctive control, not a still-switch)
   if (els.fieldNerdToggle) {
-    els.fieldNerdToggle.setAttribute('aria-checked', state.nerd ? 'true' : 'false');
+    els.fieldNerdToggle.setAttribute('aria-pressed', state.nerd ? 'true' : 'false');
     // Labels are painted on the canvas, so the control is dead while the field
     // is off — disable it alongside the sliders rather than leaving it live.
     els.fieldNerdToggle.disabled = !state.enabled;
@@ -364,7 +379,7 @@ function renderStillField(state) {
   });
 
   // The stats readout is the other half of the info layer, so it follows the
-  // same toggle as the on-canvas labels.
+  // same toggle as the on-canvas labels. Also applies fold class.
   syncNerdHud(state);
 }
 
@@ -498,13 +513,27 @@ function bindEvents() {
 
   bindSwitch(els.glassToggle, () => theme.toggleGlassMode());
 
-  // Package D/E wiring
-  bindSwitch(els.fieldNerdToggle, () => {
-    stillField.setStillFieldNerd(!stillField.getStillFieldNerd());
-  });
+  // Stats card button (distinctive control)
+  if (els.fieldNerdToggle) {
+    els.fieldNerdToggle.addEventListener('click', () => {
+      stillField.setStillFieldNerd(!stillField.getStillFieldNerd());
+    });
+  }
   bindSwitch(els.fieldTextureToggle, () => {
     stillField.setStillFieldTexture(!stillField.getStillFieldTexture());
   });
+
+  // Fold control on the HUD itself
+  if (els.nerdFoldBtn) {
+    els.nerdFoldBtn.addEventListener('click', () => stillField.toggleNerdFolded());
+  }
+
+  // Mobile top-left Stats launcher
+  if (els.nerdMobileToggle) {
+    els.nerdMobileToggle.addEventListener('click', () => {
+      stillField.setStillFieldNerd(!stillField.getStillFieldNerd());
+    });
+  }
 
   els.nerdTabs.forEach((tab, index) => {
     tab.addEventListener('click', () => stillField.setNerdView(tab.dataset.nerdView));

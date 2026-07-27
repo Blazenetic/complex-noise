@@ -23,7 +23,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Lint
-        run: npm run lint
+        run: npx eslint js
 
       - name: Test
         run: npm test

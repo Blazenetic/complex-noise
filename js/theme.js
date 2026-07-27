@@ -1,52 +1,70 @@
 /**
  * Still Theme management.
  *
- * Applies data-still-theme attribute, updates meta theme-color / color-scheme,
- * and persists preference. Calls an optional onThemeChange callback so
- * Still Field can re-seed node colours immediately.
+ * Owns the `data-still-theme` attribute on <html> and the two meta tags that
+ * must follow it (`theme-color` drives the Android browser chrome, and
+ * `color-scheme` drives native form control rendering).
+ *
+ * Like audio.js and still-field.js, this module publishes state rather than
+ * updating widgets itself — app.js renders the toggle's icon and label.
+ *
+ * Adding a third theme: add its token block to css/styles.css under
+ * `[data-still-theme="..."]`, add the name to THEMES in constants.js, and give
+ * it an entry in THEME_META below.
  */
 
-import { STORAGE_KEYS } from './constants.js';
+import { STORAGE_KEYS, THEMES, DEFAULTS } from './constants.js';
+import { write, readEnum } from './storage.js';
 
-let stillTheme = localStorage.getItem(STORAGE_KEYS.stillTheme) || 'dark';
+/** Per-theme browser chrome colours, keyed by theme name. */
+export const THEME_META = {
+  dark: { themeColor: '#0C0C11', colorScheme: 'dark' },
+  bone: { themeColor: '#F4F0E8', colorScheme: 'light' },
+};
 
-/**
- * @returns {'dark'|'bone'}
- */
+let stillTheme = readEnum(STORAGE_KEYS.stillTheme, THEMES, DEFAULTS.theme);
+
+const listeners = new Set();
+
+/** @returns {'dark'|'bone'} */
 export function getStillTheme() {
   return stillTheme;
 }
 
 /**
- * Apply a theme and persist it.
- * @param {'dark'|'bone'} theme
- * @param {(theme: string) => void} [onThemeChange] optional callback (e.g. re-seed Still Field)
+ * Subscribe to theme changes. Fires immediately with the current theme.
+ * @param {(theme: string) => void} fn
+ * @returns {() => void} unsubscribe
  */
-export function applyStillTheme(theme, onThemeChange) {
-  stillTheme = theme;
-  document.documentElement.setAttribute('data-still-theme', theme);
-  localStorage.setItem(STORAGE_KEYS.stillTheme, theme);
-
-  const isBone = theme === 'bone';
-  const themeColorMeta = document.getElementById('themeColorMeta');
-  if (themeColorMeta) themeColorMeta.content = isBone ? '#F4F0E8' : '#0C0C11';
-
-  const schemeMeta = document.querySelector('meta[name="color-scheme"]');
-  if (schemeMeta) schemeMeta.content = isBone ? 'light' : 'dark';
-
-  // Update toggle UI if present
-  const icon = document.getElementById('stillThemeIcon');
-  const label = document.getElementById('stillThemeLabel');
-  if (icon) icon.textContent = isBone ? '◑' : '◐';
-  if (label) label.textContent = isBone ? 'Still · Bone' : 'Still · Dark';
-
-  if (onThemeChange) onThemeChange(theme);
+export function subscribe(fn) {
+  listeners.add(fn);
+  fn(stillTheme);
+  return () => listeners.delete(fn);
 }
 
 /**
- * Toggle between dark and bone.
- * @param {(theme: string) => void} [onThemeChange]
+ * Apply a theme and persist it.
+ * @param {'dark'|'bone'} theme
  */
-export function toggleStillTheme(onThemeChange) {
-  applyStillTheme(stillTheme === 'dark' ? 'bone' : 'dark', onThemeChange);
+export function applyStillTheme(theme) {
+  if (!THEMES.includes(theme)) return;
+  stillTheme = theme;
+
+  document.documentElement.setAttribute('data-still-theme', theme);
+  write(STORAGE_KEYS.stillTheme, theme);
+
+  const meta = THEME_META[theme] || THEME_META.dark;
+  const themeColorMeta = document.getElementById('themeColorMeta');
+  if (themeColorMeta) themeColorMeta.content = meta.themeColor;
+
+  const schemeMeta = document.querySelector('meta[name="color-scheme"]');
+  if (schemeMeta) schemeMeta.content = meta.colorScheme;
+
+  listeners.forEach(fn => fn(stillTheme));
+}
+
+/** Cycle to the next theme (currently dark ↔ bone). */
+export function toggleStillTheme() {
+  const next = THEMES[(THEMES.indexOf(stillTheme) + 1) % THEMES.length];
+  applyStillTheme(next);
 }

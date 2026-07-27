@@ -144,6 +144,10 @@ let stillFieldSpeed = clamp(
 let stillFieldNerd = readBool(STORAGE_KEYS.stillFieldNerd, DEFAULTS.stillFieldNerd);
 let stillFieldTexture = readBool(STORAGE_KEYS.stillFieldTexture, DEFAULTS.stillFieldTexture);
 
+// Session-only fold for the HUD panel (does not persist). Default folded on
+// narrow viewports so the main interface is not blocked on first open.
+let nerdFolded = typeof window !== 'undefined' && window.innerWidth <= 520;
+
 // --- Runtime ---
 let stillFieldNodes = [];
 let linkState = new Float32Array(0); // [i * n + j] link strength, i < j
@@ -296,7 +300,7 @@ const listeners = new Set();
 
 /**
  * @returns {{enabled: boolean, intensity: number, speed: number, nerd: boolean,
- *   texture: boolean, nerdView: string}}
+ *   texture: boolean, nerdView: string, nerdFolded: boolean}}
  */
 export function getState() {
   return {
@@ -306,6 +310,7 @@ export function getState() {
     nerd: stillFieldNerd,
     texture: stillFieldTexture,
     nerdView,
+    nerdFolded,
   };
 }
 
@@ -343,6 +348,10 @@ export function getStillFieldNerd() {
 
 export function getStillFieldTexture() {
   return stillFieldTexture;
+}
+
+export function getNerdFolded() {
+  return nerdFolded;
 }
 
 /**
@@ -1331,6 +1340,20 @@ export function setStillFieldNerd(on) {
   write(STORAGE_KEYS.stillFieldNerd, stillFieldNerd);
   if (!stillFieldNerd) measuredFrameMs = 0;
   emit();
+}
+
+/**
+ * Fold or expand the stats HUD. Session-only (does not persist).
+ * @param {boolean} folded
+ */
+export function setNerdFolded(folded) {
+  nerdFolded = Boolean(folded);
+  emit();
+}
+
+/** Toggle the fold state of the stats HUD. */
+export function toggleNerdFolded() {
+  setNerdFolded(!nerdFolded);
 }
 
 /**

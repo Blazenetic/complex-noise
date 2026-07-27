@@ -91,7 +91,7 @@ complex-noise/
 ├── README.md
 ├── LICENSE
 ├── CHANGELOG.md            # What shipped + Lab Log
-└── docs/                   # Lab Voice, historical requirements, visitor notes
+└── docs/                   # Historical requirements, visitor notes, Meet the Lab
 ```
 
 **State flows one way.** `audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` own state
@@ -256,5 +256,5 @@ Copyright (c) 2026 Blazenetic
 ---
 
 Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
-See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [Lab Voice](docs/LAB_VOICE.md) for the rules.  
+See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list.  
 Sleep well. (Or don’t. We’re not your parents.)

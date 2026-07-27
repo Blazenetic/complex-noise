@@ -2,7 +2,7 @@
 
 All notable changes to Complex Noise are documented here.
 
-The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section written in full [Lab Voice](docs/LAB_VOICE.md).
+The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section written in full Lab Voice (style guide lives in the project Google Drive).
 
 ---
 

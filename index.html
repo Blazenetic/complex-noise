@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-still-theme="dark">
+<html lang="en" data-still-theme="dark" data-glass="standard">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
@@ -69,11 +69,20 @@
       <div class="still-field-controls">
         <div class="still-toggle-row">
           <span id="stillFieldLabel">Still Field</span>
-          <button type="button" class="still-switch" id="stillFieldToggle" role="switch" aria-checked="false" aria-labelledby="stillFieldLabel"></button>
+          <button type="button" class="still-switch" id="stillFieldToggle" role="switch" aria-checked="true" aria-labelledby="stillFieldLabel"></button>
         </div>
         <div class="still-field-row">
           <label for="stillFieldIntensity">Intensity</label>
           <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.55" />
+        </div>
+        <!-- Range must match STILL_SPEED_MIN / STILL_SPEED_MAX in js/constants.js -->
+        <div class="still-field-row">
+          <label for="stillFieldSpeed">Speed</label>
+          <input type="range" id="stillFieldSpeed" min="0.4" max="2" step="0.05" value="1.25" />
+        </div>
+        <div class="still-toggle-row is-secondary">
+          <span id="stillGlassLabel">Ultra-transparent glass</span>
+          <button type="button" class="still-switch" id="stillGlassToggle" role="switch" aria-checked="false" aria-labelledby="stillGlassLabel"></button>
         </div>
       </div>
 

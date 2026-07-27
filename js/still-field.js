@@ -149,6 +149,7 @@ let stillFieldNodes = [];
 let linkState = new Float32Array(0); // [i * n + j] link strength, i < j
 let spawnIndex = 0;                  // drives the R2 sequence
 let clockS = 0;                      // speed-scaled animation clock, in seconds
+let infoClockS = 0;                  // real accepted time; diagnostics ignore drift speed
 let stillFieldRaf = null;
 let lastFrameMs = 0;
 let lastDrawMs = 0;
@@ -165,6 +166,8 @@ let linkRadius = 0;    // world units
 let zWorld = 0;        // world units a full depth traverse is worth when linking
 let stillFieldDpr = 1;
 let resizeDebounceId = null;
+let nodeSerial = 0;
+let nerdView = 'live';
 
 // Theme-derived colours, refreshed by refreshThemeColors()
 const nodePalette = new Array(COLOR_STEPS).fill('rgb(190,195,210)');
@@ -182,8 +185,15 @@ const reducedMotionQuery = typeof window !== 'undefined' && window.matchMedia
   : null;
 let reducedMotion = reducedMotionQuery ? reducedMotionQuery.matches : false;
 
-/** Most info labels drawn at once. */
-const MAX_LABELS = 4;
+/** Most info labels drawn at once; phones retain the quieter original cap. */
+const MAX_LABELS = 6;
+const PHONE_MAX_LABELS = 4;
+const LABEL_WIDE_VIEWPORT = 720;
+/** A detail mode stays put long enough to be read rather than merely glimpsed. */
+const LABEL_MODE_SECONDS = 8;
+/** Dynamic label strings are refreshed at human speed, not canvas speed. */
+const LABEL_VALUE_SECONDS = 1;
+const LABEL_MODE_NAMES = ['energy', 'position', 'velocity', 'projection', 'wave'];
 /**
  * Energy a node must exceed before it earns a label.
  *
@@ -210,7 +220,7 @@ const LABEL_FONT = '11px system-ui, -apple-system, sans-serif';
  * off-screen label costs a `fillText` and shows nothing, so they never become
  * candidates. Wide enough for a centred "0.00" plus its offset above the node.
  */
-const LABEL_EDGE_X = 18;
+const LABEL_EDGE_X = 82;
 const LABEL_EDGE_Y = 26;
 
 /**
@@ -218,8 +228,12 @@ const LABEL_EDGE_Y = 26;
  * test the label against the keep-out rectangle, so the test covers the text
  * rather than the node it belongs to.
  */
-const LABEL_BOX_HALF_W = 14;
+const LABEL_BOX_HALF_W = 78;
 const LABEL_BOX_H = 30;
+const EDGE_LABEL_BOX_HALF_W = 42;
+const EDGE_LABEL_BOX_H = 24;
+const MAX_EDGE_LABELS = 3;
+const EDGE_LABEL_MIN_STRENGTH = 0.18;
 
 /**
  * Screen rectangles the labels must stay out of, in CSS px. Empty means none.
@@ -240,30 +254,40 @@ let labelKeepOuts = [];
 
 // Pre-sized label candidate indices (no allocation in render loop)
 const labelCandidates = new Int16Array(MAX_LABELS);
+const labelDrawnX = new Float32Array(MAX_LABELS);
+const labelDrawnY = new Float32Array(MAX_LABELS);
+const edgeSampleX = new Float32Array(MAX_EDGE_LABELS);
+const edgeSampleY = new Float32Array(MAX_EDGE_LABELS);
+const edgeSampleDistance = new Uint16Array(MAX_EDGE_LABELS);
+const edgeSampleAngle = new Int16Array(MAX_EDGE_LABELS);
+
+// Quantised once at module load. Edge annotations can then paint changing
+// measurements without allocating strings in the render loop.
+const DISTANCE_TEXT = new Array(1001);
+for (let i = 0; i < DISTANCE_TEXT.length; i++) DISTANCE_TEXT[i] = `d₃ ${i}`;
+const ANGLE_TEXT = new Array(361);
+for (let i = 0; i < ANGLE_TEXT.length; i++) ANGLE_TEXT[i] = `θ ${i - 180}°`;
 
 // --- Live statistics for the info layer's HUD ---
 /** Smoothing rate (per second) for the displayed frame rate. */
 const FPS_SMOOTH = 3;
 let measuredFps = 0;
+let measuredFrameMs = 0;
 let lastEdgeCount = 0;
 let lastLabelCount = 0;
+let lastEdgeLabelCount = 0;
 /**
  * Reused snapshot object. `getStillFieldStats()` is polled a few times a second
  * by the HUD, and handing back a fresh object each time would allocate for no
  * reason — the same argument as the pre-quantised palettes.
  */
 const statsSnapshot = {
-  fps: 0, nodes: 0, edges: 0, labels: 0, energy: 0, speed: 0, intensity: 0, reducedMotion: false,
+  fps: 0, frameMs: 0, nodes: 0, edges: 0, pairChecks: 0,
+  meanDegree: 0, density: 0, labels: 0, edgeLabels: 0, labelCapacity: 0,
+  labelMode: LABEL_MODE_NAMES[0], energy: 0, wavePhase: 0,
+  waveAngle: Math.atan2(WAVE_KY, WAVE_KX) * 180 / Math.PI,
+  speed: 0, intensity: 0, reducedMotion: false,
 };
-
-/**
- * Energy readouts, pre-rendered to two decimals. `toFixed` allocates a fresh
- * string every call, and four labels at 30 fps is a quarter of a million
- * throwaway strings an hour — the same reason the colour ramps are quantised
- * into palettes rather than built per node.
- */
-const LABEL_TEXT = new Array(101);
-for (let i = 0; i <= 100; i++) LABEL_TEXT[i] = (i / 100).toFixed(2);
 
 // ----------------------------------------------------------
 // Subscriptions (mirrors the pattern in audio.js)
@@ -271,7 +295,8 @@ for (let i = 0; i <= 100; i++) LABEL_TEXT[i] = (i / 100).toFixed(2);
 const listeners = new Set();
 
 /**
- * @returns {{enabled: boolean, intensity: number, speed: number, nerd: boolean, texture: boolean}}
+ * @returns {{enabled: boolean, intensity: number, speed: number, nerd: boolean,
+ *   texture: boolean, nerdView: string}}
  */
 export function getState() {
   return {
@@ -280,6 +305,7 @@ export function getState() {
     speed: stillFieldSpeed,
     nerd: stillFieldNerd,
     texture: stillFieldTexture,
+    nerdView,
   };
 }
 
@@ -325,15 +351,26 @@ export function getStillFieldTexture() {
  * Returns a shared object that is overwritten on each call — read what you need
  * immediately rather than holding on to it.
  *
- * @returns {{fps: number, nodes: number, edges: number, labels: number,
- *   energy: number, speed: number, intensity: number, reducedMotion: boolean}}
+ * @returns {{fps: number, frameMs: number, nodes: number, edges: number,
+ *   pairChecks: number, meanDegree: number, density: number, labels: number,
+ *   edgeLabels: number, labelCapacity: number, labelMode: string, energy: number,
+ *   wavePhase: number, waveAngle: number, speed: number, intensity: number,
+ *   reducedMotion: boolean}}
  */
 export function getStillFieldStats() {
   statsSnapshot.fps = measuredFps;
+  statsSnapshot.frameMs = measuredFrameMs;
   statsSnapshot.nodes = stillFieldNodes.length;
   statsSnapshot.edges = lastEdgeCount;
+  statsSnapshot.pairChecks = stillFieldNodes.length * (stillFieldNodes.length - 1) / 2;
+  statsSnapshot.meanDegree = stillFieldNodes.length ? lastEdgeCount * 2 / stillFieldNodes.length : 0;
+  statsSnapshot.density = statsSnapshot.pairChecks ? lastEdgeCount / statsSnapshot.pairChecks : 0;
   statsSnapshot.labels = lastLabelCount;
+  statsSnapshot.edgeLabels = lastEdgeLabelCount;
+  statsSnapshot.labelCapacity = stillFieldW >= LABEL_WIDE_VIEWPORT ? MAX_LABELS : PHONE_MAX_LABELS;
+  statsSnapshot.labelMode = LABEL_MODE_NAMES[Math.floor(infoClockS / LABEL_MODE_SECONDS) % LABEL_MODE_NAMES.length];
   statsSnapshot.energy = stillEnergy;
+  statsSnapshot.wavePhase = ((clockS * WAVE_RATE) % (Math.PI * 2)) * 180 / Math.PI;
   statsSnapshot.speed = stillFieldSpeed;
   statsSnapshot.intensity = stillFieldIntensity;
   statsSnapshot.reducedMotion = reducedMotion;
@@ -560,6 +597,7 @@ function resizeStillField() {
  */
 function respawnNode(n, seeded = false) {
   const i = spawnIndex++;
+  n.id = ++nodeSerial;
 
   // World coordinates are centred on the origin; the camera sits on the axis.
   n.x = (((0.5 + R2_A1 * i) % 1) - 0.5) * worldW;
@@ -582,6 +620,9 @@ function respawnNode(n, seeded = false) {
   n.life = seeded ? Math.random() : 0;
   n.lifeRate = 1 / (LIFE_MIN_S + Math.random() * (LIFE_MAX_S - LIFE_MIN_S));
   n.energy = 0;
+  n.labelMode = -1;
+  n.labelNextUpdate = 0;
+  n.labelText = '';
 }
 
 /** Forget every link touching node `index` — a respawned node is a new node. */
@@ -607,9 +648,11 @@ export function initStillFieldNodes(force = false) {
 
   for (let i = 0; i < count; i++) {
     const n = {
+      id: 0,
       x: 0, y: 0, z: 0, zBase: 0, zAmp: 0, zRate: 0, zPhase: 0,
       vx: 0, vy: 0, phase: 0, phaseRate: 0,
       life: 0, lifeRate: 0, energy: 0,
+      labelMode: -1, labelNextUpdate: 0, labelText: '',
       // Scratch fields, written during update and read during draw. Keeping
       // them on the node is what lets the draw pass allocate nothing.
       sx: 0, sy: 0, scale: 0, fade: 0,
@@ -733,9 +776,15 @@ function frame(nowMs) {
   const speed = reducedMotion ? stillFieldSpeed * 0.35 : stillFieldSpeed;
   const adt = dt * speed;   // the animation clock advances at the user's speed
   clockS += adt;
+  infoClockS += dt;
 
+  const workStart = stillFieldNerd ? performance.now() : 0;
   update(adt);
   draw(adt);
+  if (stillFieldNerd) {
+    const workK = 1 - Math.exp(-FPS_SMOOTH * dt);
+    measuredFrameMs += (performance.now() - workStart - measuredFrameMs) * workK;
+  }
 }
 
 function update(adt) {
@@ -848,6 +897,7 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
   const releaseK = 1 - Math.exp(-LINK_RELEASE * adt);
 
   let drawn = 0;
+  let sampled = 0;
 
   for (let i = 0; i < n; i++) {
     const a = nodes[i];
@@ -867,7 +917,11 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
       // zero. The 0.65 exponent lifts the mid-range so the lattice reads as
       // structure rather than as a few bright pairs in a haze.
       let target = 0;
-      if (distSq < r2) target = Math.pow(1 - Math.sqrt(distSq) * invR, 0.65);
+      let distance = 0;
+      if (distSq < r2) {
+        distance = Math.sqrt(distSq);
+        target = Math.pow(1 - distance * invR, 0.65);
+      }
 
       const prev = linkState[k];
       // The arrival transient falls straight out of the envelope: the gap
@@ -912,10 +966,57 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
       ctx.lineTo(bx, by);
       ctx.stroke();
       drawn++;
+
+      // Piggyback on this existing O(n²) pass: a small deterministic sample of
+      // established edges gets real world distance and projected angle. No
+      // sorting, arrays, or second graph scan are introduced.
+      if (stillFieldNerd && sampled < MAX_EDGE_LABELS
+        && strength >= EDGE_LABEL_MIN_STRENGTH && distance > 0
+        && ((i * 31 + j * 17) % 5 === 0)) {
+        const mx = (ax + bx) * 0.5;
+        const my = (ay + by) * 0.5;
+        let overlapsSample = false;
+        for (let sample = 0; sample < sampled; sample++) {
+          if (Math.abs(mx - edgeSampleX[sample]) < EDGE_LABEL_BOX_HALF_W * 2
+            && Math.abs(my - edgeSampleY[sample]) < EDGE_LABEL_BOX_H) {
+            overlapsSample = true;
+            break;
+          }
+        }
+        if (mx >= EDGE_LABEL_BOX_HALF_W && mx <= stillFieldW - EDGE_LABEL_BOX_HALF_W
+          && my >= EDGE_LABEL_BOX_H && my <= stillFieldH
+          && !overlapsSample
+          && !hitsKeepOutBox(mx, my, EDGE_LABEL_BOX_HALF_W, EDGE_LABEL_BOX_H)) {
+          edgeSampleX[sampled] = mx;
+          edgeSampleY[sampled] = my;
+          edgeSampleDistance[sampled] = clamp(Math.round(distance), 0, DISTANCE_TEXT.length - 1);
+          edgeSampleAngle[sampled] = clamp(
+            Math.round(Math.atan2(by - ay, bx - ax) * 180 / Math.PI),
+            -180,
+            180,
+          );
+          sampled++;
+        }
+      }
     }
   }
 
   lastEdgeCount = drawn;
+  lastEdgeLabelCount = sampled;
+  if (sampled > 0) drawEdgeLabels(ctx, sampled);
+}
+
+function drawEdgeLabels(ctx, count) {
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.globalAlpha = 0.58;
+  ctx.fillStyle = edgePalette[COLOR_STEPS - 1];
+  for (let i = 0; i < count; i++) {
+    const x = edgeSampleX[i] - EDGE_LABEL_BOX_HALF_W + 2;
+    const y = edgeSampleY[i];
+    ctx.fillText(DISTANCE_TEXT[edgeSampleDistance[i]], x, y - 1);
+    ctx.fillText(ANGLE_TEXT[edgeSampleAngle[i] + 180], x, y + 10);
+  }
 }
 
 function drawNodes(ctx, nodes, n, intensity) {
@@ -1015,25 +1116,54 @@ function drawNodes(ctx, nodes, n, intensity) {
  * tested is the text's, not the node's — the readout is drawn centred above the
  * node, so those are not the same place.
  */
-function hitsKeepOut(sx, sy) {
+function hitsKeepOutBox(sx, sy, halfWidth, height) {
   for (let i = 0; i < labelKeepOuts.length; i++) {
     const r = labelKeepOuts[i];
-    if (sx + LABEL_BOX_HALF_W > r.left
-      && sx - LABEL_BOX_HALF_W < r.right
+    if (sx + halfWidth > r.left
+      && sx - halfWidth < r.right
       && sy > r.top
-      && sy - LABEL_BOX_H < r.bottom) return true;
+      && sy - height < r.bottom) return true;
   }
   return false;
 }
 
 /**
- * Sparse energy-gated labels — at most MAX_LABELS, on the nodes nearest the
- * viewer. Allocates nothing: candidates land in a pre-sized index array and the
- * readouts come from a pre-built string table.
+ * Refresh a node's compact callout at one-second cadence. The renderer reuses
+ * the cached string between refreshes, avoiding 30 string builds per second.
+ */
+function refreshNodeLabel(node, mode) {
+  if (node.labelMode === mode && infoClockS < node.labelNextUpdate) return;
+
+  const id = `n${String(node.id).padStart(3, '0')}`;
+  if (mode === 0) {
+    const phase = Math.round(((node.phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) * 180 / Math.PI);
+    node.labelText = `${id} · E ${node.energy.toFixed(2)} · φ ${phase}°`;
+  } else if (mode === 1) {
+    node.labelText = `${id} · xyz ${Math.round(node.x)}, ${Math.round(node.y)}, ${node.z.toFixed(2)}`;
+  } else if (mode === 2) {
+    const speed = Math.hypot(node.vx, node.vy);
+    const heading = Math.round(Math.atan2(node.vy, node.vx) * 180 / Math.PI);
+    node.labelText = `${id} · v ${speed.toFixed(1)} · θ ${heading}°`;
+  } else if (mode === 3) {
+    node.labelText = `${id} · s ${node.scale.toFixed(2)} · life ${Math.round(node.life * 100)}%`;
+  } else {
+    const wave = clockS * WAVE_RATE - (node.x * WAVE_KX + node.y * WAVE_KY);
+    const phase = Math.round((((wave % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 180 / Math.PI);
+    node.labelText = `${id} · wave ${phase}°`;
+  }
+  node.labelMode = mode;
+  node.labelNextUpdate = infoClockS + LABEL_VALUE_SECONDS;
+}
+
+/**
+ * Sparse energy-gated labels on the nodes nearest the viewer. Candidates land
+ * in a pre-sized index array, and detail strings are cached on each node.
  *
  * @returns {number} how many labels were drawn, for the stats readout
  */
 function drawNerdLabels(ctx, nodes, n) {
+  const maxLabels = stillFieldW >= LABEL_WIDE_VIEWPORT ? MAX_LABELS : PHONE_MAX_LABELS;
+  const mode = Math.floor(infoClockS / LABEL_MODE_SECONDS) % LABEL_MODE_NAMES.length;
   // Keep the nearest MAX_LABELS of everything that clears the gate. Selecting
   // the *first* few in array order instead would hand the labels to the same
   // low-index nodes every frame, however far back in the volume they sit.
@@ -1043,12 +1173,12 @@ function drawNerdLabels(ctx, nodes, n) {
     if (node.fade <= 0 || node.energy <= LABEL_ENERGY_GATE) continue;
     if (node.sx < LABEL_EDGE_X || node.sx > stillFieldW - LABEL_EDGE_X) continue;
     if (node.sy < LABEL_EDGE_Y || node.sy > stillFieldH) continue;
-    if (hitsKeepOut(node.sx, node.sy)) continue;
+    if (hitsKeepOutBox(node.sx, node.sy, LABEL_BOX_HALF_W, LABEL_BOX_H)) continue;
 
     const scale = node.scale;
-    if (count === MAX_LABELS && scale <= nodes[labelCandidates[count - 1]].scale) continue;
+    if (count === maxLabels && scale <= nodes[labelCandidates[count - 1]].scale) continue;
 
-    let b = count < MAX_LABELS ? count++ : count - 1;
+    let b = count < maxLabels ? count++ : count - 1;
     while (b > 0 && nodes[labelCandidates[b - 1]].scale < scale) {
       labelCandidates[b] = labelCandidates[b - 1];
       b--;
@@ -1064,6 +1194,25 @@ function drawNerdLabels(ctx, nodes, n) {
   let drawn = 0;
   for (let k = 0; k < count; k++) {
     const node = nodes[labelCandidates[k]];
+    let collides = false;
+    for (let i = 0; i < drawn; i++) {
+      if (Math.abs(node.sx - labelDrawnX[i]) < LABEL_BOX_HALF_W * 2
+        && Math.abs(node.sy - labelDrawnY[i]) < LABEL_BOX_H) {
+        collides = true;
+        break;
+      }
+    }
+    if (!collides) {
+      for (let i = 0; i < lastEdgeLabelCount; i++) {
+        if (Math.abs(node.sx - edgeSampleX[i]) < LABEL_BOX_HALF_W + EDGE_LABEL_BOX_HALF_W
+          && Math.abs(node.sy - edgeSampleY[i]) < LABEL_BOX_H + EDGE_LABEL_BOX_H) {
+          collides = true;
+          break;
+        }
+      }
+    }
+    if (collides) continue;
+
     const nearness = (node.scale - MIN_SCALE) / (1 - MIN_SCALE);
     const radius = (2.1 + node.energy * 1.9) * node.scale * (0.85 + stillFieldIntensity * 0.25);
     // Ramp in across the band above the gate, and follow the node's own
@@ -1075,9 +1224,12 @@ function drawNerdLabels(ctx, nodes, n) {
     const alpha = clamp(0.42 + nearness * 0.38, 0, 0.86) * gate * node.fade;
     if (alpha < 0.01) continue;
 
+    refreshNodeLabel(node, mode);
     ctx.globalAlpha = alpha;
     ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (Math.pow(node.energy, 1.35) * COLOR_STEPS) | 0)];
-    ctx.fillText(LABEL_TEXT[clamp(node.energy * 100 + 0.5, 0, 100) | 0], node.sx, node.sy - radius - 3);
+    ctx.fillText(node.labelText, node.sx, node.sy - radius - 3);
+    labelDrawnX[drawn] = node.sx;
+    labelDrawnY[drawn] = node.sy;
     drawn++;
   }
 
@@ -1092,8 +1244,10 @@ function stopLoop() {
   // Nothing is being drawn any more, so the readout should say so rather than
   // freeze on the last rate it happened to see.
   measuredFps = 0;
+  measuredFrameMs = 0;
   lastEdgeCount = 0;
   lastLabelCount = 0;
+  lastEdgeLabelCount = 0;
 }
 
 export function startStillFieldLoop() {
@@ -1175,6 +1329,18 @@ export function setStillFieldSpeed(v) {
 export function setStillFieldNerd(on) {
   stillFieldNerd = Boolean(on);
   write(STORAGE_KEYS.stillFieldNerd, stillFieldNerd);
+  if (!stillFieldNerd) measuredFrameMs = 0;
+  emit();
+}
+
+/**
+ * Select the integrated information view. This is intentionally session-only:
+ * reloading returns to the useful live overview.
+ * @param {'live'|'math'|'code'} view
+ */
+export function setNerdView(view) {
+  if (view !== 'live' && view !== 'math' && view !== 'code') return;
+  nerdView = view;
   emit();
 }
 

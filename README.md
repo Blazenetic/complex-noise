@@ -38,7 +38,10 @@ there silently.)
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
 - **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Nodes keep a soft residual outline so a quiet node stays legible instead of sinking into the background. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
-- **Info labels** (nerd layer, default on) — sparse, energy-gated per-node readouts on the canvas, plus a stats panel carrying frame rate, node and link counts, field energy, band levels, sample rate, drift and uptime
+- **Info labels** (nerd layer, default on) — stable-ID node callouts and sampled
+  edge measurements on the canvas, plus one integrated Live / Math / Code panel
+  exposing renderer health, graph topology, analyser levels, equations and the
+  operations that drive them
 - **Background texture** — controllable procedural overlay (default on)
 - **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
 - **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
@@ -141,24 +144,32 @@ maths, not a 3D engine.
   the error signal of the link's envelope — the gap between where a link wants
   to be and where it is, which peaks the instant two nodes come into range.
 - **Info labels** (nerd layer, default on). Two halves under one toggle:
-  - *On the canvas* — sparse, energy-gated per-node energy readouts, at most
-    four, on the nearest qualifying nodes. They ramp in across a band above the
-    gate rather than blinking on, and the readouts come from a pre-built string
-    table so the layer still allocates nothing per frame. They are drawn only
-    where there is open background: the canvas sits behind the interface, so a
-    label under a card would be painted into a surface nobody can see. On a
-    phone that means they appear once you minimise the interface.
-  - *The stats readout* — a fixed panel in the top-left carrying frame rate,
-    node and link counts, live label count, field energy, the low/mid/high band
-    levels, noise colour and sample rate, drift speed and intensity, and
-    playback uptime. Refreshed four times a second from outside the render
-    loop, and stopped entirely while the page is hidden.
+  - *On the canvas* — stable lifetime IDs and compact diagnostic callouts on
+    the nearest energy-qualified nodes. Up to six appear on a wide viewport and
+    four on a phone; collision checks, screen bounds and measured interface
+    keep-outs reduce that cap when the available space is smaller. Detail
+    rotates every eight seconds through energy/phase, world position, velocity,
+    projection/lifecycle and local travelling-wave phase. Values are cached for
+    a second at a time rather than rebuilt at 30 fps. Up to three established
+    edges show the true 3D distance used by the link test and their projected
+    angle, sampled inside the existing pair scan.
+  - *The information panel* — the same top-left surface now has **Live**,
+    **Math** and **Code** views. Live adds renderer work, pair tests, mean graph
+    degree, density, callout mode, wave phase/vector, colour-coded health and
+    analyser meters to the existing source, drift and uptime data. Math and
+    Code expose verified equations and compact versions of the actual renderer
+    operations. Tabs are keyboard navigable; changing values are deliberately
+    not a live region. DOM values still refresh only four times a second and
+    stop entirely while the page is hidden.
 - **Battery.** Runs at 30 fps with motion integrated from real elapsed time (so
   it drifts identically at 30, 60 or 120 Hz), stops the loop entirely when the
   page is hidden, allocates nothing per frame, and rations `shadowBlur` to the
   few highest-energy nodes. `prefers-reduced-motion` slows it and drops the glow.
 - Colours come from `--still-field-*` custom properties, read once per theme
   change — restyling the field is a CSS edit.
+
+See [Info Layer](./docs/INFO_LAYER.md) for metric definitions, displayed
+equations and the instrumentation performance contract.
 
 **Glass surfaces**  
 Control panels, type selector, theme toggle and EQ use translucent `rgba`
@@ -200,9 +211,10 @@ npm test -- --headed
 its own static server, so nothing needs to be running first. It covers playback
 and the fade-out/restart race, the sleep timer, persistence (including corrupt,
 zero and out-of-range values), theming and glass mode, the canvas visualisation
-(that it paints, stays transparent, and stops while the page is hidden), the
-spectral tilt of each noise colour, and basic accessibility (labels and 44px
-touch targets).
+(that it paints, stays transparent, and stops while the page is hidden), Info
+layer callout formats, graph metrics and keyboard tab navigation, the spectral
+tilt of each noise colour, and basic accessibility (labels and 44px touch
+targets).
 
 If your environment ships a pre-provisioned Chromium rather than letting
 Playwright download one, point the suite at it with

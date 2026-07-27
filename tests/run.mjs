@@ -95,6 +95,9 @@ test('defaults: brown noise, field on, standard glass, status Ready', async page
   assertEqual(await page.getAttribute('#playBtn', 'aria-label'), 'Play noise', 'initial play button label');
   assertEqual(await page.inputValue('#timer'), '0', 'timer should default to Off');
   assertEqual((await page.textContent('#timerValue')).trim(), 'Off', 'timer readout should say Off');
+  // New controls default on
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'true', 'Info labels should default to on');
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'true', 'Background texture should default to on');
 });
 
 // ==========================================================
@@ -356,21 +359,42 @@ test('Still Field survives a resize without losing its nodes', async page => {
 
 test('Still Field intensity and speed persist', async page => {
   await setRange(page, 'stillFieldIntensity', 0.85);
-  await setRange(page, 'stillFieldSpeed', 0.6);
+  await setRange(page, 'stillFieldSpeed', 0.8);
   assertEqual(await storage(page, 'complexNoise_stillFieldIntensity'), '0.85', 'intensity should persist');
-  assertEqual(await storage(page, 'complexNoise_stillFieldSpeed'), '0.6', 'speed should persist');
+  assertEqual(await storage(page, 'complexNoise_stillFieldSpeed'), '0.8', 'speed should persist');
 
   await page.reload({ waitUntil: 'load' });
   assertEqual(await page.inputValue('#stillFieldIntensity'), '0.85', 'intensity should restore');
-  assertEqual(await page.inputValue('#stillFieldSpeed'), '0.6', 'speed should restore');
-  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 0.6, 'engine should restore the stored speed');
+  assertEqual(await page.inputValue('#stillFieldSpeed'), '0.8', 'speed should restore');
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 0.8, 'engine should restore the stored speed');
 });
 
 test('speed outside the allowed range is clamped, not trusted', async page => {
   await page.evaluate(() => localStorage.setItem('complexNoise_stillFieldSpeed', '99'));
   await page.reload({ waitUntil: 'load' });
   assertEqual(page.errors.length, 0, `an out-of-range speed should not throw: ${page.errors.join(' | ')}`);
-  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 4, 'speed should clamp to the maximum');
+  // Deliberate update: STILL_SPEED_MAX is now 4.8
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 4.8, 'speed should clamp to the maximum');
+});
+
+test('Info labels and Background texture toggles work and persist', async page => {
+  // Both default on (covered in the defaults test). Toggle them off and confirm.
+  await page.click('#stillFieldNerdToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'false', 'Info labels switch should read unchecked');
+  assertEqual(await storage(page, 'complexNoise_stillFieldNerd'), 'false', 'nerd preference should persist');
+
+  await page.click('#stillFieldTextureToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'false', 'Background texture switch should read unchecked');
+  assertEqual(await storage(page, 'complexNoise_stillFieldTexture'), 'false', 'texture preference should persist');
+
+  // Restore
+  await page.click('#stillFieldNerdToggle');
+  await page.click('#stillFieldTextureToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'true', 'Info labels should be back on');
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'true', 'Background texture should be back on');
 });
 
 test('ultra glass toggles, restyles the surfaces, and persists', async page => {

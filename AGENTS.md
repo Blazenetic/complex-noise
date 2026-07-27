@@ -100,6 +100,18 @@ once; `tests/run.mjs` now guards against it.
   the full interface is visible.
 - Escape always restores the full interface.
 
+## Still Field controls (current)
+
+- **Field visualisation** toggle (default on)
+- **Intensity** and **Speed** sliders (speed practical range **0.7 – 4.8**, default 2.0)
+- **Info labels** (nerd layer) — default on, sparse, energy-gated (only appear when there is meaningful activity). Toggle in the Still Field card.
+- **Background texture** — controllable procedural overlay (default on). Toggle in the Still Field card.
+- Alive nodes keep a soft residual stroke-circle outline so they never fully vanish while still alive.
+
+New localStorage keys:
+- `complexNoise_stillFieldNerd`
+- `complexNoise_stillFieldTexture`
+
 ## Common tasks
 
 **Add a noise colour** — add a generator to `GENERATORS` in `js/noise.js`, add
@@ -161,8 +173,9 @@ noise rather than the listening volume.
   node it intends to clean up, or it will tear down whatever happens to be
   playing when it fires.
 - **Defaults live in `constants.js`.** Volume default is intentionally soft
-  (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (range 0.5–4.0).
-  Changing a default without updating the matching test assertion will fail CI.
+  (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (practical range
+  **0.7–4.8**). Changing a default without updating the matching test assertion
+  will fail CI.
 
 ## Conventions
 

@@ -37,7 +37,9 @@ there silently.)
 - Continuous sleep timer (0–10 h slider, 0.5 h steps) with gentle fade-out
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
-- **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders
+- **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Alive nodes keep a soft residual stroke-circle outline so they never fully vanish while still alive. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
+- **Info labels** (nerd layer, default on) — sparse, energy-gated labels that appear only when there is meaningful activity
+- **Background texture** — controllable procedural overlay (default on)
 - **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
 - **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
 - Dedicated **Minimise interface** action for immersion, with a floating restore cluster (play + status + Show controls)
@@ -125,7 +127,8 @@ maths, not a 3D engine.
 - **Lifecycle.** Nodes live 70–150 s, easing in and out. Replacements are placed
   on the R2 low-discrepancy sequence (Roberts, 2018) instead of at random, so
   coverage stays even without any repulsion pass. When a node fades, its links
-  retract along themselves into the surviving node.
+  retract along themselves into the surviving node. Alive nodes keep a soft
+  residual stroke-circle outline so they never fully vanish while still alive.
 - **Energy.** Three layers that never line up: a per-node breath, a plane wave
   crossing the field at an irrational angle, and the analyser's mid/high bands.
   Energy drives size, line weight, colour along the violet → cyan ramp, and
@@ -135,6 +138,8 @@ maths, not a 3D engine.
 - **New links pulse.** The brightness transient on a fresh connection is just
   the error signal of the link's envelope — the gap between where a link wants
   to be and where it is, which peaks the instant two nodes come into range.
+- **Info labels** (nerd layer, default on). Sparse, energy-gated labels (max 4)
+  that only appear on high-energy, nearer nodes.
 - **Battery.** Runs at 30 fps with motion integrated from real elapsed time (so
   it drifts identically at 30, 60 or 120 Hz), stops the loop entirely when the
   page is hidden, allocates nothing per frame, and rations `shadowBlur` to the
@@ -162,8 +167,9 @@ See [AGENTS.md](./AGENTS.md#common-tasks) for step-by-step recipes.
 `complexNoise_type`, `complexNoise_volume`, `complexNoise_timer`,  
 `complexNoise_stillTheme`, `complexNoise_stillEqLow/Mid/High`,  
 `complexNoise_stillFieldEnabled` (default true), `complexNoise_stillFieldIntensity`,  
-`complexNoise_stillFieldSpeed` (0.5–4.0, default 2.0), `complexNoise_stillGlassTransparent`,
-`complexNoise_uiChromeHidden`
+`complexNoise_stillFieldSpeed` (0.7–4.8, default 2.0),  
+`complexNoise_stillFieldNerd` (default true), `complexNoise_stillFieldTexture` (default true),  
+`complexNoise_stillGlassTransparent`, `complexNoise_uiChromeHidden`
 
 All keys are centralised in `js/constants.js` → `STORAGE_KEYS`, and read/written
 through `js/storage.js`, which degrades gracefully when storage is unavailable

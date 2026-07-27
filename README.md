@@ -38,7 +38,7 @@ there silently.)
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
 - **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Nodes keep a soft residual outline so a quiet node stays legible instead of sinking into the background. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
-- **Info labels** (nerd layer, default on) — sparse, energy-gated labels that appear only when there is meaningful activity
+- **Info labels** (nerd layer, default on) — sparse, energy-gated per-node readouts on the canvas, plus a stats panel carrying frame rate, node and link counts, field energy, band levels, sample rate, drift and uptime
 - **Background texture** — controllable procedural overlay (default on)
 - **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
 - **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
@@ -140,11 +140,19 @@ maths, not a 3D engine.
 - **New links pulse.** The brightness transient on a fresh connection is just
   the error signal of the link's envelope — the gap between where a link wants
   to be and where it is, which peaks the instant two nodes come into range.
-- **Info labels** (nerd layer, default on). Sparse, energy-gated labels — at
-  most four, on the nearest qualifying nodes, and only where the label lands on
-  screen. They ramp in across a band above the gate rather than blinking on, and
-  the readouts come from a pre-built string table so the layer still allocates
-  nothing per frame.
+- **Info labels** (nerd layer, default on). Two halves under one toggle:
+  - *On the canvas* — sparse, energy-gated per-node energy readouts, at most
+    four, on the nearest qualifying nodes. They ramp in across a band above the
+    gate rather than blinking on, and the readouts come from a pre-built string
+    table so the layer still allocates nothing per frame. They are drawn only
+    where there is open background: the canvas sits behind the interface, so a
+    label under a card would be painted into a surface nobody can see. On a
+    phone that means they appear once you minimise the interface.
+  - *The stats readout* — a fixed panel in the top-left carrying frame rate,
+    node and link counts, live label count, field energy, the low/mid/high band
+    levels, noise colour and sample rate, drift speed and intensity, and
+    playback uptime. Refreshed four times a second from outside the render
+    loop, and stopped entirely while the page is hidden.
 - **Battery.** Runs at 30 fps with motion integrated from real elapsed time (so
   it drifts identically at 30, 60 or 120 Hz), stops the loop entirely when the
   page is hidden, allocates nothing per frame, and rations `shadowBlur` to the

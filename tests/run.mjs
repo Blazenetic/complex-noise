@@ -170,7 +170,7 @@ test('switching type mid-playback cross-fades and persists', async page => {
 });
 
 // ==========================================================
-// Sleep timer — the regression that started all this
+ // Sleep timer — the regression that started all this
 // ==========================================================
 
 test('sleep timer stop resets the play button', async page => {
@@ -679,7 +679,7 @@ test('ultra glass survives a theme change', async page => {
 });
 
 // ==========================================================
-// UI chrome (immersion hide)
+ // UI chrome (immersion hide)
 // ==========================================================
 
 test('hiding chrome fades the main UI and persists, Escape restores', async page => {
@@ -723,7 +723,7 @@ test('hiding chrome fades the main UI and persists, Escape restores', async page
 
 // ==========================================================
 // Noise generation
-// ==========================================================
+ // ==========================================================
 
 test('each noise colour produces signal with the expected spectral tilt', async page => {
   const spectra = await page.evaluate(async () => {
@@ -756,7 +756,7 @@ test('each noise colour produces signal with the expected spectral tilt', async 
 });
 
 // ==========================================================
-// Accessibility & markup
+ // Accessibility & markup
 // ==========================================================
 
 test('interactive controls are labelled and reachable', async page => {

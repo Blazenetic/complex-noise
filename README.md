@@ -37,7 +37,7 @@ there silently.)
 - Continuous sleep timer (0–10 h slider, 0.5 h steps) with gentle fade-out
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
-- **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Alive nodes keep a soft residual stroke-circle outline so they never fully vanish while still alive. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
+- **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Nodes keep a soft residual outline so a quiet node stays legible instead of sinking into the background. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
 - **Info labels** (nerd layer, default on) — sparse, energy-gated labels that appear only when there is meaningful activity
 - **Background texture** — controllable procedural overlay (default on)
 - **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
@@ -127,8 +127,10 @@ maths, not a 3D engine.
 - **Lifecycle.** Nodes live 70–150 s, easing in and out. Replacements are placed
   on the R2 low-discrepancy sequence (Roberts, 2018) instead of at random, so
   coverage stays even without any repulsion pass. When a node fades, its links
-  retract along themselves into the surviving node. Alive nodes keep a soft
-  residual stroke-circle outline so they never fully vanish while still alive.
+  retract along themselves into the surviving node. A node also keeps a soft
+  residual stroke-circle outline, floored against *dimness* so a low-energy node
+  stays legible — but scaled by the lifecycle envelope, so births and deaths
+  still ease rather than pop.
 - **Energy.** Three layers that never line up: a per-node breath, a plane wave
   crossing the field at an irrational angle, and the analyser's mid/high bands.
   Energy drives size, line weight, colour along the violet → cyan ramp, and
@@ -138,8 +140,11 @@ maths, not a 3D engine.
 - **New links pulse.** The brightness transient on a fresh connection is just
   the error signal of the link's envelope — the gap between where a link wants
   to be and where it is, which peaks the instant two nodes come into range.
-- **Info labels** (nerd layer, default on). Sparse, energy-gated labels (max 4)
-  that only appear on high-energy, nearer nodes.
+- **Info labels** (nerd layer, default on). Sparse, energy-gated labels — at
+  most four, on the nearest qualifying nodes, and only where the label lands on
+  screen. They ramp in across a band above the gate rather than blinking on, and
+  the readouts come from a pre-built string table so the layer still allocates
+  nothing per frame.
 - **Battery.** Runs at 30 fps with motion integrated from real elapsed time (so
   it drifts identically at 30, 60 or 120 Hz), stops the loop entirely when the
   page is hidden, allocates nothing per frame, and rations `shadowBlur` to the

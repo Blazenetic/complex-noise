@@ -16,6 +16,8 @@ const browser = {
   cancelAnimationFrame: 'readonly',
   setTimeout: 'readonly',
   clearTimeout: 'readonly',
+  setInterval: 'readonly',
+  clearInterval: 'readonly',
   getComputedStyle: 'readonly',
   performance: 'readonly',
   Event: 'readonly',

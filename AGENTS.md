@@ -50,7 +50,7 @@ js/
   storage.js        safe typed localStorage access
   noise.js          the noise generators
   audio.js          Web Audio graph, transport, EQ, sleep timer, wake lock
-  still-field.js    the canvas visualisation
+  still-field.js    the canvas visualisation (+ live stats for the info layer)
   theme.js          dark ↔ bone theme, and standard ↔ ultra glass
   ui-chrome.js      immersion hide/show of the main controls
   app.js            DOM wiring — the only module that touches the app's DOM
@@ -104,7 +104,18 @@ once; `tests/run.mjs` now guards against it.
 
 - **Field visualisation** toggle (default on)
 - **Intensity** and **Speed** sliders (speed practical range **0.7 – 4.8**, default 2.0)
-- **Info labels** (nerd layer) — default on, sparse, energy-gated (only appear when there is meaningful activity). At most four at a time, on the nearest qualifying nodes, and only where the label actually lands on screen. Disabled alongside the sliders when the field is off. Toggle in the Still Field card.
+- **Info labels** (nerd layer) — default on, one toggle governing two things:
+  - Sparse, energy-gated per-node energy readouts on the canvas. At most four at
+    a time, on the nearest qualifying nodes, only where the label lands on
+    screen, and only clear of the interface (see the keep-out note below).
+  - A stats panel (`#nerdHud`) in the top-left: frame rate, node and link
+    counts, live label count, field energy, low/mid/high band levels, noise
+    colour and sample rate, drift speed and intensity, playback uptime.
+    Rendered by `app.js` on a 250 ms interval — *not* in the render loop — and
+    the interval is cleared whenever the page is hidden or the layer is off.
+
+  Both are disabled alongside the sliders when the field is off. Toggle in the
+  Still Field card.
 - **Background texture** — controllable procedural overlay (default on). Independent of the field, so it stays available with the field off. Toggle in the Still Field card.
 - Nodes keep a soft residual stroke-circle outline so a low-energy node stays
   legible instead of sinking into the background. The outline is scaled by the
@@ -176,6 +187,25 @@ noise rather than the listening volume.
   `MAX_GLOW_NODES` and is skipped entirely under `prefers-reduced-motion`.
   Anything deferred to it unconditionally is deferred into nothing, and the
   brightest nodes disappear from the field. Draw them flat in pass 0 instead.
+- **The info-label energy gate has a ceiling well below 1.** With nothing
+  playing, `getStillAudioMetrics()` reports zeros, so `audioBoost` is 0 and
+  `computeNodeEnergy` tops out at `0.3 + 0.24 = 0.54` — the two procedural
+  layers alone. A gate above that makes the whole layer unreachable while the
+  audio is paused, which is exactly what a gate of 0.55 did: the toggle read
+  "on" and drew nothing, indefinitely. The field is deliberately alive when
+  paused, so the labels must be too. `tests/run.mjs` now guards this.
+- **Canvas labels must dodge the interface.** The canvas is painted *behind* the
+  controls, so a label under a card is a `fillText` into a surface nobody can
+  see — and at a phone viewport, where the control column spans the screen, that
+  was every single one of them. `app.js` measures the chrome and pushes
+  rectangles to `setLabelKeepOuts()` on resize, scroll, panel toggle and
+  minimise/restore; `still-field.js` never measures the document itself, because
+  a `getBoundingClientRect` per frame forces layout just like `getComputedStyle`.
+  The first measurement is synchronous in `boot()` — scheduling it on an
+  animation frame lets the loop's first frames paint under the controls. The
+  honest consequence is that on a phone with the interface up there is nowhere
+  for the labels to go, so none are drawn; minimise the interface and they
+  appear. The stats panel carries the numbers in the meantime.
 - **The Still Field canvas must stay transparent.** Its trail effect subtracts
   alpha with `destination-out`. Filling with a background colour instead drives
   the canvas opaque within seconds and buries the background gradient and the

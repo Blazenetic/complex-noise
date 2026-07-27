@@ -1,14 +1,20 @@
 /* ============================================================
    Still Theme system — premium brushed titanium (default) + bone-white calm
-   All theme tokens live here. Switch via data-still-theme on <html>
-   Glass surfaces let Still Field show through
+
+   Two independent axes, both attributes on <html>:
+     data-still-theme  dark | bone     — the palette
+     data-glass        standard | ultra — how much the control surfaces hide
+
+   All theme tokens live here. The Still Field canvas reads its own colours
+   from the --still-field-* tokens once per theme change, so restyling the
+   visualisation is a CSS edit, not a JavaScript one.
    ============================================================ */
 :root,
 [data-still-theme="dark"] {
   --bg: #0C0C11;
   --bg-sheen: linear-gradient(160deg, #0E0E15 0%, #0A0A0F 45%, #12121A 100%);
-  --surface: rgba(20, 20, 28, 0.58);
-  --surface-elevated: rgba(28, 28, 38, 0.72);
+  --surface: rgba(20, 20, 28, 0.46);
+  --surface-elevated: rgba(28, 28, 38, 0.62);
   --titanium: #3A3A48;
   --text-primary: #D4D4DC;
   --text-secondary: #9A9AA8;
@@ -19,9 +25,15 @@
   --purple-glow: rgba(124, 58, 237, 0.55);
   --border: rgba(255, 255, 255, 0.11);
   --still-accent: var(--purple);
-  /* Still Field — subtle silver / brushed titanium (no purple blobs) */
-  --still-field-node: rgba(190, 195, 210, 0.55);
-  --still-field-edge: rgba(160, 165, 180, 0.22);
+  /* Still Field ramp — the canvas lerps node/edge → mid → spark as a node's
+     energy rises, so the field rests in cool violet-silver and only reaches
+     cyan on peaks. Alpha on the node and edge tokens sets the field's
+     baseline opacity; mid and spark are used for hue only. */
+  --still-field-node: rgba(176, 170, 212, 0.72);
+  --still-field-edge: rgba(148, 142, 192, 0.34);
+  --still-field-mid: #A78BFA;
+  --still-field-spark: #22D3EE;
+  --still-field-glow: rgba(124, 58, 237, 0.60);
   --still-texture-opacity: 0.025;
   --still-energy: 0;
   --radius: 16px;
@@ -34,8 +46,8 @@
 [data-still-theme="bone"] {
   --bg: #F4F0E8;
   --bg-sheen: linear-gradient(165deg, #F8F4EC 0%, #F0EBE2 100%);
-  --surface: rgba(249, 246, 240, 0.68);
-  --surface-elevated: rgba(237, 232, 223, 0.82);
+  --surface: rgba(249, 246, 240, 0.58);
+  --surface-elevated: rgba(237, 232, 223, 0.74);
   --titanium: #C4BCB0;
   --text-primary: #2C2C34;
   --text-secondary: #5A5A66;
@@ -46,12 +58,39 @@
   --purple-glow: rgba(124, 58, 237, 0.32);
   --border: rgba(0, 0, 0, 0.09);
   --still-accent: #7C3AED;
-  /* Still Field — muted warm grey for bone theme */
-  --still-field-node: rgba(95, 90, 85, 0.42);
-  --still-field-edge: rgba(100, 95, 90, 0.18);
+  /* Still Field — darker ramp so it reads against a light background */
+  --still-field-node: rgba(96, 88, 120, 0.58);
+  --still-field-edge: rgba(104, 96, 128, 0.28);
+  --still-field-mid: #7C3AED;
+  --still-field-spark: #0E9BB5;
+  --still-field-glow: rgba(124, 58, 237, 0.35);
   --still-texture-opacity: 0.065;
   --glass-blur: blur(14px) saturate(1.2);
   color-scheme: light;
+}
+
+/* ------------------------------------------------------------
+   Ultra glass — surfaces drop far enough for the Still Field to read
+   through them. Deliberately a separate axis from the theme: some people
+   want the field foregrounded, most want legible controls at 3 a.m.
+
+   These sit below the theme blocks and carry one more attribute of
+   specificity, so they win regardless of source order within each theme.
+   Only the translucent panels change; the play button, the active noise
+   type and all text keep their contrast.
+   ------------------------------------------------------------ */
+[data-still-theme="dark"][data-glass="ultra"] {
+  --surface: rgba(20, 20, 28, 0.24);
+  --surface-elevated: rgba(28, 28, 38, 0.40);
+  --border: rgba(255, 255, 255, 0.16);
+  --glass-blur: blur(22px) saturate(1.45);
+}
+
+[data-still-theme="bone"][data-glass="ultra"] {
+  --surface: rgba(249, 246, 240, 0.36);
+  --surface-elevated: rgba(237, 232, 223, 0.54);
+  --border: rgba(0, 0, 0, 0.14);
+  --glass-blur: blur(20px) saturate(1.3);
 }
 
 * {
@@ -409,6 +448,18 @@ select:focus-visible {
   gap: 6px;
 }
 
+/* Glass transparency lives with the Still Field controls because that is the
+   only reason to reach for it — it exists to let the field show through. */
+.still-field-controls .still-toggle-row.is-secondary {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.still-field-controls .still-toggle-row.is-secondary span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .still-field-row label {
   font-size: 0.76rem;
   color: var(--text-muted);
@@ -586,4 +637,25 @@ footer .sep {
   main { gap: 16px; }
   #playBtn { width: 88px; height: 88px; }
   .tagline { display: none; }
+}
+
+/* Reduced motion — the Still Field slows itself down and drops its glow in
+   still-field.js; this covers the CSS-driven motion. The play button keeps its
+   colour and focus ring, it just stops breathing. */
+@media (prefers-reduced-motion: reduce) {
+  #playBtn,
+  #playBtn.playing {
+    animation: none;
+    transform: none;
+  }
+
+  #stillField {
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
 }

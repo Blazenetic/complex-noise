@@ -158,11 +158,16 @@ function renderStillField(state) {
   // Package D/E — info labels + background texture toggles
   if (els.fieldNerdToggle) {
     els.fieldNerdToggle.setAttribute('aria-checked', state.nerd ? 'true' : 'false');
+    // Labels are painted on the canvas, so the control is dead while the field
+    // is off — disable it alongside the sliders rather than leaving it live.
+    els.fieldNerdToggle.disabled = !state.enabled;
   }
+  // The texture is a separate CSS overlay, not part of the canvas, so it stays
+  // available even with the field switched off.
   if (els.fieldTextureToggle) {
     els.fieldTextureToggle.setAttribute('aria-checked', state.texture ? 'true' : 'false');
   }
-  // Texture opacity control — hide the procedural overlay when off
+  // Clearing the inline value hands opacity back to the per-theme CSS variable.
   if (els.stillTextureEl) {
     els.stillTextureEl.style.opacity = state.texture ? '' : '0';
   }

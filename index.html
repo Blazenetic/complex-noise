@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-still-theme="dark" data-glass="standard">
+<html lang="en" data-still-theme="dark" data-glass="standard" data-ui-chrome="visible">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
@@ -50,7 +50,7 @@
     <div class="controls">
       <div class="control-group">
         <label for="volume">Volume</label>
-        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.4" />
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.22" />
       </div>
 
       <div class="control-group">
@@ -73,12 +73,12 @@
         </div>
         <div class="still-field-row">
           <label for="stillFieldIntensity">Intensity</label>
-          <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.55" />
+          <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.7" />
         </div>
         <!-- Range must match STILL_SPEED_MIN / STILL_SPEED_MAX in js/constants.js -->
         <div class="still-field-row">
           <label for="stillFieldSpeed">Speed</label>
-          <input type="range" id="stillFieldSpeed" min="0.4" max="2" step="0.05" value="1.25" />
+          <input type="range" id="stillFieldSpeed" min="0.5" max="4" step="0.05" value="2" />
         </div>
         <div class="still-toggle-row is-secondary">
           <span id="stillGlassLabel">Ultra-transparent glass</span>
@@ -120,6 +120,13 @@
     <br />
     Complex State
   </footer>
+
+  <!-- Immersion control — hides/restores the main chrome so the field can fill the night. -->
+  <button id="uiChromeToggle" class="ui-chrome-toggle" type="button" aria-label="Hide controls" aria-pressed="false" title="Hide controls">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 9h16M4 15h16"/>
+    </svg>
+  </button>
 
   <!-- ES modules — load order is resolved by the import graph from app.js -->
   <script type="module" src="js/app.js"></script>

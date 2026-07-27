@@ -107,8 +107,8 @@ const WAVE_RATE = 0.55;      // rad/s
 const WAVE_KX = 0.0042;      // rad per world unit
 const WAVE_KY = 0.0042 * 1.6180339887;
 /** Only the highest-energy nodes glow, and never more than this many. */
-const GLOW_THRESHOLD = 0.62;
-const MAX_GLOW_NODES = 8;
+const GLOW_THRESHOLD = 0.52;
+const MAX_GLOW_NODES = 10;
 
 /** Quantisation of the purple→spark colour ramp. 16 steps is past the eye. */
 const COLOR_STEPS = 16;
@@ -592,7 +592,9 @@ function frame(nowMs) {
 
 function update(adt) {
   const m = getStillAudioMetrics();
-  const audioBoost = Math.min(1, (0.45 * m.overall + 0.35 * m.mid + 0.2 * m.high) * 1.6);
+  // Weight overall a little higher so brown/pink still feed the cyan spark
+  // ramp; white remains the liveliest, but the gap is smaller.
+  const audioBoost = Math.min(1, (0.5 * m.overall + 0.3 * m.mid + 0.2 * m.high) * 1.75);
 
   // Smoothed, intensity-scaled energy for the CSS variable the UI reacts to.
   const targetEnergy = m.overall * stillFieldIntensity * (getIsPlaying() ? 1 : 0.06);
@@ -742,9 +744,9 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
       const by = b.sy + (a.sy - b.sy) * rb;
 
       const energy = (a.energy + b.energy) * 0.5 + pulse * 0.5;
-      // Squaring the mix keeps the field mostly in its base colour and lets the
-      // spark hue read as an event rather than a wash.
-      const shade = clamp(energy * energy, 0, 1);
+      // Soft power keeps the field mostly cool-violet but lets mid energy
+      // reach cyan more often (the white-noise character we want on brown too).
+      const shade = clamp(Math.pow(energy, 1.35), 0, 1);
 
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = edgePalette[Math.min(COLOR_STEPS - 1, (shade * COLOR_STEPS) | 0)];
@@ -795,7 +797,7 @@ function drawNodes(ctx, nodes, n, intensity) {
         1,
       );
 
-      const shade = clamp(node.energy * node.energy, 0, 1);
+      const shade = clamp(Math.pow(node.energy, 1.35), 0, 1);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (shade * COLOR_STEPS) | 0)];
       ctx.beginPath();

@@ -26,14 +26,15 @@ export const GLASS_MODES = ['standard', 'ultra'];
 /** Defaults applied when nothing is persisted yet */
 export const DEFAULTS = {
   type: 'brown',
-  volume: 0.4,
+  volume: 0.22,
   timerHours: 0,
   theme: 'dark',
   eq: 0,
   stillFieldEnabled: true,
-  stillFieldIntensity: 0.55,
-  stillFieldSpeed: 1.25,
+  stillFieldIntensity: 0.7,
+  stillFieldSpeed: 2.0,
   stillGlassTransparent: false,
+  uiChromeHidden: false,
 };
 
 /** EQ gain range in dB — must match the slider min/max in index.html */
@@ -42,11 +43,11 @@ export const EQ_MAX_DB = 12;
 
 /**
  * Still Field drift speed multiplier — must match the slider min/max in
- * index.html. 1 is the original slow drift; the default sits a little above it
- * so the field reads as alive rather than frozen, without becoming busy.
+ * index.html. The previous maximum (2.0) is now the default medium so the
+ * field feels alive; the new max (4.0) is for people who want more motion.
  */
-export const STILL_SPEED_MIN = 0.4;
-export const STILL_SPEED_MAX = 2.0;
+export const STILL_SPEED_MIN = 0.5;
+export const STILL_SPEED_MAX = 4.0;
 
 /** Clean SVG icons (simple paths — free to use, no external assets) */
 export const PLAY_ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -65,4 +66,5 @@ export const STORAGE_KEYS = {
   stillFieldIntensity: 'complexNoise_stillFieldIntensity',
   stillFieldSpeed: 'complexNoise_stillFieldSpeed',
   stillGlassTransparent: 'complexNoise_stillGlassTransparent',
+  uiChromeHidden: 'complexNoise_uiChromeHidden',
 };

@@ -27,8 +27,10 @@ export const DEFAULTS = {
   timerHours: 0,
   theme: 'dark',
   eq: 0,
-  stillFieldEnabled: false,
+  stillFieldEnabled: true,
   stillFieldIntensity: 0.55,
+  stillFieldSpeed: 1.25,
+  stillGlassTransparent: false,
 };
 
 /** EQ gain range in dB — must match the slider min/max in index.html */
@@ -50,4 +52,6 @@ export const STORAGE_KEYS = {
   stillEqHigh: 'complexNoise_stillEqHigh',
   stillFieldEnabled: 'complexNoise_stillFieldEnabled',
   stillFieldIntensity: 'complexNoise_stillFieldIntensity',
+  stillFieldSpeed: 'complexNoise_stillFieldSpeed',
+  stillGlassTransparent: 'complexNoise_stillGlassTransparent',
 };

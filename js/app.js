@@ -43,6 +43,8 @@ const els = {
   eqHigh: document.getElementById('stillEqHigh'),
   fieldToggle: document.getElementById('stillFieldToggle'),
   fieldIntensity: document.getElementById('stillFieldIntensity'),
+  fieldSpeed: document.getElementById('stillFieldSpeed'),
+  glassToggle: document.getElementById('stillGlassToggle'),
   fieldCanvas: document.getElementById('stillField'),
 };
 
@@ -86,15 +88,18 @@ function renderAudio(state) {
 function renderStillField(state) {
   els.fieldToggle.setAttribute('aria-checked', state.enabled ? 'true' : 'false');
   els.fieldIntensity.disabled = !state.enabled;
+  els.fieldSpeed.disabled = !state.enabled;
   els.fieldIntensity.setAttribute('aria-valuetext', `${Math.round(state.intensity * 100)} percent`);
+  els.fieldSpeed.setAttribute('aria-valuetext', `${state.speed.toFixed(2)} times`);
 }
 
-/** @param {string} name */
-function renderTheme(name) {
-  const meta = THEME_LABELS[name] || THEME_LABELS.dark;
+/** @param {ReturnType<typeof theme.getState>} state */
+function renderTheme(state) {
+  const meta = THEME_LABELS[state.theme] || THEME_LABELS.dark;
   if (els.themeIcon) els.themeIcon.textContent = meta.icon;
   if (els.themeLabel) els.themeLabel.textContent = meta.text;
-  els.themeToggle.setAttribute('aria-pressed', name === 'bone' ? 'true' : 'false');
+  els.themeToggle.setAttribute('aria-pressed', state.theme === 'bone' ? 'true' : 'false');
+  els.glassToggle.setAttribute('aria-checked', state.glass === 'ultra' ? 'true' : 'false');
 
   // Canvas colours come from CSS custom properties, so they must be re-read
   // whenever the token set changes.
@@ -117,6 +122,23 @@ function restoreControlValues() {
   els.eqHigh.value = eq.high;
 
   els.fieldIntensity.value = stillField.getStillFieldIntensity();
+  els.fieldSpeed.value = stillField.getStillFieldSpeed();
+}
+
+/**
+ * Wire a `role="switch"` button. `<button>` gives Enter for free, but Space
+ * needs the keydown guard or the page scrolls instead of toggling.
+ * @param {HTMLElement} el
+ * @param {() => void} toggle
+ */
+function bindSwitch(el, toggle) {
+  el.addEventListener('click', toggle);
+  el.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      toggle();
+    }
+  });
 }
 
 // ----------------------------------------------------------
@@ -145,21 +167,18 @@ function bindEvents() {
   els.eqMid.addEventListener('input', e => audio.setStillEqMid(parseFloat(e.target.value)));
   els.eqHigh.addEventListener('input', e => audio.setStillEqHigh(parseFloat(e.target.value)));
 
-  els.fieldToggle.addEventListener('click', () => {
+  bindSwitch(els.fieldToggle, () => {
     stillField.setStillFieldEnabled(!stillField.getStillFieldEnabled());
   });
 
-  // role="switch" must respond to Space/Enter; <button> gives Enter for free
-  // but Space needs the keydown guard to avoid scrolling the page.
-  els.fieldToggle.addEventListener('keydown', e => {
-    if (e.key === ' ' || e.key === 'Spacebar') {
-      e.preventDefault();
-      stillField.setStillFieldEnabled(!stillField.getStillFieldEnabled());
-    }
-  });
+  bindSwitch(els.glassToggle, () => theme.toggleGlassMode());
 
   els.fieldIntensity.addEventListener('input', e => {
     stillField.setStillFieldIntensity(parseFloat(e.target.value));
+  });
+
+  els.fieldSpeed.addEventListener('input', e => {
+    stillField.setStillFieldSpeed(parseFloat(e.target.value));
   });
 
   els.themeToggle.addEventListener('click', () => theme.toggleStillTheme());
@@ -192,6 +211,7 @@ function boot() {
   // Keep this in sync with tests/smoke.mjs.
   window.complexNoiseStill = {
     getTheme: theme.getStillTheme,
+    getGlassMode: theme.getGlassMode,
     getEnergy: stillField.getStillEnergy,
     getMetrics: stillField.getStillAudioMetrics,
     getAudioState: audio.getState,

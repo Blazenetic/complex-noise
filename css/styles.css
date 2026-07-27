@@ -300,14 +300,14 @@ body {
   box-shadow: 0 0 8px #ef4444;
 }
 
-/* Fold control — small chevron in the head */
+/* Fold control — ≥44px touch target so the a11y audit passes */
 .nerd-hud-fold {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  margin: -4px -4px 0 0;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px 0 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -460,7 +460,8 @@ body {
 }
 
 /* Mobile Stats launcher — sits in the same top-left corner when the HUD is off.
-   Only shown on narrow viewports so desktop keeps a clean surface. */
+   Only shown on narrow viewports so desktop keeps a clean surface.
+   min-height 44px satisfies the touch-target audit. */
 .nerd-mobile-toggle {
   position: fixed;
   top: calc(10px + var(--safe-top));
@@ -469,8 +470,8 @@ body {
   display: none;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
-  padding: 8px 12px;
+  min-height: 44px;
+  padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--nerd-hud-bg);

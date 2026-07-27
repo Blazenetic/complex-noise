@@ -40,6 +40,9 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --glass-blur: blur(16px) saturate(1.35);
+  /* Minimised chrome — settled “Show controls” surface */
+  --chrome-toggle-bg: rgba(28, 28, 38, 0.62);
+  --chrome-toggle-border: rgba(124, 58, 237, 0.42);
   color-scheme: dark;
 }
 
@@ -66,6 +69,9 @@
   --still-field-glow: rgba(124, 58, 237, 0.35);
   --still-texture-opacity: 0.065;
   --glass-blur: blur(14px) saturate(1.2);
+  /* Minimised chrome — settled “Show controls” surface (light) */
+  --chrome-toggle-bg: rgba(245, 240, 230, 0.82);
+  --chrome-toggle-border: rgba(124, 58, 237, 0.38);
   color-scheme: light;
 }
 
@@ -490,7 +496,8 @@ select:focus-visible {
   letter-spacing: 0.05em;
 }
 
-/* Theme segmented control — longer pill, clear active side */
+/* Theme segmented control — longer pill, clear active side.
+   Individual buttons are ≥44px so the a11y touch-target audit passes. */
 .theme-segment {
   display: inline-flex;
   background: var(--surface-elevated);
@@ -498,13 +505,13 @@ select:focus-visible {
   border-radius: 999px;
   padding: 3px;
   gap: 2px;
-  min-height: 44px;
+  min-height: 50px;
 }
 
 .theme-seg {
   flex: 1;
   min-width: 64px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -513,7 +520,7 @@ select:focus-visible {
   font-weight: 550;
   cursor: pointer;
   transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
-  min-height: 38px;
+  min-height: 44px;
 }
 
 .theme-seg[aria-pressed="true"] {
@@ -805,7 +812,9 @@ html[data-ui-chrome="hidden"] .minimised-chrome {
   text-overflow: ellipsis;
 }
 
-/* Show controls — pill with text + icon, larger target */
+/* Show controls — pill with text + icon, larger target.
+   Base styles are theme-aware via --chrome-toggle-* tokens so bone stays calm.
+   The entrance animation only handles scale + temporary purple emphasis. */
 .ui-chrome-toggle {
   display: flex;
   align-items: center;
@@ -814,45 +823,45 @@ html[data-ui-chrome="hidden"] .minimised-chrome {
   min-height: 48px;
   padding: 10px 16px;
   border-radius: 999px;
-  border: 1.5px solid rgba(124, 58, 237, 0.45);
-  background: rgba(28, 28, 38, 0.55);
+  border: 1.5px solid var(--chrome-toggle-border);
+  background: var(--chrome-toggle-bg);
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
-  color: var(--purple-bright);
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 550;
   letter-spacing: 0.01em;
   transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
   -webkit-tap-highlight-color: transparent;
-  /* Start more prominent, settle via the parent animation */
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 0 0 0 transparent;
 }
 
-/* After the appear animation the button settles to a quieter grey with a soft purple outline */
+/* Entrance: start larger and more purple, then settle to the theme tokens above. */
 html[data-ui-chrome="hidden"] .ui-chrome-toggle {
   animation: toggle-settle 2.8s ease forwards;
 }
 
 @keyframes toggle-settle {
   0% {
-    background: rgba(124, 58, 237, 0.75);
+    background: rgba(124, 58, 237, 0.78);
     color: white;
     border-color: var(--purple-bright);
     box-shadow: 0 0 28px rgba(124, 58, 237, 0.55);
     transform: scale(1.15);
   }
-  45% {
-    background: rgba(80, 50, 140, 0.55);
-    color: var(--purple-bright);
+  40% {
+    background: rgba(124, 58, 237, 0.42);
+    color: white;
     border-color: rgba(124, 58, 237, 0.55);
-    box-shadow: 0 0 18px rgba(124, 58, 237, 0.35);
-    transform: scale(1.04);
+    box-shadow: 0 0 16px rgba(124, 58, 237, 0.35);
+    transform: scale(1.05);
   }
   100% {
-    background: rgba(28, 28, 38, 0.55);
+    /* Hand off to the theme-token base styles */
+    background: var(--chrome-toggle-bg);
     color: var(--text-secondary);
-    border-color: rgba(124, 58, 237, 0.38);
+    border-color: var(--chrome-toggle-border);
     box-shadow: 0 0 0 0 transparent;
     transform: scale(1);
   }

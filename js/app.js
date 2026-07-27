@@ -48,6 +48,7 @@ const els = {
   minimisedPlayBtn: document.getElementById('minimisedPlayBtn'),
   volume: document.getElementById('volume'),
   timer: document.getElementById('timer'),
+  timerValue: document.getElementById('timerValue'),
   status: document.getElementById('status'),
   minimisedStatus: document.getElementById('minimisedStatus'),
   typeButtons: Array.from(document.querySelectorAll('.type-btn')),
@@ -62,10 +63,37 @@ const els = {
   fieldCanvas: document.getElementById('stillField'),
   /** Floating restore button — only visible when chrome is hidden. */
   chromeToggle: document.getElementById('uiChromeToggle'),
-  /** Switch inside the Still Field card that hides/shows the main interface. */
-  chromeSwitch: document.getElementById('uiChromeSwitch'),
+  /** Dedicated minimise action button inside the Still Field card. */
+  chromeMinimise: document.getElementById('uiChromeMinimise'),
   minimisedChrome: document.getElementById('minimisedChrome'),
 };
+
+// ----------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------
+
+/** Format timer hours for display and aria-valuetext. */
+function formatTimerHours(hours) {
+  const h = Number(hours) || 0;
+  if (h <= 0) return 'Off';
+  if (h === 1) return '1 h';
+  // Keep half-hours tidy: 1.5 → "1.5 h", 2 → "2 h"
+  const label = Number.isInteger(h) ? String(h) : h.toFixed(1);
+  return `${label} h`;
+}
+
+/** Sync the timer range value, live readout, and ARIA attributes. */
+function updateTimerDisplay(hours) {
+  const h = Math.max(0, Number(hours) || 0);
+  if (els.timer) {
+    els.timer.value = String(h);
+    els.timer.setAttribute('aria-valuenow', String(h));
+    els.timer.setAttribute('aria-valuetext', formatTimerHours(h));
+  }
+  if (els.timerValue) {
+    els.timerValue.textContent = formatTimerHours(h);
+  }
+}
 
 // ----------------------------------------------------------
 // Renderers — the only place the UI is written to
@@ -110,6 +138,9 @@ function renderAudio(state) {
 
   els.volume.setAttribute('aria-valuenow', String(state.volume));
   els.volume.setAttribute('aria-valuetext', `${Math.round(state.volume * 100)} percent`);
+
+  // Keep the timer readout in sync when the engine changes the value
+  updateTimerDisplay(state.timerHours);
 }
 
 /** @param {ReturnType<typeof stillField.getState>} state */
@@ -141,13 +172,7 @@ function renderChrome(state) {
   const hidden = state.hidden;
   document.documentElement.setAttribute('data-ui-chrome', hidden ? 'hidden' : 'visible');
 
-  // In-card switch reflects whether the interface is currently visible.
-  if (els.chromeSwitch) {
-    els.chromeSwitch.setAttribute('aria-checked', hidden ? 'false' : 'true');
-  }
-
-  // Minimised cluster visibility is driven by the data-ui-chrome attribute +
-  // CSS. We still keep the floating restore button correctly labelled and
+  // Floating restore is the only way back; keep it correctly labelled and
   // out of the tab order while chrome is visible.
   if (els.chromeToggle) {
     const label = 'Show controls';
@@ -166,12 +191,12 @@ function renderChrome(state) {
     els.minimisedChrome.setAttribute('aria-hidden', hidden ? 'false' : 'true');
   }
 
-  // After restore, move focus back to the Interface switch so keyboard users
-  // are not stranded on the now-inert floating button (or the body).
-  if (!hidden && els.chromeSwitch) {
+  // After restore, move focus to the minimise button so keyboard users
+  // are not stranded on the now-inert floating control (or the body).
+  if (!hidden && els.chromeMinimise) {
     const active = document.activeElement;
     if (active === document.body || active === els.chromeToggle || active === els.minimisedPlayBtn) {
-      els.chromeSwitch.focus({ preventScroll: true });
+      els.chromeMinimise.focus({ preventScroll: true });
     }
   }
 }
@@ -182,9 +207,7 @@ function renderChrome(state) {
 function restoreControlValues() {
   els.volume.value = audio.getCurrentVolume();
 
-  const timerHours = audio.getTimerHours();
-  const hasOption = Array.from(els.timer.options).some(o => parseFloat(o.value) === timerHours);
-  els.timer.value = hasOption ? String(timerHours) : '0';
+  updateTimerDisplay(audio.getTimerHours());
 
   const eq = audio.getStillEqValues();
   els.eqLow.value = eq.low;
@@ -238,7 +261,12 @@ function bindEvents() {
 
   els.volume.addEventListener('input', e => audio.setVolume(parseFloat(e.target.value)));
 
-  els.timer.addEventListener('change', () => audio.setTimerHours(els.timer.value));
+  // Sleep timer is now a continuous range (0–10 h, 0.5 steps)
+  els.timer.addEventListener('input', e => {
+    const hours = parseFloat(e.target.value) || 0;
+    updateTimerDisplay(hours);
+    audio.setTimerHours(hours);
+  });
 
   els.eqLow.addEventListener('input', e => audio.setStillEqLow(parseFloat(e.target.value)));
   els.eqMid.addEventListener('input', e => audio.setStillEqMid(parseFloat(e.target.value)));
@@ -266,8 +294,10 @@ function bindEvents() {
     });
   });
 
-  // Interface switch inside the card hides the chrome.
-  bindSwitch(els.chromeSwitch, () => uiChrome.toggle());
+  // Dedicated minimise button — always hides chrome (restore via floating control or Escape)
+  if (els.chromeMinimise) {
+    els.chromeMinimise.addEventListener('click', () => uiChrome.setHidden(true));
+  }
 
   // Floating restore button (only present / interactive when hidden).
   if (els.chromeToggle) {

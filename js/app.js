@@ -128,18 +128,25 @@ function renderChrome(state) {
   }
 
   // Floating restore button — only meaningful when chrome is hidden.
+  // Keep it out of the tab order (and mark inert) while chrome is visible so
+  // keyboard users never land on an invisible control.
   if (els.chromeToggle) {
     const label = 'Show controls';
     els.chromeToggle.setAttribute('aria-label', label);
     els.chromeToggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
     els.chromeToggle.title = label;
     els.chromeToggle.innerHTML = SHOW_CHROME_ICON;
+    els.chromeToggle.tabIndex = hidden ? 0 : -1;
+    els.chromeToggle.setAttribute('aria-hidden', hidden ? 'false' : 'true');
   }
 
-  // After restore, move focus back toward the Interface switch so keyboard
-  // users are not stranded on a now-invisible element.
-  if (!hidden && document.activeElement === document.body && els.chromeSwitch) {
-    els.chromeSwitch.focus({ preventScroll: true });
+  // After restore, move focus back to the Interface switch so keyboard users
+  // are not stranded on the now-inert floating button (or the body).
+  if (!hidden && els.chromeSwitch) {
+    const active = document.activeElement;
+    if (active === document.body || active === els.chromeToggle) {
+      els.chromeSwitch.focus({ preventScroll: true });
+    }
   }
 }
 

@@ -88,6 +88,17 @@ fires, and updating the button inside its click handler is exactly how it ends
 up frozen on "pause" over silent audio at 3 a.m. That bug has already happened
 once; `tests/run.mjs` now guards against it.
 
+## UI chrome & immersion
+
+- The main interface can be minimised via the **Minimise interface** switch
+  (inside the Still Field card). State lives in `ui-chrome.js`.
+- When hidden, a floating cluster appears bottom-right: minimised play/pause,
+  a compact status line, and a **Show controls** pill. The cluster starts a
+  little larger and more purple, then settles calmly.
+- Theme is a two-sided pill (Dark | Bone) rather than a single toggle.
+- Status lives in a dedicated card directly under the main play button when
+  the full interface is visible.
+
 ## Common tasks
 
 **Add a noise colour** — add a generator to `GENERATORS` in `js/noise.js`, add
@@ -100,10 +111,10 @@ existing colours.
 `[data-still-theme="…"]` blocks at the top of `css/styles.css`.
 
 **Add a theme** — add a token block in `css/styles.css`, the name to `THEMES`
-in `js/constants.js`, an entry in `THEME_META` in `js/theme.js`, and a label in
-`THEME_LABELS` in `js/app.js`. The toggle cycles through `THEMES` in order.
-Themes and glass modes are independent axes on `<html>` (`data-still-theme` and
-`data-glass`), so a new theme also needs an `[data-glass="ultra"]` block.
+in `js/constants.js`, an entry in `THEME_META` in `js/theme.js`. The segmented
+control in `index.html` and the render logic in `app.js` need a matching
+`.theme-seg[data-theme="…"]` button. Themes and glass modes are independent
+axes on `<html>` (`data-still-theme` and `data-glass`).
 
 **Restyle the Still Field** — it is a CSS edit. The canvas reads
 `--still-field-node`, `--still-field-edge`, `--still-field-mid`,

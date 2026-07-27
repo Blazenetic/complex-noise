@@ -52,6 +52,7 @@ js/
   audio.js          Web Audio graph, transport, EQ, sleep timer, wake lock
   still-field.js    the canvas visualisation
   theme.js          dark ↔ bone theme, and standard ↔ ultra glass
+  ui-chrome.js      immersion hide/show of the main controls
   app.js            DOM wiring — the only module that touches the app's DOM
 tests/run.mjs       browser smoke tests
 docs/               product requirements and historical context

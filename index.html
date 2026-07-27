@@ -35,7 +35,8 @@
 
   <main>
     <div class="play-wrap">
-      <button id="playBtn" aria-label="Play noise" type="button">
+      <!-- Icon is swapped by app.js; data-icon tracks which one is mounted. -->
+      <button id="playBtn" aria-label="Play noise" aria-pressed="false" data-icon="play" type="button">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
       </button>
     </div>
@@ -49,7 +50,7 @@
     <div class="controls">
       <div class="control-group">
         <label for="volume">Volume</label>
-        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.4" aria-valuemin="0" aria-valuemax="1" />
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.4" />
       </div>
 
       <div class="control-group">
@@ -111,7 +112,27 @@
     Complex State
   </footer>
 
-  <!-- Modular ES modules — order of imports is handled by the dependency graph -->
+  <!-- ES modules — load order is resolved by the import graph from app.js -->
   <script type="module" src="js/app.js"></script>
+
+  <!--
+    Boot guard (classic script, so it runs even when the module graph fails).
+    ES modules are fetched with CORS, which the file:// protocol forbids — so
+    double-clicking index.html leaves a silent, dead page. Say so instead.
+  -->
+  <script>
+    window.addEventListener('load', function () {
+      if (window.complexNoiseStill) return;
+      var status = document.getElementById('status');
+      if (!status) return;
+      status.textContent = location.protocol === 'file:'
+        ? 'Complex Noise uses ES modules, which browsers refuse to load from file://. Serve this folder over http:// — see the README.'
+        : 'Complex Noise failed to load. Check the browser console for details.';
+    });
+  </script>
+
+  <noscript>
+    <p style="text-align:center;padding:16px">Complex Noise generates audio in your browser and needs JavaScript enabled.</p>
+  </noscript>
 </body>
 </html>

@@ -161,7 +161,9 @@ header {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
-  min-height: 40px;
+  /* 44px is the minimum comfortable touch target (WCAG 2.5.5) — this app is
+     tapped one-handed in the dark, so no control goes below it. */
+  min-height: 44px;
 }
 
 .still-theme-toggle:hover,
@@ -480,34 +482,57 @@ select:focus-visible {
   letter-spacing: 0.05em;
 }
 
+/* Toggle switch.
+   The button itself is a transparent 48×44 touch target; the visible 48×28
+   track is drawn by ::before and the knob by ::after, both vertically centred.
+   This keeps the switch looking small while staying comfortably tappable. */
 .still-switch {
   position: relative;
   width: 48px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--titanium);
+  height: 44px;
+  padding: 0;
   border: none;
+  background: transparent;
   cursor: pointer;
-  transition: background 0.2s;
   flex-shrink: 0;
 }
 
-.still-switch[aria-checked="true"] {
+/* Track */
+.still-switch::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 48px;
+  height: 28px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--titanium);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.still-switch[aria-checked="true"]::before {
   background: var(--purple);
 }
 
 .still-switch:focus-visible {
   outline: none;
+}
+
+/* Ring hugs the visible track, not the invisible touch area. */
+.still-switch:focus-visible::before {
   box-shadow: 0 0 0 3px var(--purple-glow);
 }
 
+/* Knob */
 .still-switch::after {
   content: "";
   position: absolute;
-  top: 3px;
+  top: 50%;
   left: 3px;
   width: 22px;
   height: 22px;
+  transform: translateY(-50%);
   border-radius: 50%;
   background: white;
   transition: transform 0.2s;
@@ -515,7 +540,7 @@ select:focus-visible {
 }
 
 .still-switch[aria-checked="true"]::after {
-  transform: translateX(20px);
+  transform: translateY(-50%) translateX(20px);
 }
 
 .status {

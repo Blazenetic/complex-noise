@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#0C0C11" id="themeColorMeta" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Complex Noise by Complex State — Procedural brown noise for deep rest. Still Theme, Still Field, Still Equaliser." />
+  <meta name="description" content="Complex Noise by Blazenetic — Procedural brown noise for deep rest. Still Theme, Still Field, Still Equaliser." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.json" />
   <!-- Simple mathematical favicon (soft abstract field mark) -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230C0C11'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%236B3FA0' stroke-width='1.5' opacity='0.7'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%236B3FA0' opacity='0.5'/%3E%3C/svg%3E" />
-  <title>Complex Noise | Complex State</title>
+  <title>Complex Noise | Blazenetic</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -23,7 +23,7 @@
 
   <header>
     <div class="logo">Complex Noise</div>
-    <div class="byline">by Complex State</div>
+    <div class="byline">by <a href="https://github.com/Blazenetic" target="_blank" rel="noopener noreferrer">Blazenetic</a></div>
     <div class="tagline">Procedural noise for deep rest</div>
   </header>
 
@@ -53,18 +53,16 @@
       </div>
 
       <div class="control-group">
-        <label for="timer">Sleep timer</label>
-        <select id="timer" aria-label="Sleep timer duration">
-          <option value="0">Off</option>
-          <option value="1">1 hour</option>
-          <option value="2">2 hours</option>
-          <option value="4">4 hours</option>
-          <option value="8">8 hours</option>
-          <option value="10">10 hours</option>
-        </select>
+        <div class="timer-label-row">
+          <label for="timer">Sleep timer</label>
+          <span id="timerValue" class="timer-value" aria-hidden="true">Off</span>
+        </div>
+        <input type="range" id="timer" min="0" max="10" step="0.5" value="0"
+               aria-label="Sleep timer duration in hours"
+               aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" aria-valuetext="Off" />
       </div>
 
-      <!-- Still Field + interface controls — theme, visualisation, chrome hide, glass -->
+      <!-- Still Field + interface controls — theme, visualisation, glass -->
       <div class="still-field-controls">
         <div class="card-title">Still Field</div>
 
@@ -79,7 +77,7 @@
         </div>
 
         <!-- Range must match STILL_SPEED_MIN / STILL_SPEED_MAX in js/constants.js -->
-        <div class="still-field-row">
+        <div class="still-field-row still-field-row--spaced">
           <label for="stillFieldSpeed">Speed</label>
           <input type="range" id="stillFieldSpeed" min="0.5" max="4" step="0.05" value="2" />
         </div>
@@ -94,19 +92,22 @@
           </div>
         </div>
 
-        <div class="still-toggle-row">
-          <span id="uiChromeLabel">Minimise interface</span>
-          <button type="button" class="still-switch" id="uiChromeSwitch" role="switch" aria-checked="true" aria-labelledby="uiChromeLabel" title="Hide the main controls for immersion"></button>
-        </div>
-
         <div class="still-toggle-row is-secondary">
           <span id="stillGlassLabel">Ultra-transparent glass</span>
           <button type="button" class="still-switch" id="stillGlassToggle" role="switch" aria-checked="false" aria-labelledby="stillGlassLabel"></button>
         </div>
+
+        <!-- Dedicated minimise action — independent of the switches above -->
+        <button type="button" id="uiChromeMinimise" class="minimise-btn" aria-label="Minimise interface for immersion">
+          <svg class="minimise-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>
+          </svg>
+          <span>Minimise interface</span>
+        </button>
       </div>
 
-      <!-- Still Equaliser (collapsible to keep main surface calm) -->
-      <details class="still-panel" id="stillPanel">
+      <!-- Still Equaliser (open by default; still collapsible) -->
+      <details class="still-panel" id="stillPanel" open>
         <summary>Still Equaliser</summary>
         <div class="still-panel-body">
           <div class="still-eq-row">
@@ -135,7 +136,7 @@
     <span class="sep">·</span>
     <span>Made in Australia with the help of AI agents</span>
     <br />
-    Complex State
+    <a href="https://github.com/Blazenetic" target="_blank" rel="noopener noreferrer">Blazenetic</a>
   </footer>
 
   <!--

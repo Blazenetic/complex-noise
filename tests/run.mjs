@@ -93,6 +93,8 @@ test('defaults: brown noise, field on, standard glass, status Ready', async page
   assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'visible', 'chrome should start visible');
   assertEqual((await page.textContent('#status')).trim(), 'Ready', 'initial status');
   assertEqual(await page.getAttribute('#playBtn', 'aria-label'), 'Play noise', 'initial play button label');
+  assertEqual(await page.inputValue('#timer'), '0', 'timer should default to Off');
+  assertEqual((await page.textContent('#timerValue')).trim(), 'Off', 'timer readout should say Off');
 });
 
 // ==========================================================
@@ -172,14 +174,15 @@ test('sleep timer stop resets the play button', async page => {
   // Regression: audio.js stopped playback when the timer fired, but the button
   // was only ever updated inside its own click handler — so it stayed frozen
   // showing "pause" over stopped audio until the user tapped it twice.
+  //
+  // The production slider uses step="0.5", which would snap a 2-second value
+  // (~0.00055 h) to 0. Temporarily drop the step so the smoke test can drive
+  // a short timer without changing the real UI contract.
   await page.evaluate(() => {
     const t = document.getElementById('timer');
-    const opt = document.createElement('option');
-    opt.value = String(2 / 3600); // two seconds, expressed in hours
-    opt.textContent = 'test';
-    t.appendChild(opt);
-    t.value = opt.value;
-    t.dispatchEvent(new Event('change', { bubbles: true }));
+    t.step = 'any';
+    t.value = String(2 / 3600); // two seconds, expressed in hours
+    t.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
   await clickPlay(page);
@@ -196,12 +199,13 @@ test('sleep timer stop resets the play button', async page => {
 test('changing the timer while playing confirms in the status', async page => {
   await clickPlay(page);
   await page.waitForTimeout(300);
-  await page.selectOption('#timer', '1');
+  await setRange(page, 'timer', 1);
   await page.waitForTimeout(200);
 
   const state = await audioState(page);
   assert(state.status.includes('timer'), `status should confirm the timer, got "${state.status}"`);
   assertEqual(await storage(page, 'complexNoise_timer'), '1', 'timer should persist');
+  assertEqual((await page.textContent('#timerValue')).trim(), '1 h', 'readout should show 1 h');
 });
 
 // ==========================================================
@@ -401,12 +405,11 @@ test('ultra glass survives a theme change', async page => {
 // ==========================================================
 
 test('hiding chrome fades the main UI and persists, Escape restores', async page => {
-  // Hide via the Minimise interface switch inside the Still Field card.
-  await page.click('#uiChromeSwitch');
+  // Hide via the dedicated Minimise interface button inside the Still Field card.
+  await page.click('#uiChromeMinimise');
   await page.waitForTimeout(150);
 
   assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'html should mark chrome as hidden');
-  assertEqual(await page.getAttribute('#uiChromeSwitch', 'aria-checked'), 'false', 'Minimise switch should read unchecked while hidden');
   assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-label'), 'Show controls', 'floating control should offer restore');
   assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-pressed'), 'true', 'floating restore pressed while chrome is hidden');
   assertEqual(await storage(page, 'complexNoise_uiChromeHidden'), 'true', 'chrome hide should persist');
@@ -437,7 +440,6 @@ test('hiding chrome fades the main UI and persists, Escape restores', async page
   await page.keyboard.press('Escape');
   await page.waitForTimeout(150);
   assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'visible', 'Escape should restore chrome');
-  assertEqual(await page.getAttribute('#uiChromeSwitch', 'aria-checked'), 'true', 'Minimise switch should read checked after restore');
   assertEqual(await storage(page, 'complexNoise_uiChromeHidden'), 'false', 'restored chrome should persist');
 });
 
@@ -496,7 +498,7 @@ test('interactive controls are labelled and reachable', async page => {
   // Every touch target should clear the 44 px minimum on a phone.
   const small = await page.evaluate(() => {
     const out = [];
-    document.querySelectorAll('button, select').forEach(el => {
+    document.querySelectorAll('button').forEach(el => {
       const r = el.getBoundingClientRect();
       if (r.height > 0 && r.height < 44) out.push(`${el.id || el.className}: ${Math.round(r.height)}px`);
     });
@@ -515,13 +517,10 @@ test('the role="switch" controls respond to the keyboard', async page => {
   await page.keyboard.press('Space');
   await page.waitForTimeout(200);
   assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'true', 'Space should toggle the glass switch');
+});
 
-  // Minimise interface switch also responds to Space.
-  await page.focus('#uiChromeSwitch');
-  await page.keyboard.press('Space');
-  await page.waitForTimeout(200);
-  assertEqual(await page.getAttribute('#uiChromeSwitch', 'aria-checked'), 'false', 'Space should toggle the Minimise interface switch');
-  assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'Minimise switch should hide chrome');
+test('Still Equaliser is open by default', async page => {
+  assert(await page.evaluate(() => document.getElementById('stillPanel').open), 'equaliser details should start open');
 });
 
 // ==========================================================

@@ -2,6 +2,8 @@
 
 This folder holds product requirements, implementation context, and visitor-facing Lab notes for Complex Noise.
 
+The Lab ships serious sleep tools. The documentation is allowed to have a little more personality.
+
 ## Documents
 
 | File | Purpose |
@@ -29,9 +31,9 @@ merged and substantially evolved on `main`:
   and a stored volume of `0`).
 - Playwright browser smoke suite + CI (ESLint + tests on every PR).
 - Still Field rewritten with real perspective depth, node lifecycle, energy
-  ramp (violet → cyan), and battery-conscious 30 fps loop. Default **on**.
-- Integrated Info layer with stable-ID node callouts, sampled edge measurements,
-  and Live / Math / Code views for graph metrics and renderer operations.
+  ramp (violet → cyan), spatial grid, and battery-conscious default 30 fps loop. Default **on**.
+- Integrated Stats / info layer with engineering-drawing callouts, edge dimensions,
+  Live / Math / Code views, Field Lab controls, and source overlay.
 - Glass transparency as an independent axis (`standard` / `ultra`).
 - Immersion path: dedicated Minimise interface button + floating restore
   cluster (play + status + Show controls). Escape restores.
@@ -46,3 +48,7 @@ reduced-motion support) has not been done.
 A fuller work report covering the intensive 26–28 July development lives in the
 project Google Drive. The public changelog is derived from it and lives at the
 repo root.
+
+---
+
+The software stays calm. The documentation gets to be chaotic. That is the deal.

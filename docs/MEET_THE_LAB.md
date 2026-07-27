@@ -40,6 +40,17 @@ Put-upon competence. Appears when the others are about to do something stupid an
 
 ---
 
+## A typical exchange
+
+**Melchett:** Another great victory! The glass is now *ultra*! The enemy will never recover!  
+**Darling:** That is a CSS variable, Melchett. Sit down.  
+**Baldrick:** I have a cunning plan involving a single potato—  
+**Darling:** No.  
+**Blazenetic:** The software stays calm. The documentation gets to be chaotic. That is the deal.  
+**Arty:** …I also fixed the fade race. Please don’t yell.
+
+---
+
 ## The Wall
 
 There is an absolute separation between narrative docs and agent docs.

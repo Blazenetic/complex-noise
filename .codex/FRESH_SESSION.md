@@ -41,7 +41,10 @@ user meant by “I've already got this going a little bit.”
 - Current branch upstream: `origin/codex/procedural-telemetry`
 - Current branch state at handover: clean
 - Current authoritative remote main: `origin/main` at `a6ab2f3`
-- Divergence: current branch is 48 commits behind and 1 commit ahead
+- Divergence when the stale base was discovered: 48 commits behind and 1
+  implementation commit ahead, before the documentation-only handover commits;
+  re-check the live count with `git rev-list --left-right --count
+  origin/main...HEAD`
 - Merge base: `4758320`
 - Draft PR: #15, open only as a design/reference branch
 

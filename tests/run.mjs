@@ -27,14 +27,7 @@ function assertEqual(actual, expected, message) {
   }
 }
 
-const clickPlay = page => page.click('#playBtn', { force: true });
-const audioState = page => page.evaluate(() => window.complexNoiseStill.getAudioState());
 const storage = (page, key) => page.evaluate(k => localStorage.getItem(k), key);
-const setRange = (page, id, value) => page.evaluate(({ id, value }) => {
-  const el = document.getElementById(id);
-  el.value = String(value);
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-}, { id, value });
 
 test('loads with no console or page errors', async page => {
   assertEqual(page.errors.length, 0, `page reported errors: ${page.errors.join(' | ')}`);

@@ -399,12 +399,15 @@ test('ultra glass survives a theme change', async page => {
 // ==========================================================
 
 test('hiding chrome fades the main UI and persists, Escape restores', async page => {
-  await page.click('#uiChromeToggle');
+  // Hide via the Interface switch inside the Still Field card (the floating
+  // button is restore-only and not interactive while chrome is visible).
+  await page.click('#uiChromeSwitch');
   await page.waitForTimeout(150);
 
   assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'html should mark chrome as hidden');
+  assertEqual(await page.getAttribute('#uiChromeSwitch', 'aria-checked'), 'false', 'Interface switch should read unchecked while hidden');
   assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-label'), 'Show controls', 'floating control should offer restore');
-  assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-pressed'), 'true', 'toggle pressed while chrome is hidden');
+  assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-pressed'), 'true', 'floating restore pressed while chrome is hidden');
   assertEqual(await storage(page, 'complexNoise_uiChromeHidden'), 'true', 'chrome hide should persist');
 
   // Main chrome is not interactive while hidden.
@@ -415,13 +418,21 @@ test('hiding chrome fades the main UI and persists, Escape restores', async page
   });
   assert(mainHidden, 'main should be non-interactive while chrome is hidden');
 
+  // Floating restore is now the only interactive entry point.
+  const floatingInteractive = await page.evaluate(() => {
+    const btn = document.getElementById('uiChromeToggle');
+    const style = getComputedStyle(btn);
+    return parseFloat(style.opacity) > 0 && style.pointerEvents !== 'none';
+  });
+  assert(floatingInteractive, 'floating restore button should be interactive while chrome is hidden');
+
   await page.reload({ waitUntil: 'load' });
   assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'hidden chrome should restore after reload');
 
   await page.keyboard.press('Escape');
   await page.waitForTimeout(150);
   assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'visible', 'Escape should restore chrome');
-  assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-label'), 'Hide controls', 'floating control should offer hide again');
+  assertEqual(await page.getAttribute('#uiChromeSwitch', 'aria-checked'), 'true', 'Interface switch should read checked after restore');
   assertEqual(await storage(page, 'complexNoise_uiChromeHidden'), 'false', 'restored chrome should persist');
 });
 
@@ -499,6 +510,13 @@ test('the role="switch" controls respond to the keyboard', async page => {
   await page.keyboard.press('Space');
   await page.waitForTimeout(200);
   assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'true', 'Space should toggle the glass switch');
+
+  // Interface switch (chrome hide) also responds to Space.
+  await page.focus('#uiChromeSwitch');
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(200);
+  assertEqual(await page.getAttribute('#uiChromeSwitch', 'aria-checked'), 'false', 'Space should toggle the Interface switch');
+  assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'Interface switch should hide chrome');
 });
 
 // ==========================================================

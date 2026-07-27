@@ -174,8 +174,13 @@ test('sleep timer stop resets the play button', async page => {
   // Regression: audio.js stopped playback when the timer fired, but the button
   // was only ever updated inside its own click handler — so it stayed frozen
   // showing "pause" over stopped audio until the user tapped it twice.
+  //
+  // The production slider uses step="0.5", which would snap a 2-second value
+  // (~0.00055 h) to 0. Temporarily drop the step so the smoke test can drive
+  // a short timer without changing the real UI contract.
   await page.evaluate(() => {
     const t = document.getElementById('timer');
+    t.step = 'any';
     t.value = String(2 / 3600); // two seconds, expressed in hours
     t.dispatchEvent(new Event('input', { bubbles: true }));
   });

@@ -46,8 +46,9 @@ information layer; do not return to the stale PR #15 implementation.
 ## Current Gate
 
 - Local gate review decision: `APPROVE`.
-- Draft PR publication is the next external step; merge and deployment remain
-  separately gated.
+- Draft PR: [#16 — Upgrade the Still Field information layer](https://github.com/Blazenetic/complex-noise/pull/16)
+- The PR is mergeable and CI was queued at handover; merge and deployment
+  remain separately gated.
 
 ## Next Safe Action
 

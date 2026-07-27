@@ -1,9 +1,18 @@
 # Still Field Info Layer
 
-The Info labels switch governs one integrated instrumentation layer: compact
-canvas callouts and the top-left Live / Math / Code panel. It extends the
-sleep visualisation without introducing another renderer, graph scan or DOM
-update loop.
+The Stats control (card button + mobile launcher) governs one integrated
+instrumentation layer: compact canvas callouts and the top-left Live / Math /
+Code panel. It extends the sleep visualisation without introducing another
+renderer, graph scan or DOM update loop.
+
+## Controls
+
+- **Still Field card** — distinctive Stats button (bar-chart icon + label).
+- **Mobile (≤520 px)** — top-left Stats launcher when the panel is off.
+- **HUD fold** — chevron in the panel head collapses the body to a compact
+  header (session-only; defaults folded on narrow viewports).
+
+On/off is persisted (`complexNoise_stillFieldNerd`). Fold is session-only.
 
 ## Live view
 
@@ -100,7 +109,7 @@ low-discrepancy placement sequence.
   one-second cadence.
 - Preserve reduced-motion behaviour, transparent trail clearing, lifecycle
   fades and interface keep-outs.
-- Keep Live / Math / Code as the only interactive elements in the panel.
+- Keep Live / Math / Code as the only interactive elements in the panel body.
   Values are ordinary text, not `<output>` elements or live regions, so a
   screen reader is not interrupted four times a second.
 - Tabs use the standard tab pattern with `aria-selected`, associated panels,

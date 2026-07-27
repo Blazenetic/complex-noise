@@ -1,1 +1,19 @@
-PLACEHOLDER
+{
+  "name": "Complex Noise",
+  "short_name": "Complex Noise",
+  "description": "Seamless noise for deep rest by Complex State — with Still Theme, Still Field and Still EQ",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0C0C11",
+  "theme_color": "#0C0C11",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%230C0C11'/%3E%3Ccircle cx='96' cy='96' r='48' fill='none' stroke='%236B3FA0' stroke-width='6' opacity='0.75'/%3E%3Ccircle cx='96' cy='96' r='18' fill='%236B3FA0' opacity='0.55'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

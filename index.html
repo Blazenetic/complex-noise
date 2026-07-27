@@ -1,1 +1,1193 @@
-PLACEHOLDER_WILL_BE_REPLACED
+<!DOCTYPE html>
+<html lang="en" data-still-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0C0C11" id="themeColorMeta" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Complex Noise by Complex State — Seamless brown noise for deep rest. Still Theme, Still Field, Still EQ." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <!-- Simple mathematical favicon (soft abstract field mark) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230C0C11'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%236B3FA0' stroke-width='1.5' opacity='0.7'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%236B3FA0' opacity='0.5'/%3E%3C/svg%3E" />
+  <title>Complex Noise | Complex State</title>
+  <style>
+    /* ============================================================
+       Still Theme system — premium brushed titanium (default) + bone-white calm
+       All theme tokens live here. Switch via data-still-theme on <html>
+       ============================================================ */
+    :root,
+    [data-still-theme="dark"] {
+      --bg: #0C0C11;
+      --bg-sheen: linear-gradient(160deg, #0E0E15 0%, #0A0A0F 45%, #12121A 100%);
+      --surface: #14141C;
+      --surface-elevated: #1C1C26;
+      --titanium: #3A3A48;
+      --text-primary: #D4D4DC;
+      --text-secondary: #9A9AA8;
+      --text-muted: #6E6E7C;
+      --purple: #6B3FA0;
+      --purple-deep: #4A2870;
+      --purple-bright: #9B6BFF;
+      --purple-glow: rgba(107, 63, 160, 0.48);
+      --border: rgba(255, 255, 255, 0.075);
+      --still-accent: var(--purple);
+      --still-field-particle: rgba(155, 107, 255, 0.32);
+      --still-field-core: rgba(180, 140, 255, 0.18);
+      --still-texture-opacity: 0.025;
+      --still-energy: 0;
+      --radius: 16px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      color-scheme: dark;
+    }
+
+    [data-still-theme="bone"] {
+      --bg: #F4F0E8;
+      --bg-sheen: linear-gradient(165deg, #F8F4EC 0%, #F0EBE2 100%);
+      --surface: #F9F6F0;
+      --surface-elevated: #EDE8DF;
+      --titanium: #C4BCB0;
+      --text-primary: #2C2C34;
+      --text-secondary: #5A5A66;
+      --text-muted: #8A8A96;
+      --purple: #7A6B8A;
+      --purple-deep: #5C4E6A;
+      --purple-bright: #9A8BA8;
+      --purple-glow: rgba(122, 107, 138, 0.28);
+      --border: rgba(0, 0, 0, 0.07);
+      --still-accent: #8A7B6A;
+      --still-field-particle: rgba(110, 95, 85, 0.22);
+      --still-field-core: rgba(130, 115, 100, 0.12);
+      --still-texture-opacity: 0.065;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      background-image: var(--bg-sheen);
+      color: var(--text-primary);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(20px + var(--safe-top)) 18px calc(18px + var(--safe-bottom));
+      min-height: 100dvh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Still Texture — procedural SVG noise overlay (feTurbulence) */
+    .still-texture {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: var(--still-texture-opacity);
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+      mix-blend-mode: overlay;
+    }
+
+    /* Still Field canvas — full page, behind UI */
+    #stillField {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.6s ease;
+    }
+
+    #stillField.still-field-off {
+      opacity: 0;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .logo {
+      font-size: 1.7rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .byline {
+      margin-top: 3px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.02em;
+    }
+
+    .tagline {
+      margin-top: 10px;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+
+    /* Still Theme toggle — calm switch */
+    .still-theme-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+    }
+
+    .still-theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .still-theme-toggle:hover,
+    .still-theme-toggle:focus-visible {
+      background: var(--surface-elevated);
+      color: var(--text-primary);
+      border-color: var(--purple);
+      outline: none;
+    }
+
+    .still-theme-icon {
+      font-size: 1rem;
+      line-height: 1;
+      opacity: 0.85;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 420px;
+      gap: 28px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Play button — focal point, gently influenced by Still Field energy */
+    .play-wrap {
+      position: relative;
+    }
+
+    #playBtn {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      border: none;
+      background: var(--purple-deep);
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.25s, transform 0.35s ease, box-shadow 0.4s ease;
+      box-shadow: 0 0 0 0 var(--purple-glow);
+      /* Still Field gentle influence via CSS custom property */
+      transform: scale(calc(1 + var(--still-energy, 0) * 0.028));
+    }
+
+    #playBtn:active {
+      transform: scale(0.96);
+    }
+
+    #playBtn.playing {
+      background: var(--purple);
+      box-shadow: 0 0 calc(28px + var(--still-energy, 0) * 18px) calc(6px + var(--still-energy, 0) * 6px) var(--purple-glow);
+      animation: still-pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes still-pulse {
+      0%, 100% { transform: scale(calc(1 + var(--still-energy, 0) * 0.028)); }
+      50% { transform: scale(calc(1.025 + var(--still-energy, 0) * 0.028)); }
+    }
+
+    /* Type selector */
+    .types {
+      display: flex;
+      background: var(--surface);
+      background-image: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%);
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+      width: 100%;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .type-btn {
+      flex: 1;
+      padding: 13px 8px;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+      font-weight: 550;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .type-btn.active {
+      background: var(--purple);
+      color: white;
+      box-shadow: 0 2px 12px var(--purple-glow);
+    }
+
+    /* Controls */
+    .controls {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .control-group {
+      background: var(--surface);
+      background-image: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 45%);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Range inputs */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--titanium);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--purple-bright);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--purple-glow);
+      border: 2px solid var(--bg);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--purple-bright);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+    }
+
+    input[type="range"]:disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    /* Timer select */
+    select {
+      width: 100%;
+      padding: 11px 13px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text-primary);
+      font-size: 0.98rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--purple);
+    }
+
+    /* Still settings panel (collapsible) */
+    .still-panel {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .still-panel summary {
+      padding: 13px 16px;
+      font-size: 0.85rem;
+      font-weight: 550;
+      color: var(--text-secondary);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .still-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .still-panel summary::after {
+      content: "▾";
+      font-size: 0.75rem;
+      opacity: 0.6;
+      transition: transform 0.2s;
+    }
+
+    .still-panel[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .still-panel-body {
+      padding: 4px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .still-eq-row,
+    .still-field-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .still-eq-row label,
+    .still-field-row label {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .still-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .still-toggle-row span {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .still-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--titanium);
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .still-switch[aria-checked="true"] {
+      background: var(--purple);
+    }
+
+    .still-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
+    .still-switch[aria-checked="true"]::after {
+      transform: translateX(20px);
+    }
+
+    .status {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      min-height: 1.2em;
+      text-align: center;
+      z-index: 2;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      width: 100%;
+      max-width: 420px;
+      z-index: 2;
+      line-height: 1.5;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    footer a:hover,
+    footer a:focus-visible {
+      color: var(--purple-bright);
+      border-bottom-color: var(--purple);
+      outline: none;
+    }
+
+    footer .sep {
+      opacity: 0.45;
+      margin: 0 6px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Procedural texture layer (Still Theme) -->
+  <div class="still-texture" aria-hidden="true"></div>
+
+  <!-- Still Field — full-page mathematical visualisation -->
+  <canvas id="stillField" aria-hidden="true"></canvas>
+
+  <header>
+    <div class="logo">Complex Noise</div>
+    <div class="byline">by Complex State</div>
+    <div class="tagline">Seamless noise for deep rest</div>
+    <div class="still-theme-row">
+      <button id="stillThemeToggle" class="still-theme-toggle" type="button" aria-label="Toggle Still Theme">
+        <span class="still-theme-icon" id="stillThemeIcon">◐</span>
+        <span class="still-theme-label" id="stillThemeLabel">Still · Dark</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="play-wrap">
+      <button id="playBtn" aria-label="Play noise">▶</button>
+    </div>
+
+    <div class="types" role="group" aria-label="Noise type">
+      <button class="type-btn active" data-type="brown">Brown</button>
+      <button class="type-btn" data-type="pink">Pink</button>
+      <button class="type-btn" data-type="white">White</button>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.4" />
+      </div>
+
+      <div class="control-group">
+        <label for="timer">Sleep timer</label>
+        <select id="timer">
+          <option value="0">Off</option>
+          <option value="1">1 hour</option>
+          <option value="2">2 hours</option>
+          <option value="4">4 hours</option>
+          <option value="8">8 hours</option>
+          <option value="10">10 hours</option>
+        </select>
+      </div>
+
+      <!-- Still settings: EQ + Field (collapsible to keep main surface calm) -->
+      <details class="still-panel" id="stillPanel">
+        <summary>Still settings</summary>
+        <div class="still-panel-body">
+          <!-- Still EQ -->
+          <div class="still-eq-row">
+            <label for="stillEqLow">Still EQ · Low</label>
+            <input type="range" id="stillEqLow" min="-12" max="12" step="0.5" value="0" />
+          </div>
+          <div class="still-eq-row">
+            <label for="stillEqMid">Still EQ · Mid</label>
+            <input type="range" id="stillEqMid" min="-12" max="12" step="0.5" value="0" />
+          </div>
+          <div class="still-eq-row">
+            <label for="stillEqHigh">Still EQ · High</label>
+            <input type="range" id="stillEqHigh" min="-12" max="12" step="0.5" value="0" />
+          </div>
+
+          <!-- Still Field controls -->
+          <div class="still-toggle-row">
+            <span>Still Field</span>
+            <button type="button" class="still-switch" id="stillFieldToggle" role="switch" aria-checked="true" aria-label="Enable Still Field"></button>
+          </div>
+          <div class="still-field-row">
+            <label for="stillFieldIntensity">Still Field intensity</label>
+            <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.55" />
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="status" id="status">Ready</div>
+  </main>
+
+  <footer>
+    <span>Procedural · Infinite · Offline</span>
+    <span class="sep">·</span>
+    <a href="https://github.com/Blazenetic/complex-noise" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
+    <br />
+    Complex State
+  </footer>
+
+  <script>
+    // ============================================================
+    // Complex Noise by Complex State
+    // Procedural seamless noise generator (Web Audio API)
+    // Upgraded with Still Theme · Still Field · Still EQ
+    // Optimized for long sleep sessions on mobile browsers
+    // ============================================================
+
+    const BUFFER_DURATION = 12; // seconds — long enough for inaudible loop seams
+    const FADE_TIME = 0.9;
+
+    // --- Still Theme ---
+    let stillTheme = localStorage.getItem('complexNoise_stillTheme') || 'dark';
+
+    // --- Still EQ state (dB) ---
+    let stillEqLow = parseFloat(localStorage.getItem('complexNoise_stillEqLow')) || 0;
+    let stillEqMid = parseFloat(localStorage.getItem('complexNoise_stillEqMid')) || 0;
+    let stillEqHigh = parseFloat(localStorage.getItem('complexNoise_stillEqHigh')) || 0;
+
+    // --- Still Field state ---
+    let stillFieldEnabled = localStorage.getItem('complexNoise_stillFieldEnabled') !== 'false';
+    let stillFieldIntensity = parseFloat(localStorage.getItem('complexNoise_stillFieldIntensity'));
+    if (isNaN(stillFieldIntensity)) stillFieldIntensity = 0.55;
+
+    // --- Core audio state ---
+    let audioCtx = null;
+    let gainNode = null;
+    let sourceNode = null;
+    let stillEqLowNode = null;
+    let stillEqMidNode = null;
+    let stillEqHighNode = null;
+    let analyser = null;
+    let currentType = localStorage.getItem('complexNoise_type') || 'brown';
+    let currentVolume = parseFloat(localStorage.getItem('complexNoise_volume')) || 0.4;
+    let isPlaying = false;
+    let timerId = null;
+    let wakeLock = null;
+
+    // --- Still Field runtime ---
+    let stillFieldParticles = [];
+    let stillFieldRaf = null;
+    let stillFieldLastTs = 0;
+    let stillEnergy = 0; // 0–1 smoothed energy for UI influence
+
+    // DOM
+    const playBtn = document.getElementById('playBtn');
+    const volumeSlider = document.getElementById('volume');
+    const timerSelect = document.getElementById('timer');
+    const statusEl = document.getElementById('status');
+    const typeButtons = document.querySelectorAll('.type-btn');
+    const stillThemeToggle = document.getElementById('stillThemeToggle');
+    const stillThemeIcon = document.getElementById('stillThemeIcon');
+    const stillThemeLabel = document.getElementById('stillThemeLabel');
+    const stillEqLowSlider = document.getElementById('stillEqLow');
+    const stillEqMidSlider = document.getElementById('stillEqMid');
+    const stillEqHighSlider = document.getElementById('stillEqHigh');
+    const stillFieldToggle = document.getElementById('stillFieldToggle');
+    const stillFieldIntensitySlider = document.getElementById('stillFieldIntensity');
+    const stillFieldCanvas = document.getElementById('stillField');
+    const themeColorMeta = document.getElementById('themeColorMeta');
+
+    // Restore UI
+    volumeSlider.value = currentVolume;
+    typeButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.type === currentType);
+    });
+    const savedTimer = localStorage.getItem('complexNoise_timer');
+    if (savedTimer) timerSelect.value = savedTimer;
+
+    stillEqLowSlider.value = stillEqLow;
+    stillEqMidSlider.value = stillEqMid;
+    stillEqHighSlider.value = stillEqHigh;
+    stillFieldIntensitySlider.value = stillFieldIntensity;
+    stillFieldToggle.setAttribute('aria-checked', stillFieldEnabled ? 'true' : 'false');
+    // Keep the intensity control in sync with the toggle state for clarity
+    stillFieldIntensitySlider.disabled = !stillFieldEnabled;
+
+    // ----------------------------------------------------------
+    // Still Theme
+    // ----------------------------------------------------------
+    function applyStillTheme(theme) {
+      stillTheme = theme;
+      document.documentElement.setAttribute('data-still-theme', theme);
+      localStorage.setItem('complexNoise_stillTheme', theme);
+      const isBone = theme === 'bone';
+      stillThemeIcon.textContent = isBone ? '◑' : '◐';
+      stillThemeLabel.textContent = isBone ? 'Still · Bone' : 'Still · Dark';
+      if (themeColorMeta) themeColorMeta.content = isBone ? '#F4F0E8' : '#0C0C11';
+      const schemeMeta = document.querySelector('meta[name="color-scheme"]');
+      if (schemeMeta) schemeMeta.content = isBone ? 'light' : 'dark';
+      // Re-seed particles so colours update immediately with the new theme
+      if (stillFieldParticles.length) initStillFieldParticles(true);
+    }
+
+    applyStillTheme(stillTheme);
+
+    stillThemeToggle.addEventListener('click', () => {
+      applyStillTheme(stillTheme === 'dark' ? 'bone' : 'dark');
+    });
+
+    // ----------------------------------------------------------
+    // Noise generation (proven algorithms from noisehack / Paul Kellet)
+    // ----------------------------------------------------------
+    function generateNoiseBuffer(ctx, type, durationSec = BUFFER_DURATION) {
+      const sampleRate = ctx.sampleRate;
+      const length = Math.floor(sampleRate * durationSec);
+      const buffer = ctx.createBuffer(1, length, sampleRate);
+      const data = buffer.getChannelData(0);
+
+      if (type === 'white') {
+        for (let i = 0; i < length; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.5;
+        }
+      } else if (type === 'brown') {
+        let lastOut = 0.0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          lastOut = (lastOut + (0.02 * white)) / 1.02;
+          data[i] = lastOut * 3.5;
+        }
+      } else if (type === 'pink') {
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          b3 = 0.86650 * b3 + white * 0.3104856;
+          b4 = 0.55000 * b4 + white * 0.5329522;
+          b5 = -0.7616 * b5 - white * 0.0168980;
+          data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+          b6 = white * 0.115926;
+        }
+      }
+      return buffer;
+    }
+
+    // ----------------------------------------------------------
+    // Audio engine + Still EQ + Analyser
+    // Chain: source → stillEqLow → stillEqMid → stillEqHigh → analyser → gain → destination
+    // ----------------------------------------------------------
+    async function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Still EQ nodes
+        stillEqLowNode = audioCtx.createBiquadFilter();
+        stillEqLowNode.type = 'lowshelf';
+        stillEqLowNode.frequency.value = 220;
+        stillEqLowNode.gain.value = stillEqLow;
+
+        stillEqMidNode = audioCtx.createBiquadFilter();
+        stillEqMidNode.type = 'peaking';
+        stillEqMidNode.frequency.value = 1000;
+        stillEqMidNode.Q.value = 0.85;
+        stillEqMidNode.gain.value = stillEqMid;
+
+        stillEqHighNode = audioCtx.createBiquadFilter();
+        stillEqHighNode.type = 'highshelf';
+        stillEqHighNode.frequency.value = 3500;
+        stillEqHighNode.gain.value = stillEqHigh;
+
+        // Analyser for Still Field
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.82;
+        analyser.minDecibels = -90;
+        analyser.maxDecibels = -10;
+
+        // Gain
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0;
+
+        // Permanent chain: EQ → analyser → gain → dest
+        stillEqLowNode.connect(stillEqMidNode);
+        stillEqMidNode.connect(stillEqHighNode);
+        stillEqHighNode.connect(analyser);
+        analyser.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+    }
+
+    function applyStillEqGains() {
+      if (!stillEqLowNode) return;
+      stillEqLowNode.gain.value = stillEqLow;
+      stillEqMidNode.gain.value = stillEqMid;
+      stillEqHighNode.gain.value = stillEqHigh;
+    }
+
+    function startSource() {
+      if (sourceNode) {
+        try { sourceNode.stop(); } catch (e) {}
+        sourceNode.disconnect();
+      }
+      const buffer = generateNoiseBuffer(audioCtx, currentType);
+      sourceNode = audioCtx.createBufferSource();
+      sourceNode.buffer = buffer;
+      sourceNode.loop = true;
+      // Connect into the Still EQ head
+      sourceNode.connect(stillEqLowNode);
+      sourceNode.start();
+    }
+
+    async function play() {
+      await ensureAudio();
+      startSource();
+
+      const now = audioCtx.currentTime;
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+      gainNode.gain.linearRampToValueAtTime(currentVolume, now + FADE_TIME);
+
+      isPlaying = true;
+      playBtn.classList.add('playing');
+      playBtn.innerHTML = '⏸';
+      playBtn.setAttribute('aria-label', 'Pause noise');
+      statusEl.textContent = currentType.charAt(0).toUpperCase() + currentType.slice(1) + ' noise playing';
+
+      requestWakeLock();
+      scheduleTimer();
+      startStillFieldLoop();
+    }
+
+    function stop(fade = true) {
+      if (!audioCtx || !isPlaying) return;
+
+      const now = audioCtx.currentTime;
+      if (fade) {
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + FADE_TIME);
+        setTimeout(() => {
+          if (sourceNode) {
+            try { sourceNode.stop(); } catch (e) {}
+            sourceNode.disconnect();
+            sourceNode = null;
+          }
+        }, FADE_TIME * 1000 + 50);
+      } else {
+        if (sourceNode) {
+          try { sourceNode.stop(); } catch (e) {}
+          sourceNode.disconnect();
+          sourceNode = null;
+        }
+        gainNode.gain.value = 0;
+      }
+
+      isPlaying = false;
+      playBtn.classList.remove('playing');
+      playBtn.innerHTML = '▶';
+      playBtn.setAttribute('aria-label', 'Play noise');
+      statusEl.textContent = 'Paused';
+      clearTimer();
+      releaseWakeLock();
+      // Keep Still Field ambient if enabled; energy will decay naturally
+    }
+
+    function setType(type) {
+      if (type === currentType) return;
+      currentType = type;
+      localStorage.setItem('complexNoise_type', type);
+
+      typeButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+      });
+
+      if (isPlaying) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.linearRampToValueAtTime(0, now + 0.15);
+        setTimeout(() => {
+          startSource();
+          gainNode.gain.linearRampToValueAtTime(currentVolume, audioCtx.currentTime + 0.25);
+          statusEl.textContent = type.charAt(0).toUpperCase() + type.slice(1) + ' noise playing';
+        }, 160);
+      }
+    }
+
+    function setVolume(v) {
+      currentVolume = v;
+      localStorage.setItem('complexNoise_volume', v);
+      if (isPlaying && gainNode) {
+        gainNode.gain.linearRampToValueAtTime(v, audioCtx.currentTime + 0.05);
+      }
+    }
+
+    // Still EQ setters
+    function setStillEqLow(v) {
+      stillEqLow = v;
+      localStorage.setItem('complexNoise_stillEqLow', v);
+      if (stillEqLowNode) stillEqLowNode.gain.value = v;
+    }
+    function setStillEqMid(v) {
+      stillEqMid = v;
+      localStorage.setItem('complexNoise_stillEqMid', v);
+      if (stillEqMidNode) stillEqMidNode.gain.value = v;
+    }
+    function setStillEqHigh(v) {
+      stillEqHigh = v;
+      localStorage.setItem('complexNoise_stillEqHigh', v);
+      if (stillEqHighNode) stillEqHighNode.gain.value = v;
+    }
+
+    // ----------------------------------------------------------
+    // Sleep timer
+    // ----------------------------------------------------------
+    function scheduleTimer() {
+      clearTimer();
+      const hours = parseFloat(timerSelect.value);
+      if (hours <= 0) return;
+
+      const ms = hours * 3600 * 1000;
+      timerId = setTimeout(() => {
+        statusEl.textContent = 'Timer ended — fading out…';
+        stop(true);
+      }, ms);
+
+      statusEl.textContent = `Playing · timer ${hours}h`;
+    }
+
+    function clearTimer() {
+      if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    }
+
+    // ----------------------------------------------------------
+    // Wake Lock
+    // ----------------------------------------------------------
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isPlaying) {
+        requestWakeLock();
+      }
+      // Still Field loop respects visibility inside its own tick
+    });
+
+    // ----------------------------------------------------------
+    // Still Field — full-page procedural visualisation
+    // Soft particle field driven by analyser, gentle UI influence
+    // ----------------------------------------------------------
+    const stillFieldCtx = stillFieldCanvas.getContext('2d', { alpha: true });
+    let stillFieldW = 0;
+    let stillFieldH = 0;
+    let stillFieldDpr = 1;
+
+    function resizeStillField() {
+      stillFieldDpr = Math.min(window.devicePixelRatio || 1, 2);
+      stillFieldW = window.innerWidth;
+      stillFieldH = window.innerHeight;
+      stillFieldCanvas.width = Math.floor(stillFieldW * stillFieldDpr);
+      stillFieldCanvas.height = Math.floor(stillFieldH * stillFieldDpr);
+      stillFieldCanvas.style.width = stillFieldW + 'px';
+      stillFieldCanvas.style.height = stillFieldH + 'px';
+      stillFieldCtx.setTransform(stillFieldDpr, 0, 0, stillFieldDpr, 0, 0);
+      if (stillFieldParticles.length === 0) initStillFieldParticles();
+    }
+
+    function initStillFieldParticles(force = false) {
+      if (stillFieldParticles.length && !force) return;
+      // Cap particle count for mid-range mobile performance while keeping the field present
+      const count = Math.min(42, Math.max(24, Math.floor((stillFieldW * stillFieldH) / 20000)));
+      stillFieldParticles = [];
+      const style = getComputedStyle(document.documentElement);
+      const particleColor = style.getPropertyValue('--still-field-particle').trim() || 'rgba(155,107,255,0.3)';
+      const coreColor = style.getPropertyValue('--still-field-core').trim() || 'rgba(180,140,255,0.15)';
+
+      for (let i = 0; i < count; i++) {
+        stillFieldParticles.push({
+          x: Math.random() * stillFieldW,
+          y: Math.random() * stillFieldH,
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          baseR: 18 + Math.random() * 42,
+          phase: Math.random() * Math.PI * 2,
+          color: particleColor,
+          core: coreColor
+        });
+      }
+    }
+
+    function getStillAudioMetrics() {
+      if (!analyser || !isPlaying) {
+        return { low: 0, mid: 0, high: 0, overall: 0 };
+      }
+      const bins = analyser.frequencyBinCount;
+      const data = new Uint8Array(bins);
+      analyser.getByteFrequencyData(data);
+
+      // Rough band averages (fftSize 256 → ~ bin width ~ sampleRate/256)
+      let lowSum = 0, midSum = 0, highSum = 0, total = 0;
+      const lowEnd = Math.floor(bins * 0.12);
+      const midEnd = Math.floor(bins * 0.45);
+      for (let i = 0; i < bins; i++) {
+        const v = data[i] / 255;
+        total += v;
+        if (i < lowEnd) lowSum += v;
+        else if (i < midEnd) midSum += v;
+        else highSum += v;
+      }
+      const overall = total / bins;
+      return {
+        low: lowSum / Math.max(1, lowEnd),
+        mid: midSum / Math.max(1, midEnd - lowEnd),
+        high: highSum / Math.max(1, bins - midEnd),
+        overall: overall
+      };
+    }
+
+    function updateStillField(ts) {
+      if (!stillFieldEnabled || stillFieldIntensity <= 0.01) {
+        stillFieldCanvas.classList.add('still-field-off');
+        if (stillFieldRaf) {
+          cancelAnimationFrame(stillFieldRaf);
+          stillFieldRaf = null;
+        }
+        // Force energy to zero so play button influence disappears cleanly
+        stillEnergy = 0;
+        document.documentElement.style.setProperty('--still-energy', '0');
+        return;
+      }
+
+      stillFieldCanvas.classList.remove('still-field-off');
+
+      if (document.visibilityState !== 'visible') {
+        stillFieldRaf = requestAnimationFrame(updateStillField);
+        return;
+      }
+
+      stillFieldLastTs = ts;
+
+      const metrics = getStillAudioMetrics();
+      // Smooth energy for UI — much quieter when not actively playing
+      const targetEnergy = metrics.overall * stillFieldIntensity * (isPlaying ? 1 : 0.08);
+      stillEnergy += (targetEnergy - stillEnergy) * 0.1;
+      document.documentElement.style.setProperty('--still-energy', stillEnergy.toFixed(4));
+
+      // Soft residual clear (calm trails, never harsh)
+      stillFieldCtx.fillStyle = stillTheme === 'bone'
+        ? 'rgba(244, 240, 232, 0.22)'
+        : 'rgba(12, 12, 17, 0.18)';
+      stillFieldCtx.fillRect(0, 0, stillFieldW, stillFieldH);
+
+      const intensity = stillFieldIntensity;
+      const energyBoost = 0.4 + metrics.overall * 1.4;
+
+      // Soft attraction points (play button approx centre, lower controls)
+      const anchors = [
+        { x: stillFieldW * 0.5, y: stillFieldH * 0.38, strength: 0.012 + metrics.low * 0.02 },
+        { x: stillFieldW * 0.5, y: stillFieldH * 0.62, strength: 0.006 + metrics.mid * 0.012 }
+      ];
+
+      for (const p of stillFieldParticles) {
+        // Very gentle random walk + audio energy (kept calm)
+        p.vx += (Math.random() - 0.5) * 0.028 * energyBoost;
+        p.vy += (Math.random() - 0.5) * 0.028 * energyBoost;
+
+        // Gentle attraction to anchors
+        for (const a of anchors) {
+          const dx = a.x - p.x;
+          const dy = a.y - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+          p.vx += (dx / dist) * a.strength * intensity;
+          p.vy += (dy / dist) * a.strength * intensity;
+        }
+
+        // Strong damping keeps motion calm and premium
+        p.vx *= 0.972;
+        p.vy *= 0.972;
+
+        p.x += p.vx * (1 + metrics.mid * 0.6);
+        p.y += p.vy * (1 + metrics.mid * 0.6);
+
+        // Soft wrap
+        if (p.x < -60) p.x = stillFieldW + 60;
+        if (p.x > stillFieldW + 60) p.x = -60;
+        if (p.y < -60) p.y = stillFieldH + 60;
+        if (p.y > stillFieldH + 60) p.y = -60;
+
+        // Breathing radius
+        p.phase += 0.008 + metrics.high * 0.015;
+        const r = p.baseR * (0.75 + Math.sin(p.phase) * 0.18) * (0.85 + metrics.overall * 0.45) * intensity;
+
+        // Draw soft particle
+        const grad = stillFieldCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        grad.addColorStop(0, p.core);
+        grad.addColorStop(0.45, p.color);
+        grad.addColorStop(1, 'transparent');
+        stillFieldCtx.beginPath();
+        stillFieldCtx.fillStyle = grad;
+        stillFieldCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        stillFieldCtx.fill();
+      }
+
+      stillFieldRaf = requestAnimationFrame(updateStillField);
+    }
+
+    function startStillFieldLoop() {
+      if (stillFieldRaf) return;
+      if (!stillFieldEnabled) return;
+      stillFieldLastTs = performance.now();
+      stillFieldRaf = requestAnimationFrame(updateStillField);
+    }
+
+    function setStillFieldEnabled(on) {
+      stillFieldEnabled = on;
+      localStorage.setItem('complexNoise_stillFieldEnabled', on ? 'true' : 'false');
+      stillFieldToggle.setAttribute('aria-checked', on ? 'true' : 'false');
+      stillFieldIntensitySlider.disabled = !on;
+      if (on) {
+        startStillFieldLoop();
+      } else {
+        if (stillFieldRaf) {
+          cancelAnimationFrame(stillFieldRaf);
+          stillFieldRaf = null;
+        }
+        stillFieldCanvas.classList.add('still-field-off');
+        stillEnergy = 0;
+        document.documentElement.style.setProperty('--still-energy', '0');
+        // Clear residual particles so the next enable starts clean
+        if (stillFieldCtx) {
+          stillFieldCtx.clearRect(0, 0, stillFieldW || stillFieldCanvas.width, stillFieldH || stillFieldCanvas.height);
+        }
+      }
+    }
+
+    function setStillFieldIntensity(v) {
+      stillFieldIntensity = v;
+      localStorage.setItem('complexNoise_stillFieldIntensity', v);
+      if (v > 0.01 && stillFieldEnabled) startStillFieldLoop();
+    }
+
+    // ----------------------------------------------------------
+    // Event listeners
+    // ----------------------------------------------------------
+    playBtn.addEventListener('click', () => {
+      if (isPlaying) stop(true);
+      else play();
+    });
+
+    typeButtons.forEach(btn => {
+      btn.addEventListener('click', () => setType(btn.dataset.type));
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      setVolume(parseFloat(e.target.value));
+    });
+
+    timerSelect.addEventListener('change', () => {
+      localStorage.setItem('complexNoise_timer', timerSelect.value);
+      if (isPlaying) scheduleTimer();
+    });
+
+    stillEqLowSlider.addEventListener('input', (e) => {
+      setStillEqLow(parseFloat(e.target.value));
+    });
+    stillEqMidSlider.addEventListener('input', (e) => {
+      setStillEqMid(parseFloat(e.target.value));
+    });
+    stillEqHighSlider.addEventListener('input', (e) => {
+      setStillEqHigh(parseFloat(e.target.value));
+    });
+
+    stillFieldToggle.addEventListener('click', () => {
+      setStillFieldEnabled(!(stillFieldToggle.getAttribute('aria-checked') === 'true'));
+    });
+
+    stillFieldIntensitySlider.addEventListener('input', (e) => {
+      setStillFieldIntensity(parseFloat(e.target.value));
+    });
+
+    // Prevent accidental zoom / scroll issues on some Android browsers
+    document.addEventListener('gesturestart', e => e.preventDefault());
+
+    // Init Still Field
+    window.addEventListener('resize', () => {
+      resizeStillField();
+      initStillFieldParticles(true);
+    });
+    resizeStillField();
+    initStillFieldParticles();
+    if (stillFieldEnabled) startStillFieldLoop();
+
+    // Expose a few helpers for future agents / debugging (optional)
+    window.complexNoiseStill = {
+      getTheme: () => stillTheme,
+      getEnergy: () => stillEnergy,
+      getMetrics: getStillAudioMetrics
+    };
+  </script>
+</body>
+</html>

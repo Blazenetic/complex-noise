@@ -3,6 +3,9 @@
 **Procedural noise for deep rest**  
 by **[Blazenetic](https://github.com/Blazenetic)**
 
+> Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
+> Built in a small Australian lab by Blazenetic (systems), Arty (the one who actually tests the sleep timer), and a supporting cast of increasingly questionable decision-makers.
+
 A pure client-side procedural noise generator (Brown, Pink, White) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
 ## Quick Start
@@ -87,7 +90,8 @@ complex-noise/
 ├── AGENTS.md               # Contributor / agent guide
 ├── README.md
 ├── LICENSE
-└── docs/                   # Historical product requirements + context
+├── CHANGELOG.md            # What shipped + Lab Log
+└── docs/                   # Lab Voice, historical requirements, visitor notes
 ```
 
 **State flows one way.** `audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` own state
@@ -251,5 +255,6 @@ Copyright (c) 2026 Blazenetic
 
 ---
 
-Made in Australia with the help of AI agents.  
-Sleep well.
+Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
+See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [Lab Voice](docs/LAB_VOICE.md) for the rules.  
+Sleep well. (Or don’t. We’re not your parents.)

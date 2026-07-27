@@ -1,20 +1,21 @@
 # Complex Noise — Documentation
 
-This folder holds product requirements and implementation context for Complex Noise upgrades.
+This folder holds product requirements, Lab Voice rules, and implementation context for Complex Noise.
 
 ## Documents
 
 | File | Purpose |
 |------|---------|
+| [LAB_VOICE.md](./LAB_VOICE.md) | **Source of truth** for Lab personality, cast, tone and rules (narrative docs only) |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance |
 
-These two documents are **historical context**, kept because they explain why
-the app looks and behaves the way it does. They are not current specifications.
+The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications.
 
-For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running,
-testing, architecture) and the [README](../README.md).
+For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running, testing, architecture) and the [README](../README.md).  
+For what shipped and the Lab’s reaction to it, see **[CHANGELOG.md](../CHANGELOG.md)**.
 
 ## Current status (as of 28 July 2026)
 
@@ -41,5 +42,6 @@ partially addressed — controls are labelled and all touch targets clear 44 px 
 but a full audit (screen-reader walkthrough, contrast check beyond the current
 reduced-motion support) has not been done.
 
-A fuller work report and changelog (covering the intensive 26–28 July
-development) lives in the project Google Drive under Complex noise → reports.
+A fuller work report covering the intensive 26–28 July development lives in the
+project Google Drive. The public changelog is derived from it and lives at the
+repo root.

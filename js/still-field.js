@@ -10,35 +10,68 @@
  *
  * ## Contract
  *
- * This module owns exactly one DOM element: the canvas handed to
- * `initStillField()`. It never queries the document for anything else. UI
- * controls (the toggle switch, the intensity and speed sliders) are rendered by
- * app.js from the snapshot published via `subscribe()`.
+ * This module owns exactly two DOM elements: the field canvas and the info
+ * canvas handed to `initStillField()`. It never queries the document for
+ * anything else. UI controls are rendered by app.js from the snapshot published
+ * via `subscribe()`.
  *
- * ## Performance notes — this app runs all night on a phone
+ * ## Why there are two canvases
  *
- * The field is on by default now, so every per-frame cost is a battery cost for
- * eight unattended hours. The rules that keep it cheap:
+ * The field canvas keeps a trail: each frame subtracts alpha from the previous
+ * one with `destination-out`. That is what gives the drift its comet tail — and
+ * it is also what made every callout look like it had a soft glow behind it,
+ * because a moving label leaves half a second of decaying copies of itself
+ * smeared along its path. Text cannot share a surface with a trail and stay
+ * crisp.
  *
- * - **30 fps, not 60.** Nothing here moves fast enough to need more, and the
- *   motion is integrated from real elapsed time, so the field drifts at exactly
- *   the same rate whether the display runs at 30, 60 or 120 Hz. Halving the
- *   frame rate halves the work for no perceptible loss.
+ * So the instrumentation lives on its own canvas, cleared outright every frame.
+ * No trail, no `shadowBlur`, glyph origins snapped to whole device pixels: the
+ * text is as sharp as the display can draw it, however fast it is moving. The
+ * second surface costs one `clearRect` per frame and only while the layer is on.
+ *
+ * ## Performance notes
+ *
+ * The field is on by default, and the visualisation is toggleable, so the
+ * budget is "excellent on a desktop, still honest on a phone". The rules that
+ * keep it cheap:
+ *
+ * - **Frame rate is capped, and the cap is a setting** (30 / 45 / 60). Motion is
+ *   integrated from real elapsed time, so the field drifts at exactly the same
+ *   rate whichever cap is chosen — including the trail, whose decay is a rate
+ *   per second rather than a per-frame alpha.
  * - **The loop stops when the page is hidden.** Requesting frames that the
  *   browser will only throttle still wakes the compositor; not asking is free.
  * - **No allocation in the render loop.** Colours are pre-quantised into small
- *   palettes at theme-change time and selected by index, so per-node colour
- *   costs an array lookup instead of a string build. Link state lives in one
- *   pre-sized Float32Array.
+ *   palettes at theme-change time and selected by index. Link state, the
+ *   spatial grid, callout geometry and edge-annotation slots all live in
+ *   pre-sized typed arrays.
+ * - **Linking is a uniform grid, not an O(n²) scan.** Each node only tests the
+ *   nodes in its own cell and four neighbours, which is what makes a
+ *   user-raisable node population affordable at all. Both the real and the
+ *   would-be brute-force pair counts are reported in the HUD.
+ * - **Consecutive same-style edge segments share a path.** Alpha varies almost
+ *   continuously with depth and strength, so this collapses runs rather than
+ *   the whole frame — a real saving when the field is calm and a no-op when it
+ *   is not. The path count is reported next to the edge count so the ratio is
+ *   visible rather than claimed.
  * - **`getComputedStyle` is called once per theme change, never per frame**, and
  *   `--still-energy` is only written when it moves perceptibly, because both
  *   force a style recalculation for the whole document.
  * - **Glow is rationed.** `shadowBlur` is the single most expensive thing on
- *   this canvas, so only the few highest-energy nodes get it, with a hard cap.
- * - O(n²) link scanning is fine at n ≤ 44 once the frame rate is halved.
+ *   this canvas, so only the few highest-energy nodes get it, with a hard cap —
+ *   and it never touches text.
  */
 
-import { STORAGE_KEYS, DEFAULTS, STILL_SPEED_MIN, STILL_SPEED_MAX } from './constants.js';
+import {
+  STORAGE_KEYS, DEFAULTS,
+  STILL_SPEED_MIN, STILL_SPEED_MAX,
+  STILL_DENSITY_MIN, STILL_DENSITY_MAX,
+  STILL_REACH_MIN, STILL_REACH_MAX,
+  STILL_TRAIL_MIN, STILL_TRAIL_MAX,
+  STILL_DEPTH_MIN, STILL_DEPTH_MAX,
+  STILL_DWELL_MIN, STILL_DWELL_MAX,
+  STILL_FPS_OPTIONS,
+} from './constants.js';
 import { write, readNumber, readBool, clamp } from './storage.js';
 import { getAnalyser, getIsPlaying } from './audio.js';
 
@@ -50,17 +83,16 @@ import { getAnalyser, getIsPlaying } from './audio.js';
  * Perspective depth. `z` runs 0 (nearest) to 1 (furthest) and projects through
  * a pinhole camera of focal length 1:
  *
- *     scale(z) = 1 / (1 + z * DEPTH)
+ *     scale(z) = 1 / (1 + z * depth)
  *
- * so the near plane draws at 1.0 and the far plane at 1/(1 + DEPTH). At 0.75
- * that is a 1.75× size ratio across the volume — enough to read as depth, not
- * enough to look like a flying-through-space screensaver.
+ * so the near plane draws at 1.0 and the far plane at 1/(1 + depth). At the
+ * default 0.75 that is a 1.75× size ratio across the volume — enough to read as
+ * depth, not enough to look like a flying-through-space screensaver. The Field
+ * Lab exposes it, which is why it is a variable rather than a constant.
  */
-const DEPTH = 0.75;
-const MIN_SCALE = 1 / (1 + DEPTH);
-
-/** Target frame interval. See the battery note above. */
-const FRAME_INTERVAL_MS = 1000 / 30;
+let depth = clamp(readNumber(STORAGE_KEYS.stillFieldDepth, DEFAULTS.stillFieldDepth),
+  STILL_DEPTH_MIN, STILL_DEPTH_MAX);
+let minScale = 1 / (1 + depth);
 
 /** Longest timestep we will integrate in one go, after a stall or a hidden tab. */
 const MAX_STEP_S = 0.1;
@@ -68,12 +100,14 @@ const MAX_STEP_S = 0.1;
 /**
  * Node count bounds, measured against the *world* plane rather than the
  * viewport: perspective pulls distant nodes toward the centre, so a count
- * derived from screen area leaves the field looking thin. The upper bound is
- * what keeps O(n²) linking honest — 44 nodes is 946 pairs a frame, and at 30 fps
- * that is less pair-testing per second than the old 22 nodes at 60 fps.
+ * derived from screen area leaves the field looking thin. The ceiling is high
+ * because the grid made it affordable — brute-force pair testing is what used
+ * to cap this at 44.
  */
-const MIN_NODES = 26;
-const MAX_NODES = 44;
+const BASE_MIN_NODES = 26;
+const BASE_MAX_NODES = 44;
+const MIN_NODES = 14;
+const MAX_NODES = 150;
 const AREA_PER_NODE = 30000;
 
 /** Node lifetime range in seconds, before the speed multiplier. */
@@ -90,12 +124,6 @@ const LINK_RELEASE = 1.1;
 const LINK_PULSE_GAIN = 0.9;
 /** Below this, a link is invisible and not worth stroking. */
 const LINK_EPSILON = 0.004;
-
-/**
- * Fraction of the previous frame's alpha removed each frame. At 30 fps, 0.24
- * fades a trail to invisibility in a little over half a second.
- */
-const TRAIL_DECAY = 0.24;
 
 /** Energy smoothing rate (per second) for the value mirrored to CSS. */
 const ENERGY_SMOOTH = 2.4;
@@ -114,6 +142,14 @@ const MAX_GLOW_NODES = 10;
 const COLOR_STEPS = 16;
 
 /**
+ * Edge batching quantisation. Alpha to 1/64 and width to 1/8 px are both well
+ * under the threshold where a change is visible on a hairline, so rounding to
+ * them costs nothing and lets neighbouring edges share a path.
+ */
+const BATCH_ALPHA_STEPS = 64;
+const BATCH_WIDTH_STEPS = 8;
+
+/**
  * Strides of the R2 low-discrepancy sequence (Roberts, 2018), generated from
  * the plastic number g ≈ 1.3247. Successive points fill a rectangle far more
  * evenly than `Math.random()`, which clumps — spawning a replacement node at
@@ -125,6 +161,8 @@ const R2_A2 = 0.5698402909980532; // 1/g²
 const R2_A3 = 0.4301597090052419; // 1/g³
 
 const PHI = 1.6180339887498949;
+const TAU = Math.PI * 2;
+const RAD_TO_DEG = 180 / Math.PI;
 
 /** Debounce window for resize — mobile browsers fire it on every URL-bar nudge. */
 const RESIZE_DEBOUNCE_MS = 150;
@@ -143,6 +181,30 @@ let stillFieldSpeed = clamp(
 );
 let stillFieldNerd = readBool(STORAGE_KEYS.stillFieldNerd, DEFAULTS.stillFieldNerd);
 let stillFieldTexture = readBool(STORAGE_KEYS.stillFieldTexture, DEFAULTS.stillFieldTexture);
+let stillFieldDensity = clamp(
+  readNumber(STORAGE_KEYS.stillFieldDensity, DEFAULTS.stillFieldDensity),
+  STILL_DENSITY_MIN,
+  STILL_DENSITY_MAX,
+);
+let stillFieldReach = clamp(
+  readNumber(STORAGE_KEYS.stillFieldReach, DEFAULTS.stillFieldReach),
+  STILL_REACH_MIN,
+  STILL_REACH_MAX,
+);
+let stillFieldTrail = clamp(
+  readNumber(STORAGE_KEYS.stillFieldTrail, DEFAULTS.stillFieldTrail),
+  STILL_TRAIL_MIN,
+  STILL_TRAIL_MAX,
+);
+let stillFieldDwell = clamp(
+  readNumber(STORAGE_KEYS.stillFieldDwell, DEFAULTS.stillFieldDwell),
+  STILL_DWELL_MIN,
+  STILL_DWELL_MAX,
+);
+let stillFieldFps = STILL_FPS_OPTIONS.includes(
+  readNumber(STORAGE_KEYS.stillFieldFps, DEFAULTS.stillFieldFps),
+) ? readNumber(STORAGE_KEYS.stillFieldFps, DEFAULTS.stillFieldFps) : DEFAULTS.stillFieldFps;
+let stillFieldCode = readBool(STORAGE_KEYS.stillFieldCode, DEFAULTS.stillFieldCode);
 
 // Session-only fold for the HUD panel (does not persist). Default folded on
 // narrow viewports so the main interface is not blocked on first open.
@@ -162,6 +224,9 @@ let lastPublishedEnergy = -1; // last value actually written to the CSS variable
 
 let stillFieldCanvas = null;
 let stillFieldCtx = null;
+let infoCanvas = null;
+let infoCtx = null;
+let infoCleared = true;
 let stillFieldW = 0;   // viewport, CSS px
 let stillFieldH = 0;
 let worldW = 0;        // world plane, sized so far nodes still reach the edges
@@ -172,6 +237,7 @@ let stillFieldDpr = 1;
 let resizeDebounceId = null;
 let nodeSerial = 0;
 let nerdView = 'live';
+let hasRoundRect = false;
 
 // Theme-derived colours, refreshed by refreshThemeColors()
 const nodePalette = new Array(COLOR_STEPS).fill('rgb(190,195,210)');
@@ -179,6 +245,12 @@ const edgePalette = new Array(COLOR_STEPS).fill('rgb(160,165,180)');
 let glowColor = 'rgba(124, 58, 237, 0.55)';
 let baseNodeAlpha = 0.55;
 let baseEdgeAlpha = 0.22;
+let inkColor = 'rgb(212,212,220)';       // primary instrumentation text
+let inkMutedColor = 'rgb(140,140,158)';  // keys, gutters, rules
+let accentColor = 'rgb(167,139,250)';    // heads, active line, leader lines
+let plateColor = 'rgba(12,12,18,0.72)';  // backing plate behind callouts
+let hairlineColor = 'rgba(167,139,250,0.30)';
+const axisColors = ['rgb(226,102,106)', 'rgb(139,208,90)', 'rgb(96,150,232)'];
 
 /**
  * Users who ask for reduced motion still get the field if they turned it on,
@@ -189,17 +261,48 @@ const reducedMotionQuery = typeof window !== 'undefined' && window.matchMedia
   : null;
 let reducedMotion = reducedMotionQuery ? reducedMotionQuery.matches : false;
 
-/** Most info labels drawn at once; phones retain the quieter original cap. */
-const MAX_LABELS = 6;
-const PHONE_MAX_LABELS = 4;
-const LABEL_WIDE_VIEWPORT = 720;
-/** A detail mode stays put long enough to be read rather than merely glimpsed. */
-const LABEL_MODE_SECONDS = 8;
+// ----------------------------------------------------------
+// Info layer — geometry, typography and timing
+// ----------------------------------------------------------
+
+/**
+ * Callout cap by viewport. Wider screens have room for more without the field
+ * turning into a wall of text; a phone keeps the quiet original count.
+ */
+const MAX_LABELS = 8;
+const LABEL_CAP_WIDE = 8;
+const LABEL_CAP_MEDIUM = 6;
+const LABEL_CAP_PHONE = 4;
+const LABEL_WIDE_VIEWPORT = 1180;
+const LABEL_MEDIUM_VIEWPORT = 720;
+
+const LABEL_MODE_NAMES = ['energy', 'position', 'velocity', 'projection', 'wave'];
+const LABEL_MODE_COUNT = LABEL_MODE_NAMES.length;
+
+/**
+ * Per-mode dwell weights, from the golden ratio.
+ *
+ * A fixed rotation period is the one piece of this visualisation that felt like
+ * a `setInterval` rather than a simulation: five modes, eight seconds each,
+ * forever. Weighting each mode by `frac((k + 1)φ)` makes the cycle
+ * quasi-periodic instead — every mode gets a different, irrationally-related
+ * slice of the cycle, so the rotation never lines up with the travelling wave
+ * or with the node lifetimes, and the whole schedule falls out of the same
+ * mathematics as the field itself. The weights average 1, so the user's dwell
+ * setting is still the mean seconds per mode.
+ */
+const MODE_WEIGHTS = new Float32Array(LABEL_MODE_COUNT);
+let modeWeightSum = 0;
+for (let k = 0; k < LABEL_MODE_COUNT; k++) {
+  MODE_WEIGHTS[k] = 0.72 + 0.56 * (((k + 1) * PHI) % 1);
+  modeWeightSum += MODE_WEIGHTS[k];
+}
+
 /** Dynamic label strings are refreshed at human speed, not canvas speed. */
 const LABEL_VALUE_SECONDS = 1;
-const LABEL_MODE_NAMES = ['energy', 'position', 'velocity', 'projection', 'wave'];
+
 /**
- * Energy a node must exceed before it earns a label.
+ * Energy a node must exceed before it earns a callout.
  *
  * This has to sit below the *silent* ceiling, and that ceiling is not 1. With
  * nothing playing `getStillAudioMetrics()` reports zeros, so `audioBoost` is 0
@@ -211,33 +314,54 @@ const LABEL_MODE_NAMES = ['energy', 'position', 'velocity', 'projection', 'wave'
  */
 const LABEL_ENERGY_GATE = 0.42;
 /**
- * Width of the fade band just above the gate. Without it a node hovering on the
- * threshold blinks its label on and off frame to frame, which is the last thing
- * you want on a screen you are falling asleep to.
+ * Hysteresis. A node that already holds a callout keeps it until its energy
+ * falls this far below the acquisition gate. Without the gap, a node sitting on
+ * the threshold flickers its label on and off — the last thing you want on a
+ * screen you are falling asleep to.
  */
-const LABEL_ENERGY_BAND = 0.08;
-const LABEL_FONT = '11px system-ui, -apple-system, sans-serif';
-/**
- * Keep-out band for label placement. The world plane is sized so the *far*
- * plane fills the viewport, which means near nodes legitimately project past
- * the edges — and those are exactly the nodes a nearest-first pick favours. An
- * off-screen label costs a `fillText` and shows nothing, so they never become
- * candidates. Wide enough for a centred "0.00" plus its offset above the node.
- */
-const LABEL_EDGE_X = 82;
-const LABEL_EDGE_Y = 26;
+const LABEL_ENERGY_RELEASE = 0.10;
+/** Callout opacity envelope rates, per second. Slow out is deliberate. */
+const LABEL_ATTACK = 2.6;
+const LABEL_RELEASE = 0.85;
+/** A callout, once acquired, is guaranteed this long regardless of energy. */
+const LABEL_MIN_HOLD_FRACTION = 0.55;
+
+const HEAD_FONT = '600 10px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+const MONO_FONT = '11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const DIM_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const CODE_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+
+/** Callout block geometry, CSS px. Fixed so nothing has to call measureText. */
+const CALLOUT_W = 124;
+const CALLOUT_PAD_X = 8;
+const CALLOUT_PAD_Y = 6;
+const CALLOUT_HEAD_H = 13;
+const CALLOUT_ROW_H = 13;
+const CALLOUT_GAUGE_H = 6;
+/** Leader line: a diagonal run out of the node, then a short horizontal shelf. */
+const LEADER_RUN = 16;
+const LEADER_SHELF = 10;
+/** Half-size of the open square drawn on a node that owns a callout. */
+const NODE_HANDLE = 4.5;
+
+/** Edge annotation geometry. Text rides the line, blueprint-dimension style. */
+const MAX_EDGE_LABELS = 5;
+const EDGE_LABEL_MIN_STRENGTH = 0.18;
+const EDGE_LABEL_HALF_W = 46;
+const EDGE_LABEL_HALF_H = 15;
+/** Attack/release for an annotation's opacity, per second. */
+const EDGE_LABEL_ATTACK = 2.4;
+const EDGE_LABEL_RELEASE = 1.0;
 
 /**
- * Half-width and height of the box a label occupies above its node. Used to
- * test the label against the keep-out rectangle, so the test covers the text
- * rather than the node it belongs to.
+ * Keep-out band for callout placement. The world plane is sized so the *far*
+ * plane fills the viewport, which means near nodes legitimately project past
+ * the edges — and those are exactly the nodes a nearest-first pick favours. An
+ * off-screen callout costs a `fillText` and shows nothing, so they never become
+ * candidates.
  */
-const LABEL_BOX_HALF_W = 78;
-const LABEL_BOX_H = 30;
-const EDGE_LABEL_BOX_HALF_W = 42;
-const EDGE_LABEL_BOX_H = 24;
-const MAX_EDGE_LABELS = 3;
-const EDGE_LABEL_MIN_STRENGTH = 0.18;
+const LABEL_EDGE_X = 30;
+const LABEL_EDGE_Y = 20;
 
 /**
  * Screen rectangles the labels must stay out of, in CSS px. Empty means none.
@@ -256,41 +380,168 @@ const EDGE_LABEL_MIN_STRENGTH = 0.18;
  */
 let labelKeepOuts = [];
 
-// Pre-sized label candidate indices (no allocation in render loop)
+// Pre-sized callout selection and geometry (no allocation in the render loop)
 const labelCandidates = new Int16Array(MAX_LABELS);
-const labelDrawnX = new Float32Array(MAX_LABELS);
-const labelDrawnY = new Float32Array(MAX_LABELS);
-const edgeSampleX = new Float32Array(MAX_EDGE_LABELS);
-const edgeSampleY = new Float32Array(MAX_EDGE_LABELS);
-const edgeSampleDistance = new Uint16Array(MAX_EDGE_LABELS);
-const edgeSampleAngle = new Int16Array(MAX_EDGE_LABELS);
+const labelScores = new Float32Array(MAX_LABELS);
+const calloutNode = new Int16Array(MAX_LABELS);
+const calloutLeft = new Float32Array(MAX_LABELS);
+const calloutTop = new Float32Array(MAX_LABELS);
+const calloutHeight = new Float32Array(MAX_LABELS);
+const calloutSide = new Int8Array(MAX_LABELS);   // +1 block to the right, −1 left
+const calloutAlpha = new Float32Array(MAX_LABELS);
+
+/**
+ * Edge annotation slots.
+ *
+ * The old sample re-picked its edges from a hash every single frame, so an
+ * annotation existed for as long as its pair happened to satisfy the hash —
+ * often a fraction of a second. These are slots instead: one is claimed by a
+ * pair, tracks that pair while it stays linked and on screen, holds for a
+ * procedurally-derived dwell, then fades out and frees itself. The pair is
+ * identified by both endpoints' lifetime IDs, because array indices are reused
+ * by respawning nodes and a slot must never silently start describing a
+ * different edge.
+ */
+const edgeSlotIdA = new Int32Array(MAX_EDGE_LABELS);
+const edgeSlotIdB = new Int32Array(MAX_EDGE_LABELS);
+const edgeSlotHold = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotAlpha = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotSeen = new Uint8Array(MAX_EDGE_LABELS);
+const edgeSlotX = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotY = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotAngle = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotLength = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotDistance = new Uint16Array(MAX_EDGE_LABELS);
+const edgeSlotDegrees = new Int16Array(MAX_EDGE_LABELS);
+const edgeSlotDz = new Uint8Array(MAX_EDGE_LABELS);
+const edgeSlotStrength = new Float32Array(MAX_EDGE_LABELS);
 
 // Quantised once at module load. Edge annotations can then paint changing
 // measurements without allocating strings in the render loop.
-const DISTANCE_TEXT = new Array(1001);
-for (let i = 0; i < DISTANCE_TEXT.length; i++) DISTANCE_TEXT[i] = `d₃ ${i}`;
+const DISTANCE_TEXT = new Array(2001);
+for (let i = 0; i < DISTANCE_TEXT.length; i++) DISTANCE_TEXT[i] = `${i} u`;
 const ANGLE_TEXT = new Array(361);
 for (let i = 0; i < ANGLE_TEXT.length; i++) ANGLE_TEXT[i] = `θ ${i - 180}°`;
+const DZ_TEXT = new Array(101);
+for (let i = 0; i < DZ_TEXT.length; i++) DZ_TEXT[i] = `Δz ${(i / 100).toFixed(2)}`;
 
-// --- Live statistics for the info layer's HUD ---
+// ----------------------------------------------------------
+// The code ticker — the renderer's own source, on the canvas
+// ----------------------------------------------------------
+
+/**
+ * Real statements from this file, grouped by pipeline stage.
+ *
+ * These are transcribed from the code immediately below them and are checked by
+ * eye against it — if you change `update()` or `drawLinks()`, change these too.
+ * `slot` indexes a live value refreshed once a second and printed against the
+ * line, so the column is not a decorative snippet: it is the loop that is
+ * running, with the numbers it is currently running on.
+ *
+ * Stages: 0 update, 1 links, 2 nodes, 3 info.
+ */
+const CODE_STAGE = 0, CODE_INDENT = 1, CODE_TEXT = 2, CODE_SLOT = 3;
+const CODE_LINES = [
+  [0, 0, 'dt = min((now - last) / 1000, 0.1);', 0],
+  [0, 0, 'clock += dt * speed;', 1],
+  [0, 0, 'for (const node of nodes) {', 2],
+  [0, 1, 'node.vx += (rand() - .5) * J * dt;', 3],
+  [0, 1, 'node.vx *= exp(-0.55 * dt);', -1],
+  [0, 1, 'node.z = zBase + sin(zPhase) * zAmp;', 4],
+  [0, 1, 'node.scale = 1 / (1 + node.z * DEPTH);', 5],
+  [0, 0, '}', -1],
+  [1, 0, 'grid.rebuild(nodes);', 6],
+  [1, 0, 'for (const [a, b] of grid.pairs()) {', 7],
+  [1, 1, 'd = hypot(dx, dy, dz * zWorld);', 8],
+  [1, 1, 't = pow(1 - d / radius, 0.65);', 9],
+  [1, 1, 's += (t - s) * (1 - exp(-λ * dt));', 10],
+  [1, 1, 'batch.stroke(a, b, shade(s));', 11],
+  [1, 0, '}', -1],
+  [2, 0, 'shade = pow(node.energy, 1.35);', 12],
+  [2, 0, 'ctx.arc(sx, sy, radius, 0, TAU);', 13],
+  [3, 0, 'info.clearRect(0, 0, w, h);', -1],
+  [3, 0, 'label.α += (target - label.α) * k;', 14],
+  [3, 0, 'drawCallouts(nearest(nodes));', 15],
+];
+const CODE_VALUE_COUNT = 16;
+const codeValueText = new Array(CODE_VALUE_COUNT).fill('');
+/** Lines per stage, so the cursor can spread a stage's real cost across them. */
+const CODE_STAGE_LINES = new Int32Array(4);
+for (const line of CODE_LINES) CODE_STAGE_LINES[line[CODE_STAGE]]++;
+const CODE_LINE_H = 13;
+const CODE_BLOCK_W = 352;
+const CODE_GUTTER = 22;
+const CODE_MIN_VIEWPORT = 1000;
+/** Seconds for the program counter to complete one sweep of the listing. */
+const CODE_SWEEP_S = 1.4;
+let codeCursor = 0;
+let codeValueNextUpdate = 0;
+let codeActiveLine = 0;
+/** Where the listing landed this frame, so callouts can stay off it. */
+let codeVisible = false;
+let codeLeft = 0;
+let codeTop = 0;
+let codeHeight = 0;
+
+// ----------------------------------------------------------
+// Live statistics for the info layer's HUD
+// ----------------------------------------------------------
+
 /** Smoothing rate (per second) for the displayed frame rate. */
 const FPS_SMOOTH = 3;
 let measuredFps = 0;
 let measuredFrameMs = 0;
+/** Shared between update() and the callout pass; see the note in update(). */
+let labelAttackCoefficient = 0;
+let stageUpdateMs = 0;
+let stageLinksMs = 0;
+let stageNodesMs = 0;
+let stageInfoMs = 0;
 let lastEdgeCount = 0;
 let lastLabelCount = 0;
 let lastEdgeLabelCount = 0;
+let lastPairTests = 0;
+let lastBatches = 0;
+let lastGridCells = 0;
+let lastDt = 0;
+let lastJitter = 0;
+/** Lifetime respawn count, for the observed turnover rate in the readout. */
+let respawnCount = 0;
+
+/** The node the Math view is currently evaluating its equations against. */
+let probeId = 0;
+let probeZ = 0;
+let probeScale = 0;
+let probeEnergy = 0;
+let probeBreath = 0;
+let probeWave = 0;
+let probeAudio = 0;
+/** The link the Math view is currently evaluating its equations against. */
+let sampleDistance = 0;
+let sampleTarget = 0;
+let sampleStrength = 0;
+
 /**
  * Reused snapshot object. `getStillFieldStats()` is polled a few times a second
  * by the HUD, and handing back a fresh object each time would allocate for no
  * reason — the same argument as the pre-quantised palettes.
  */
 const statsSnapshot = {
-  fps: 0, frameMs: 0, nodes: 0, edges: 0, pairChecks: 0,
+  fps: 0, fpsCap: 30, frameMs: 0, dt: 0,
+  msUpdate: 0, msLinks: 0, msNodes: 0, msInfo: 0, stage: 'update',
+  nodes: 0, edges: 0, pairTests: 0, bruteTests: 0, gridCells: 0, batches: 0,
+  turnover: 0, meanLifeS: 0,
   meanDegree: 0, density: 0, labels: 0, edgeLabels: 0, labelCapacity: 0,
-  labelMode: LABEL_MODE_NAMES[0], energy: 0, wavePhase: 0,
-  waveAngle: Math.atan2(WAVE_KY, WAVE_KX) * 180 / Math.PI,
+  labelMode: LABEL_MODE_NAMES[0], modeRemaining: 0, dwell: 0,
+  energy: 0, wavePhase: 0,
+  waveAngle: Math.atan2(WAVE_KY, WAVE_KX) * RAD_TO_DEG,
+  waveLength: 0,
   speed: 0, intensity: 0, reducedMotion: false,
+  densityScale: 1, reach: 1, trail: 8.2, depth: 0.75, codeOverlay: true,
+  linkRadius: 0, zWorld: 0, worldW: 0, worldH: 0, minScale: 0,
+  probeId: 0, probeZ: 0, probeScale: 0, probeEnergy: 0,
+  probeBreath: 0, probeWave: 0, probeAudio: 0,
+  sampleDistance: 0, sampleTarget: 0, sampleStrength: 0, attackK: 0,
 };
 
 // ----------------------------------------------------------
@@ -300,7 +551,9 @@ const listeners = new Set();
 
 /**
  * @returns {{enabled: boolean, intensity: number, speed: number, nerd: boolean,
- *   texture: boolean, nerdView: string, nerdFolded: boolean}}
+ *   texture: boolean, nerdView: string, nerdFolded: boolean, density: number,
+ *   reach: number, trail: number, depth: number, dwell: number, fps: number,
+ *   code: boolean}}
  */
 export function getState() {
   return {
@@ -311,6 +564,13 @@ export function getState() {
     texture: stillFieldTexture,
     nerdView,
     nerdFolded,
+    density: stillFieldDensity,
+    reach: stillFieldReach,
+    trail: stillFieldTrail,
+    depth,
+    dwell: stillFieldDwell,
+    fps: stillFieldFps,
+    code: stillFieldCode,
   };
 }
 
@@ -350,8 +610,55 @@ export function getStillFieldTexture() {
   return stillFieldTexture;
 }
 
+export function getStillFieldCode() {
+  return stillFieldCode;
+}
+
 export function getNerdFolded() {
   return nerdFolded;
+}
+
+/** Mean seconds a callout mode holds before the field rotates it. */
+export function getStillFieldDwell() {
+  return stillFieldDwell;
+}
+
+/** Cap in frames per second the render loop is currently honouring. */
+export function getStillFieldFps() {
+  return stillFieldFps;
+}
+
+/** Current label cap for this viewport width. */
+function labelCapacity() {
+  if (stillFieldW >= LABEL_WIDE_VIEWPORT) return LABEL_CAP_WIDE;
+  if (stillFieldW >= LABEL_MEDIUM_VIEWPORT) return LABEL_CAP_MEDIUM;
+  return LABEL_CAP_PHONE;
+}
+
+/**
+ * Which detail mode is showing, and how long it has left.
+ *
+ * The schedule is quasi-periodic (see MODE_WEIGHTS), so it cannot be a modulo —
+ * it walks the five weighted slices of one cycle. Five iterations, no
+ * allocation, and the remaining time falls out of the same walk.
+ *
+ * @param {number} t seconds on the diagnostics clock
+ * @returns {number} mode index; `modeRemainingS` carries the countdown
+ */
+let modeRemainingS = 0;
+function modeAt(t) {
+  const cycle = stillFieldDwell * modeWeightSum;
+  let u = t % cycle;
+  for (let k = 0; k < LABEL_MODE_COUNT; k++) {
+    const slice = stillFieldDwell * MODE_WEIGHTS[k];
+    if (u < slice) {
+      modeRemainingS = slice - u;
+      return k;
+    }
+    u -= slice;
+  }
+  modeRemainingS = 0;
+  return LABEL_MODE_COUNT - 1;
 }
 
 /**
@@ -360,30 +667,74 @@ export function getNerdFolded() {
  * Returns a shared object that is overwritten on each call — read what you need
  * immediately rather than holding on to it.
  *
- * @returns {{fps: number, frameMs: number, nodes: number, edges: number,
- *   pairChecks: number, meanDegree: number, density: number, labels: number,
- *   edgeLabels: number, labelCapacity: number, labelMode: string, energy: number,
- *   wavePhase: number, waveAngle: number, speed: number, intensity: number,
- *   reducedMotion: boolean}}
+ * @returns {typeof statsSnapshot}
  */
 export function getStillFieldStats() {
+  const n = stillFieldNodes.length;
   statsSnapshot.fps = measuredFps;
+  statsSnapshot.fpsCap = stillFieldFps;
   statsSnapshot.frameMs = measuredFrameMs;
-  statsSnapshot.nodes = stillFieldNodes.length;
+  statsSnapshot.dt = lastDt;
+  statsSnapshot.msUpdate = stageUpdateMs;
+  statsSnapshot.msLinks = stageLinksMs;
+  statsSnapshot.msNodes = stageNodesMs;
+  statsSnapshot.msInfo = stageInfoMs;
+  statsSnapshot.stage = dominantStageName();
+  statsSnapshot.nodes = n;
   statsSnapshot.edges = lastEdgeCount;
-  statsSnapshot.pairChecks = stillFieldNodes.length * (stillFieldNodes.length - 1) / 2;
-  statsSnapshot.meanDegree = stillFieldNodes.length ? lastEdgeCount * 2 / stillFieldNodes.length : 0;
-  statsSnapshot.density = statsSnapshot.pairChecks ? lastEdgeCount / statsSnapshot.pairChecks : 0;
+  statsSnapshot.pairTests = lastPairTests;
+  statsSnapshot.bruteTests = n * (n - 1) / 2;
+  statsSnapshot.gridCells = lastGridCells;
+  statsSnapshot.batches = lastBatches;
+  // Observed, not assumed: births per minute counted from real respawns, which
+  // is the lifecycle rate the speed multiplier actually produced.
+  statsSnapshot.turnover = infoClockS > 1 ? respawnCount / infoClockS * 60 : 0;
+  statsSnapshot.meanLifeS = statsSnapshot.turnover > 0 ? n / statsSnapshot.turnover * 60 : 0;
+  statsSnapshot.meanDegree = n ? lastEdgeCount * 2 / n : 0;
+  statsSnapshot.density = statsSnapshot.bruteTests ? lastEdgeCount / statsSnapshot.bruteTests : 0;
   statsSnapshot.labels = lastLabelCount;
   statsSnapshot.edgeLabels = lastEdgeLabelCount;
-  statsSnapshot.labelCapacity = stillFieldW >= LABEL_WIDE_VIEWPORT ? MAX_LABELS : PHONE_MAX_LABELS;
-  statsSnapshot.labelMode = LABEL_MODE_NAMES[Math.floor(infoClockS / LABEL_MODE_SECONDS) % LABEL_MODE_NAMES.length];
+  statsSnapshot.labelCapacity = labelCapacity();
+  statsSnapshot.labelMode = LABEL_MODE_NAMES[modeAt(infoClockS)];
+  statsSnapshot.modeRemaining = modeRemainingS;
+  statsSnapshot.dwell = stillFieldDwell;
   statsSnapshot.energy = stillEnergy;
-  statsSnapshot.wavePhase = ((clockS * WAVE_RATE) % (Math.PI * 2)) * 180 / Math.PI;
+  statsSnapshot.wavePhase = ((clockS * WAVE_RATE) % TAU) * RAD_TO_DEG;
+  statsSnapshot.waveLength = TAU / Math.hypot(WAVE_KX, WAVE_KY);
   statsSnapshot.speed = stillFieldSpeed;
   statsSnapshot.intensity = stillFieldIntensity;
   statsSnapshot.reducedMotion = reducedMotion;
+  statsSnapshot.densityScale = stillFieldDensity;
+  statsSnapshot.reach = stillFieldReach;
+  statsSnapshot.trail = stillFieldTrail;
+  statsSnapshot.depth = depth;
+  statsSnapshot.codeOverlay = stillFieldCode;
+  statsSnapshot.linkRadius = linkRadius;
+  statsSnapshot.zWorld = zWorld;
+  statsSnapshot.worldW = worldW;
+  statsSnapshot.worldH = worldH;
+  statsSnapshot.minScale = minScale;
+  statsSnapshot.probeId = probeId;
+  statsSnapshot.probeZ = probeZ;
+  statsSnapshot.probeScale = probeScale;
+  statsSnapshot.probeEnergy = probeEnergy;
+  statsSnapshot.probeBreath = probeBreath;
+  statsSnapshot.probeWave = probeWave;
+  statsSnapshot.probeAudio = probeAudio;
+  statsSnapshot.sampleDistance = sampleDistance;
+  statsSnapshot.sampleTarget = sampleTarget;
+  statsSnapshot.sampleStrength = sampleStrength;
+  statsSnapshot.attackK = 1 - Math.exp(-LINK_ATTACK * (lastDt || 1 / stillFieldFps));
   return statsSnapshot;
+}
+
+function dominantStageName() {
+  let best = stageUpdateMs;
+  let name = 'update';
+  if (stageLinksMs > best) { best = stageLinksMs; name = 'links'; }
+  if (stageNodesMs > best) { best = stageNodesMs; name = 'nodes'; }
+  if (stageInfoMs > best) name = 'info';
+  return name;
 }
 
 /**
@@ -454,6 +805,14 @@ function parseColor(value) {
   return null;
 }
 
+function rgbString(c) {
+  return `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})`;
+}
+
+function rgbaString(c, alpha) {
+  return `rgba(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)},${alpha})`;
+}
+
 /**
  * Build a quantised colour ramp from `base` to `spark` through `mid`.
  *
@@ -507,6 +866,26 @@ export function refreshThemeColors() {
   buildPalette(edgePalette, edge, mid, spark);
 
   glowColor = `rgba(${Math.round(glowSource.r)},${Math.round(glowSource.g)},${Math.round(glowSource.b)},0.85)`;
+
+  // Instrumentation ink. These are separate tokens from the field ramp because
+  // text has a contrast requirement the field does not: the ramp is allowed to
+  // sink into the background, a readout is not.
+  const ink = parseColor(read('--still-ink')) || { r: 212, g: 212, b: 220, a: 1 };
+  const inkMuted = parseColor(read('--still-ink-muted')) || { r: 140, g: 140, b: 158, a: 1 };
+  const accent = parseColor(read('--still-ink-accent')) || mid;
+  const plate = parseColor(read('--still-plate')) || { r: 12, g: 12, b: 18, a: 0.72 };
+  inkColor = rgbString(ink);
+  inkMutedColor = rgbString(inkMuted);
+  accentColor = rgbString(accent);
+  plateColor = rgbaString(plate, plate.a);
+  hairlineColor = rgbaString(accent, 0.34);
+
+  const axisX = parseColor(read('--still-axis-x'));
+  const axisY = parseColor(read('--still-axis-y'));
+  const axisZ = parseColor(read('--still-axis-z'));
+  if (axisX) axisColors[0] = rgbString(axisX);
+  if (axisY) axisColors[1] = rgbString(axisY);
+  if (axisZ) axisColors[2] = rgbString(axisZ);
 }
 
 // ----------------------------------------------------------
@@ -515,11 +894,18 @@ export function refreshThemeColors() {
 
 /**
  * Call once after the DOM is ready.
- * @param {HTMLCanvasElement} canvas the full-viewport canvas this module owns
+ * @param {HTMLCanvasElement} canvas the full-viewport field canvas
+ * @param {HTMLCanvasElement} [overlay] the full-viewport info canvas. Text is
+ *   drawn here, never on the field canvas — see the header note on why.
  */
-export function initStillField(canvas) {
+export function initStillField(canvas, overlay) {
   stillFieldCanvas = canvas;
   stillFieldCtx = canvas.getContext('2d', { alpha: true });
+  if (overlay) {
+    infoCanvas = overlay;
+    infoCtx = overlay.getContext('2d', { alpha: true });
+    hasRoundRect = typeof infoCtx.roundRect === 'function';
+  }
   refreshThemeColors();
   resizeStillField();
   initStillFieldNodes();
@@ -534,8 +920,8 @@ export function initStillField(canvas) {
 }
 
 function applyCanvasVisibility() {
-  if (!stillFieldCanvas) return;
-  stillFieldCanvas.classList.toggle('still-field-off', !stillFieldEnabled);
+  if (stillFieldCanvas) stillFieldCanvas.classList.toggle('still-field-off', !stillFieldEnabled);
+  if (infoCanvas) infoCanvas.classList.toggle('still-field-off', !stillFieldEnabled);
 }
 
 /**
@@ -546,23 +932,32 @@ function applyCanvasVisibility() {
  * edge instead of leaving a bare border.
  */
 function measureWorld() {
-  worldW = stillFieldW / MIN_SCALE;
-  worldH = stillFieldH / MIN_SCALE;
+  worldW = stillFieldW / minScale;
+  worldH = stillFieldH / minScale;
 
   // Derive the link radius from the mean spacing between nodes rather than
   // fixing it in pixels: the expected number of neighbours inside radius r is
   // π·(r/spacing)² − 1, so tying r to spacing keeps a phone and a desktop at the
   // same ≈3 connections per node instead of a dense mesh on one and dust on the
-  // other.
+  // other. The Field Lab's reach multiplier rides on top of that invariant, so
+  // raising the node count does not thicken the mesh on its own.
   const count = Math.max(1, stillFieldNodes.length || targetNodeCount());
   const spacing = Math.sqrt((worldW * worldH) / count);
-  linkRadius = spacing * (0.8 + stillFieldIntensity * 0.5);
+  linkRadius = spacing * (0.8 + stillFieldIntensity * 0.5) * stillFieldReach;
   zWorld = spacing * 1.1;
+
+  allocateGrid();
 }
 
 function targetNodeCount() {
-  const area = (stillFieldW * stillFieldH) / (MIN_SCALE * MIN_SCALE);
-  return Math.min(MAX_NODES, Math.max(MIN_NODES, Math.floor(area / AREA_PER_NODE)));
+  const area = (stillFieldW * stillFieldH) / (minScale * minScale);
+  // The viewport-derived count is clamped to the original 26–44 window *first*,
+  // and the density multiplier applies to that. Applying density to the raw
+  // area figure instead would have made a 1440×900 display open on 132 nodes at
+  // the default setting — a different-looking field for everybody who never
+  // touches the Lab. Density is an opt-in, not a silent redesign.
+  const base = Math.min(BASE_MAX_NODES, Math.max(BASE_MIN_NODES, Math.floor(area / AREA_PER_NODE)));
+  return Math.min(MAX_NODES, Math.max(MIN_NODES, Math.round(base * stillFieldDensity)));
 }
 
 function resizeStillField() {
@@ -573,14 +968,8 @@ function resizeStillField() {
   stillFieldDpr = Math.min(window.devicePixelRatio || 1, 2);
   stillFieldW = window.innerWidth;
   stillFieldH = window.innerHeight;
-  stillFieldCanvas.width = Math.floor(stillFieldW * stillFieldDpr);
-  stillFieldCanvas.height = Math.floor(stillFieldH * stillFieldDpr);
-  stillFieldCanvas.style.width = stillFieldW + 'px';
-  stillFieldCanvas.style.height = stillFieldH + 'px';
-  stillFieldCtx.setTransform(stillFieldDpr, 0, 0, stillFieldDpr, 0, 0);
-  // Sizing the canvas resets every context property, so the label font is set
-  // here rather than in the draw loop: assigning `ctx.font` reparses the shorthand.
-  stillFieldCtx.font = LABEL_FONT;
+  sizeCanvas(stillFieldCanvas, stillFieldCtx);
+  sizeCanvas(infoCanvas, infoCtx);
 
   measureWorld();
 
@@ -596,6 +985,19 @@ function resizeStillField() {
       n.y *= sy;
     }
   }
+
+  // A viewport change can move the node target (the world plane is derived from
+  // it), so honour the new count rather than waiting for a settings change.
+  applyNodeCount();
+}
+
+function sizeCanvas(canvas, ctx) {
+  if (!canvas || !ctx) return;
+  canvas.width = Math.floor(stillFieldW * stillFieldDpr);
+  canvas.height = Math.floor(stillFieldH * stillFieldDpr);
+  canvas.style.width = stillFieldW + 'px';
+  canvas.style.height = stillFieldH + 'px';
+  ctx.setTransform(stillFieldDpr, 0, 0, stillFieldDpr, 0, 0);
 }
 
 /**
@@ -607,6 +1009,7 @@ function resizeStillField() {
 function respawnNode(n, seeded = false) {
   const i = spawnIndex++;
   n.id = ++nodeSerial;
+  if (!seeded) respawnCount++;
 
   // World coordinates are centred on the origin; the camera sits on the axis.
   n.x = (((0.5 + R2_A1 * i) % 1) - 0.5) * worldW;
@@ -617,31 +1020,61 @@ function respawnNode(n, seeded = false) {
   n.zBase = 0.16 + ((0.5 + R2_A3 * i) % 1) * 0.68;
   n.zAmp = 0.06 + ((i * PHI) % 1) * 0.1;
   n.zRate = 0.05 + ((i * R2_A2) % 1) * 0.07;   // rad/s — a full breath is 50–120 s
-  n.zPhase = ((i * R2_A1) % 1) * Math.PI * 2;
+  n.zPhase = ((i * R2_A1) % 1) * TAU;
   n.z = n.zBase;
 
   n.vx = (Math.random() - 0.5) * 6;            // world units/s
   n.vy = (Math.random() - 0.5) * 6;
 
-  n.phase = ((i * PHI) % 1) * Math.PI * 2;
+  n.phase = ((i * PHI) % 1) * TAU;
   n.phaseRate = 0.22 + ((i * R2_A1 * PHI) % 1) * 0.3;
 
   n.life = seeded ? Math.random() : 0;
   n.lifeRate = 1 / (LIFE_MIN_S + Math.random() * (LIFE_MAX_S - LIFE_MIN_S));
   n.energy = 0;
+  resetNodeCallout(n);
+}
+
+function resetNodeCallout(n) {
   n.labelMode = -1;
   n.labelNextUpdate = 0;
-  n.labelText = '';
+  n.labelAlpha = 0;
+  n.labelHeld = false;
+  n.labelHoldUntil = 0;
+  n.calloutHead = '';
+  n.calloutRows = 0;
+  n.calloutAxis = false;
+  n.calloutGauge = -1;
 }
 
 /** Forget every link touching node `index` — a respawned node is a new node. */
 function clearLinksFor(index) {
   const n = stillFieldNodes.length;
+  const base = index * n;
   for (let j = 0; j < n; j++) {
     if (j === index) continue;
-    linkState[index * n + j] = 0;
+    linkState[base + j] = 0;
     linkState[j * n + index] = 0;
   }
+}
+
+function makeNode() {
+  return {
+    id: 0,
+    x: 0, y: 0, z: 0, zBase: 0, zAmp: 0, zRate: 0, zPhase: 0,
+    vx: 0, vy: 0, phase: 0, phaseRate: 0,
+    life: 0, lifeRate: 0, energy: 0,
+    // Callout state. Rows are key/value pairs so the block can right-align its
+    // numbers the way a transform panel does, rather than printing one string.
+    labelMode: -1, labelNextUpdate: 0, labelAlpha: 0,
+    labelHeld: false, labelHoldUntil: 0,
+    calloutHead: '', calloutRows: 0, calloutAxis: false, calloutGauge: -1,
+    rowKey0: '', rowKey1: '', rowKey2: '',
+    rowVal0: '', rowVal1: '', rowVal2: '',
+    // Scratch fields, written during update and read during draw. Keeping
+    // them on the node is what lets the draw pass allocate nothing.
+    sx: 0, sy: 0, scale: 0, fade: 0,
+  };
 }
 
 /**
@@ -656,22 +1089,144 @@ export function initStillFieldNodes(force = false) {
   spawnIndex = 0;
 
   for (let i = 0; i < count; i++) {
-    const n = {
-      id: 0,
-      x: 0, y: 0, z: 0, zBase: 0, zAmp: 0, zRate: 0, zPhase: 0,
-      vx: 0, vy: 0, phase: 0, phaseRate: 0,
-      life: 0, lifeRate: 0, energy: 0,
-      labelMode: -1, labelNextUpdate: 0, labelText: '',
-      // Scratch fields, written during update and read during draw. Keeping
-      // them on the node is what lets the draw pass allocate nothing.
-      sx: 0, sy: 0, scale: 0, fade: 0,
-    };
+    const n = makeNode();
     respawnNode(n, true);
     stillFieldNodes[i] = n;
   }
 
   linkState = new Float32Array(count * count);
+  resetEdgeSlots();
   measureWorld();
+}
+
+/**
+ * Grow or shrink the population toward the current target without re-seeding.
+ *
+ * Density is a live control, so this has to keep the nodes that are already on
+ * screen exactly where they are — a slider that teleports the whole field on
+ * every step is unusable. Link state is dropped rather than remapped: the index
+ * space changes shape, and a brief re-attack of the envelopes is both correct
+ * and invisible next to the alternative of carrying stale strengths into the
+ * wrong pairs.
+ */
+function applyNodeCount() {
+  const target = targetNodeCount();
+  const current = stillFieldNodes.length;
+  if (target === current || current === 0) return;
+
+  if (target > current) {
+    for (let i = current; i < target; i++) {
+      const n = makeNode();
+      respawnNode(n);
+      stillFieldNodes.push(n);
+    }
+  } else {
+    stillFieldNodes.length = target;
+  }
+
+  linkState = new Float32Array(target * target);
+  resetEdgeSlots();
+  measureWorld();
+}
+
+function resetEdgeSlots() {
+  for (let s = 0; s < MAX_EDGE_LABELS; s++) {
+    edgeSlotIdA[s] = 0;
+    edgeSlotIdB[s] = 0;
+    edgeSlotAlpha[s] = 0;
+    edgeSlotHold[s] = 0;
+  }
+}
+
+// ----------------------------------------------------------
+// Uniform spatial grid
+//
+// A node can only link to a node within `linkRadius`, so the cells are exactly
+// one radius across and each node need only look at its own cell and the four
+// neighbours that have not already looked at it. That reduces the pair count
+// from n(n−1)/2 to roughly n·(density of a 5-cell neighbourhood), which is what
+// makes a user-raisable node population affordable.
+//
+// Everything here is a pre-sized typed array, rebuilt with a counting sort each
+// frame: no maps, no arrays of arrays, no allocation.
+// ----------------------------------------------------------
+
+/** Cell offsets covering the half-neighbourhood: self, E, SW, S, SE. */
+const NEIGHBOUR_DX = Int8Array.from([0, 1, -1, 0, 1]);
+const NEIGHBOUR_DY = Int8Array.from([0, 0, 1, 1, 1]);
+/** Ceiling on cell count, so a small reach on a huge world cannot run away. */
+const MAX_GRID_CELLS = 8192;
+/** World margin nodes are allowed to wander into before wrapping. */
+const WORLD_MARGIN = 40;
+
+let gridCols = 1;
+let gridRows = 1;
+let gridCell = 1;
+let gridCounts = new Int32Array(0);
+let gridStart = new Int32Array(0);
+let gridCursor = new Int32Array(0);
+let gridItems = new Int16Array(0);
+let gridCellOf = new Int16Array(0);
+
+function allocateGrid() {
+  const spanX = worldW + WORLD_MARGIN * 2;
+  const spanY = worldH + WORLD_MARGIN * 2;
+  let cell = Math.max(1, linkRadius);
+  gridCols = Math.max(1, Math.ceil(spanX / cell));
+  gridRows = Math.max(1, Math.ceil(spanY / cell));
+
+  // A very small reach on a very large world would ask for millions of cells,
+  // which costs more to clear than the pair tests it saves. Coarsen instead;
+  // the neighbourhood stays conservative either way.
+  while (gridCols * gridRows > MAX_GRID_CELLS) {
+    cell *= 1.5;
+    gridCols = Math.max(1, Math.ceil(spanX / cell));
+    gridRows = Math.max(1, Math.ceil(spanY / cell));
+  }
+  gridCell = cell;
+
+  const cells = gridCols * gridRows;
+  if (gridCounts.length !== cells) {
+    gridCounts = new Int32Array(cells);
+    gridStart = new Int32Array(cells);
+    gridCursor = new Int32Array(cells);
+  }
+  const n = stillFieldNodes.length;
+  if (gridItems.length !== n) {
+    gridItems = new Int16Array(n);
+    gridCellOf = new Int16Array(n);
+  }
+  lastGridCells = cells;
+}
+
+/** Counting-sort every node into its cell. O(n + cells), allocation-free. */
+function buildGrid(nodes, n) {
+  const cells = gridCols * gridRows;
+  gridCounts.fill(0);
+
+  const originX = worldW / 2 + WORLD_MARGIN;
+  const originY = worldH / 2 + WORLD_MARGIN;
+
+  for (let i = 0; i < n; i++) {
+    const node = nodes[i];
+    let cx = ((node.x + originX) / gridCell) | 0;
+    let cy = ((node.y + originY) / gridCell) | 0;
+    if (cx < 0) cx = 0; else if (cx >= gridCols) cx = gridCols - 1;
+    if (cy < 0) cy = 0; else if (cy >= gridRows) cy = gridRows - 1;
+    const c = cy * gridCols + cx;
+    gridCellOf[i] = c;
+    gridCounts[c]++;
+  }
+
+  let running = 0;
+  for (let c = 0; c < cells; c++) {
+    gridStart[c] = running;
+    gridCursor[c] = running;
+    running += gridCounts[c];
+  }
+  for (let i = 0; i < n; i++) {
+    gridItems[gridCursor[gridCellOf[i]]++] = i;
+  }
 }
 
 // ----------------------------------------------------------
@@ -744,6 +1299,12 @@ function computeNodeEnergy(n, audioBoost) {
   return clamp(0.3 * breath + 0.24 * wave + 0.46 * audioBoost, 0, 1);
 }
 
+/** Local travelling-wave phase at a node, in radians, wrapped to [0, 2π). */
+function nodeWavePhase(n) {
+  const raw = clockS * WAVE_RATE - (n.x * WAVE_KX + n.y * WAVE_KY);
+  return ((raw % TAU) + TAU) % TAU;
+}
+
 /** Smooth 0→1 ramp; gentler at both ends than a straight line. */
 function smoothstep(t) {
   const u = t < 0 ? 0 : t > 1 ? 1 : t;
@@ -765,17 +1326,20 @@ function frame(nowMs) {
     // Without this the last painted frame would sit frozen on screen, because
     // the residual clear that normally erases it only runs while the loop does.
     stillFieldCtx.clearRect(0, 0, stillFieldW, stillFieldH);
+    clearInfoCanvas();
     return;
   }
 
   // Frame cap. The `-1` absorbs the sub-millisecond jitter that would otherwise
   // make every second frame miss its slot and halve the effective rate.
-  if (nowMs - lastDrawMs < FRAME_INTERVAL_MS - 1) return;
+  const frameInterval = 1000 / stillFieldFps;
+  if (nowMs - lastDrawMs < frameInterval - 1) return;
 
   const dt = Math.min((nowMs - lastFrameMs) / 1000, MAX_STEP_S);
   lastFrameMs = nowMs;
   lastDrawMs = nowMs;
   if (dt <= 0) return;
+  lastDt = dt;
 
   // Measured from real elapsed time, not the speed-scaled clock, so the readout
   // reports the frame rate rather than the drift rate.
@@ -787,20 +1351,25 @@ function frame(nowMs) {
   clockS += adt;
   infoClockS += dt;
 
-  const workStart = stillFieldNerd ? performance.now() : 0;
-  update(adt);
-  draw(adt);
-  if (stillFieldNerd) {
+  const instrumented = stillFieldNerd;
+  const workStart = instrumented ? performance.now() : 0;
+  update(adt, dt);
+  const afterUpdate = instrumented ? performance.now() : 0;
+  draw(adt, dt, instrumented, afterUpdate);
+
+  if (instrumented) {
     const workK = 1 - Math.exp(-FPS_SMOOTH * dt);
     measuredFrameMs += (performance.now() - workStart - measuredFrameMs) * workK;
+    stageUpdateMs += (afterUpdate - workStart - stageUpdateMs) * workK;
   }
 }
 
-function update(adt) {
+function update(adt, dt) {
   const m = getStillAudioMetrics();
   // Weight overall a little higher so brown/pink still feed the cyan spark
   // ramp; white remains the liveliest, but the gap is smaller.
   const audioBoost = Math.min(1, (0.5 * m.overall + 0.3 * m.mid + 0.2 * m.high) * 1.75);
+  probeAudio = audioBoost;
 
   // Smoothed, intensity-scaled energy for the CSS variable the UI reacts to.
   const targetEnergy = m.overall * stillFieldIntensity * (getIsPlaying() ? 1 : 0.06);
@@ -811,7 +1380,6 @@ function update(adt) {
   const n = nodes.length;
   const halfW = worldW / 2;
   const halfH = worldH / 2;
-  const margin = 40;
   const cx = stillFieldW / 2;
   const cy = stillFieldH / 2;
 
@@ -819,6 +1387,16 @@ function update(adt) {
   // settles identically at any frame rate.
   const damp = Math.exp(-0.55 * adt);
   const jitter = 14 * (0.35 + m.overall * 1.1);
+  lastJitter = jitter;
+
+  // Callout envelopes run on the real clock, not the drift clock: how long a
+  // readout stays legible is a property of the reader, not of the simulation's
+  // speed setting.
+  const labelAttackK = 1 - Math.exp(-LABEL_ATTACK * dt);
+  const labelReleaseK = 1 - Math.exp(-LABEL_RELEASE * dt);
+  const holdSeconds = stillFieldDwell * LABEL_MIN_HOLD_FRACTION;
+
+  let bestEnergy = -1;
 
   for (let i = 0; i < n; i++) {
     const node = nodes[i];
@@ -840,11 +1418,16 @@ function update(adt) {
     node.x += node.vx * adt;
     node.y += node.vy * adt;
 
-    // Wrap in world space so the lattice stays continuous.
-    if (node.x < -halfW - margin) node.x = halfW + margin;
-    else if (node.x > halfW + margin) node.x = -halfW - margin;
-    if (node.y < -halfH - margin) node.y = halfH + margin;
-    else if (node.y > halfH + margin) node.y = -halfH - margin;
+    // Wrap in world space so the lattice stays continuous. A wrap teleports the
+    // node to the far side, so its links have to go with it: the grid only
+    // visits near pairs now, and a pair that stops being visited would freeze
+    // its envelope at whatever strength it happened to hold.
+    let wrapped = false;
+    if (node.x < -halfW - WORLD_MARGIN) { node.x = halfW + WORLD_MARGIN; wrapped = true; }
+    else if (node.x > halfW + WORLD_MARGIN) { node.x = -halfW - WORLD_MARGIN; wrapped = true; }
+    if (node.y < -halfH - WORLD_MARGIN) { node.y = halfH + WORLD_MARGIN; wrapped = true; }
+    else if (node.y > halfH + WORLD_MARGIN) { node.y = -halfH - WORLD_MARGIN; wrapped = true; }
+    if (wrapped) clearLinksFor(i);
 
     // Depth is a bounded sinusoid rather than an integrated velocity: nodes
     // drift toward the viewer and back without any chance of escaping the
@@ -855,14 +1438,50 @@ function update(adt) {
     node.phase += node.phaseRate * adt;
     node.energy = computeNodeEnergy(node, audioBoost);
 
-    // Project once, here, and reuse in the edge and node passes.
-    node.scale = 1 / (1 + node.z * DEPTH);
+    // Project once, here, and reuse in the edge, node and callout passes.
+    node.scale = 1 / (1 + node.z * depth);
     node.sx = cx + node.x * node.scale;
     node.sy = cy + node.y * node.scale;
+
+    // Callout hold and opacity. Acquisition and release use different gates, so
+    // a node hovering on the threshold cannot flicker, and a callout that has
+    // been acquired is guaranteed a readable dwell before it can be dropped.
+    if (stillFieldNerd) {
+      const keepGate = node.labelHeld ? LABEL_ENERGY_GATE - LABEL_ENERGY_RELEASE : LABEL_ENERGY_GATE;
+      const qualifies = node.fade > 0 && node.energy > keepGate;
+      if (qualifies && !node.labelHeld) {
+        node.labelHeld = true;
+        node.labelHoldUntil = infoClockS + holdSeconds;
+      } else if (!qualifies && node.labelHeld && infoClockS >= node.labelHoldUntil) {
+        node.labelHeld = false;
+      }
+    } else if (node.labelHeld) {
+      node.labelHeld = false;
+    }
+    // `labelAlpha` is driven toward 0 here and lifted back up by the callout
+    // pass for the nodes it actually draws, so a node that qualifies but loses
+    // the placement contest fades out instead of vanishing.
+    node.labelAlpha += (0 - node.labelAlpha) * labelReleaseK;
+
+    if (node.fade > 0 && node.energy > bestEnergy) {
+      bestEnergy = node.energy;
+      probeId = node.id;
+      probeZ = node.z;
+      probeScale = node.scale;
+      probeEnergy = node.energy;
+      probeBreath = 0.5 + 0.5 * Math.sin(node.phase);
+      probeWave = 0.5 + 0.5 * Math.sin(nodeWavePhase(node));
+    }
   }
+
+  // Stash the attack coefficient the callout pass needs; computing it per node
+  // would be the same exponential 150 times.
+  labelAttackCoefficient = labelAttackK;
+
+  buildGrid(nodes, n);
 }
 
-function draw(adt) {
+function draw(adt, dt, instrumented, tAfterUpdate) {
   const ctx = stillFieldCtx;
   const nodes = stillFieldNodes;
   const n = nodes.length;
@@ -877,24 +1496,51 @@ function draw(adt) {
   // underneath it. Subtracting alpha keeps the canvas genuinely transparent, so
   // both still show through, and the theme no longer has to hand this function
   // a matching colour.
+  //
+  // The decay is a rate per second, not a per-frame constant: the frame cap is
+  // a user setting now, and a fixed per-frame alpha would quietly halve every
+  // trail the moment somebody moved it from 30 to 60.
   ctx.globalCompositeOperation = 'destination-out';
   ctx.globalAlpha = 1;
-  ctx.fillStyle = `rgba(0,0,0,${TRAIL_DECAY})`;
+  ctx.fillStyle = `rgba(0,0,0,${(1 - Math.exp(-stillFieldTrail * dt)).toFixed(4)})`;
   ctx.fillRect(0, 0, stillFieldW, stillFieldH);
   ctx.globalCompositeOperation = 'source-over';
 
   drawLinks(ctx, nodes, n, intensity, adt);
-  drawNodes(ctx, nodes, n, intensity);
+  const tAfterLinks = instrumented ? performance.now() : 0;
 
-  if (stillFieldNerd) {
-    lastLabelCount = drawNerdLabels(ctx, nodes, n);
-  } else {
-    lastLabelCount = 0;
-  }
+  drawNodes(ctx, nodes, n, intensity);
+  const tAfterNodes = instrumented ? performance.now() : 0;
 
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
+
+  if (stillFieldNerd) {
+    drawInfoLayer(nodes, n, dt);
+    infoCleared = false;
+  } else {
+    lastLabelCount = 0;
+    lastEdgeLabelCount = 0;
+    clearInfoCanvas();
+  }
+
+  if (instrumented) {
+    const workK = 1 - Math.exp(-FPS_SMOOTH * dt);
+    stageLinksMs += (tAfterLinks - tAfterUpdate - stageLinksMs) * workK;
+    stageNodesMs += (tAfterNodes - tAfterLinks - stageNodesMs) * workK;
+    stageInfoMs += (performance.now() - tAfterNodes - stageInfoMs) * workK;
+  }
 }
+
+function clearInfoCanvas() {
+  if (!infoCtx || infoCleared) return;
+  infoCtx.clearRect(0, 0, stillFieldW, stillFieldH);
+  infoCleared = true;
+}
+
+// ----------------------------------------------------------
+// Link pass
+// ----------------------------------------------------------
 
 function drawLinks(ctx, nodes, n, intensity, adt) {
   const r2 = linkRadius * linkRadius;
@@ -904,129 +1550,224 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
   // once per frame rather than once per pair.
   const attackK = 1 - Math.exp(-LINK_ATTACK * adt);
   const releaseK = 1 - Math.exp(-LINK_RELEASE * adt);
+  const edgeAlphaScale = baseEdgeAlpha * (0.5 + intensity * 0.9);
 
   let drawn = 0;
-  let sampled = 0;
+  let tests = 0;
+  let batches = 0;
+  let batchKey = -1;
+  let pathOpen = false;
 
-  for (let i = 0; i < n; i++) {
-    const a = nodes[i];
-    if (a.fade <= 0) continue;
+  const collectEdges = stillFieldNerd;
+  if (collectEdges) {
+    for (let s = 0; s < MAX_EDGE_LABELS; s++) edgeSlotSeen[s] = 0;
+  }
+  const edgeCap = Math.min(MAX_EDGE_LABELS, stillFieldW >= LABEL_MEDIUM_VIEWPORT ? MAX_EDGE_LABELS : 2);
+  let sampleTaken = false;
 
-    for (let j = i + 1; j < n; j++) {
-      const b = nodes[j];
-      const k = i * n + j;
+  const cells = gridCols * gridRows;
+  for (let c = 0; c < cells; c++) {
+    const startA = gridStart[c];
+    const endA = startA + gridCounts[c];
+    if (startA === endA) continue;
+    const cellX = c % gridCols;
+    const cellY = (c / gridCols) | 0;
 
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const dz = (b.z - a.z) * zWorld;
-      const distSq = dx * dx + dy * dy + dz * dz; // squared — no sqrt unless linked
+    for (let nb = 0; nb < 5; nb++) {
+      const nx = cellX + NEIGHBOUR_DX[nb];
+      const ny = cellY + NEIGHBOUR_DY[nb];
+      if (nx < 0 || nx >= gridCols || ny < 0 || ny >= gridRows) continue;
+      const c2 = ny * gridCols + nx;
+      const startB = gridStart[c2];
+      const endB = startB + gridCounts[c2];
+      if (startB === endB) continue;
 
-      // A linear falloff leaves most links faint, because most pairs sit near
-      // the outer edge of the radius where a linear ramp is already close to
-      // zero. The 0.65 exponent lifts the mid-range so the lattice reads as
-      // structure rather than as a few bright pairs in a haze.
-      let target = 0;
-      let distance = 0;
-      if (distSq < r2) {
-        distance = Math.sqrt(distSq);
-        target = Math.pow(1 - distance * invR, 0.65);
-      }
+      for (let p = startA; p < endA; p++) {
+        const i = gridItems[p];
+        const a = nodes[i];
+        if (a.fade <= 0) continue;
 
-      const prev = linkState[k];
-      // The arrival transient falls straight out of the envelope: the gap
-      // between where a link wants to be and where it is peaks the instant two
-      // nodes come into range, and closes as the envelope catches up. That gap
-      // *is* the pulse — no extra state, no extra pass.
-      const pulse = target > prev ? target - prev : 0;
-      const strength = prev + (target - prev) * (target > prev ? attackK : releaseK);
-      linkState[k] = strength;
+        // Within one cell each unordered pair must be visited once, so the
+        // partner scan starts after the current item. Across cells the whole
+        // partner cell is fair game, because the neighbour offsets only ever
+        // point at cells that have not yet been the source.
+        const from = nb === 0 ? p + 1 : startB;
+        for (let q = from; q < endB; q++) {
+          const j = gridItems[q];
+          const b = nodes[j];
+          if (b.fade <= 0) continue;
 
-      if (strength < LINK_EPSILON) continue;
+          tests++;
 
-      const depthFade = (a.scale + b.scale) * 0.5;
-      const alpha = clamp(
-        (strength + pulse * LINK_PULSE_GAIN) * a.fade * b.fade * baseEdgeAlpha *
-          depthFade * (0.5 + intensity * 0.9),
-        0,
-        1,
-      );
-      if (alpha < 0.004) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dz = (b.z - a.z) * zWorld;
+          const distSq = dx * dx + dy * dy + dz * dz; // squared — no sqrt unless linked
 
-      // A dying node's links retract into the survivor rather than blinking
-      // off — the endpoint slides along the segment as the node fades. Capped
-      // short of 1 so the line never collapses to a point before it is gone.
-      const ra = (1 - a.fade) * 0.92;
-      const rb = (1 - b.fade) * 0.92;
-      const ax = a.sx + (b.sx - a.sx) * ra;
-      const ay = a.sy + (b.sy - a.sy) * ra;
-      const bx = b.sx + (a.sx - b.sx) * rb;
-      const by = b.sy + (a.sy - b.sy) * rb;
-
-      const energy = (a.energy + b.energy) * 0.5 + pulse * 0.5;
-      // Soft power keeps the field mostly cool-violet but lets mid energy
-      // reach cyan more often (the white-noise character we want on brown too).
-      const shade = clamp(Math.pow(energy, 1.35), 0, 1);
-
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = edgePalette[Math.min(COLOR_STEPS - 1, (shade * COLOR_STEPS) | 0)];
-      ctx.lineWidth = (0.7 + energy * 0.8) * depthFade;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-      ctx.stroke();
-      drawn++;
-
-      // Piggyback on this existing O(n²) pass: a small deterministic sample of
-      // established edges gets real world distance and projected angle. No
-      // sorting, arrays, or second graph scan are introduced.
-      if (stillFieldNerd && sampled < MAX_EDGE_LABELS
-        && strength >= EDGE_LABEL_MIN_STRENGTH && distance > 0
-        && ((i * 31 + j * 17) % 5 === 0)) {
-        const mx = (ax + bx) * 0.5;
-        const my = (ay + by) * 0.5;
-        let overlapsSample = false;
-        for (let sample = 0; sample < sampled; sample++) {
-          if (Math.abs(mx - edgeSampleX[sample]) < EDGE_LABEL_BOX_HALF_W * 2
-            && Math.abs(my - edgeSampleY[sample]) < EDGE_LABEL_BOX_H) {
-            overlapsSample = true;
-            break;
+          // A linear falloff leaves most links faint, because most pairs sit
+          // near the outer edge of the radius where a linear ramp is already
+          // close to zero. The 0.65 exponent lifts the mid-range so the lattice
+          // reads as structure rather than as a few bright pairs in a haze.
+          let target = 0;
+          let distance = 0;
+          if (distSq < r2) {
+            distance = Math.sqrt(distSq);
+            target = Math.pow(1 - distance * invR, 0.65);
           }
-        }
-        if (mx >= EDGE_LABEL_BOX_HALF_W && mx <= stillFieldW - EDGE_LABEL_BOX_HALF_W
-          && my >= EDGE_LABEL_BOX_H && my <= stillFieldH
-          && !overlapsSample
-          && !hitsKeepOutBox(mx, my, EDGE_LABEL_BOX_HALF_W, EDGE_LABEL_BOX_H)) {
-          edgeSampleX[sampled] = mx;
-          edgeSampleY[sampled] = my;
-          edgeSampleDistance[sampled] = clamp(Math.round(distance), 0, DISTANCE_TEXT.length - 1);
-          edgeSampleAngle[sampled] = clamp(
-            Math.round(Math.atan2(by - ay, bx - ax) * 180 / Math.PI),
-            -180,
-            180,
+
+          const k = i < j ? i * n + j : j * n + i;
+          const prev = linkState[k];
+          // The arrival transient falls straight out of the envelope: the gap
+          // between where a link wants to be and where it is peaks the instant
+          // two nodes come into range, and closes as the envelope catches up.
+          // That gap *is* the pulse — no extra state, no extra pass.
+          const pulse = target > prev ? target - prev : 0;
+          const strength = prev + (target - prev) * (target > prev ? attackK : releaseK);
+          linkState[k] = strength < LINK_EPSILON ? 0 : strength;
+
+          if (strength < LINK_EPSILON) continue;
+
+          const depthFade = (a.scale + b.scale) * 0.5;
+          const alpha = clamp(
+            (strength + pulse * LINK_PULSE_GAIN) * a.fade * b.fade * edgeAlphaScale * depthFade,
+            0,
+            1,
           );
-          sampled++;
+          if (alpha < 0.004) continue;
+
+          // A dying node's links retract into the survivor rather than blinking
+          // off — the endpoint slides along the segment as the node fades.
+          // Capped short of 1 so the line never collapses to a point before it
+          // is gone.
+          const ra = (1 - a.fade) * 0.92;
+          const rb = (1 - b.fade) * 0.92;
+          const ax = a.sx + (b.sx - a.sx) * ra;
+          const ay = a.sy + (b.sy - a.sy) * ra;
+          const bx = b.sx + (a.sx - b.sx) * rb;
+          const by = b.sy + (a.sy - b.sy) * rb;
+
+          const energy = (a.energy + b.energy) * 0.5 + pulse * 0.5;
+          // Soft power keeps the field mostly cool-violet but lets mid energy
+          // reach cyan more often (the white-noise character we want on brown).
+          const shade = clamp(Math.pow(energy, 1.35), 0, 1);
+          const colorIndex = Math.min(COLOR_STEPS - 1, (shade * COLOR_STEPS) | 0);
+
+          // Batching. Quantising alpha and width to steps well below the visual
+          // threshold means neighbouring edges — which the grid hands us in
+          // spatial order, so they share depth and energy — routinely land on
+          // the same key and accumulate into one path. No sorting and no
+          // per-frame arrays: the run is flushed the moment the key changes.
+          const alphaStep = Math.max(1, Math.round(alpha * BATCH_ALPHA_STEPS));
+          const widthStep = Math.max(
+            1,
+            Math.round((0.7 + energy * 0.8) * depthFade * BATCH_WIDTH_STEPS),
+          );
+          const key2 = (colorIndex * (BATCH_ALPHA_STEPS + 1) + alphaStep) * 64 + Math.min(63, widthStep);
+          if (key2 !== batchKey) {
+            if (pathOpen) ctx.stroke();
+            ctx.globalAlpha = alphaStep / BATCH_ALPHA_STEPS;
+            ctx.strokeStyle = edgePalette[colorIndex];
+            ctx.lineWidth = widthStep / BATCH_WIDTH_STEPS;
+            ctx.beginPath();
+            batchKey = key2;
+            batches++;
+            pathOpen = true;
+          }
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+          drawn++;
+
+          if (!collectEdges || distance <= 0) continue;
+
+          // One live pair feeds the Math view's worked example. Taking the
+          // first strong edge of the frame keeps it stable enough to read.
+          if (!sampleTaken && strength >= EDGE_LABEL_MIN_STRENGTH) {
+            sampleDistance = distance;
+            sampleTarget = target;
+            sampleStrength = strength;
+            sampleTaken = true;
+          }
+
+          trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, edgeCap);
         }
       }
     }
   }
 
+  if (pathOpen) ctx.stroke();
+
   lastEdgeCount = drawn;
-  lastEdgeLabelCount = sampled;
-  if (sampled > 0) drawEdgeLabels(ctx, sampled);
+  lastPairTests = tests;
+  lastBatches = batches;
 }
 
-function drawEdgeLabels(ctx, count) {
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'bottom';
-  ctx.globalAlpha = 0.58;
-  ctx.fillStyle = edgePalette[COLOR_STEPS - 1];
-  for (let i = 0; i < count; i++) {
-    const x = edgeSampleX[i] - EDGE_LABEL_BOX_HALF_W + 2;
-    const y = edgeSampleY[i];
-    ctx.fillText(DISTANCE_TEXT[edgeSampleDistance[i]], x, y - 1);
-    ctx.fillText(ANGLE_TEXT[edgeSampleAngle[i] + 180], x, y + 10);
+/**
+ * Keep the annotation slots pointed at edges that are worth reading.
+ *
+ * Called from inside the link pass, with values the renderer has already
+ * computed — this never opens a second graph scan, sorts links, or builds an
+ * edge list. A slot follows one pair (identified by both lifetime IDs, because
+ * array indices are recycled) until the pair breaks or its dwell expires.
+ */
+function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, cap) {
+  const idA = a.id < b.id ? a.id : b.id;
+  const idB = a.id < b.id ? b.id : a.id;
+
+  let free = -1;
+  for (let s = 0; s < cap; s++) {
+    if (edgeSlotIdA[s] === idA && edgeSlotIdB[s] === idB) {
+      writeEdgeSlot(s, ax, ay, bx, by, distance, strength, Math.abs(a.z - b.z));
+      edgeSlotSeen[s] = 1;
+      return;
+    }
+    if (free < 0 && edgeSlotAlpha[s] <= 0.01 && edgeSlotIdA[s] === 0) free = s;
   }
+  if (free < 0 || strength < EDGE_LABEL_MIN_STRENGTH) return;
+
+  // A candidate has to be readable where it lands: on screen, clear of the
+  // interface, and not on top of an annotation that already exists.
+  const mx = (ax + bx) * 0.5;
+  const my = (ay + by) * 0.5;
+  // The caption is rotated onto the line, so its footprint is a rotated box of
+  // unknown orientation. Bound it by the disc that contains every rotation —
+  // an axis-aligned test using the text's own height would let a near-vertical
+  // dimension run straight off the side of the screen.
+  if (mx < EDGE_LABEL_HALF_W || mx > stillFieldW - EDGE_LABEL_HALF_W) return;
+  if (my < EDGE_LABEL_HALF_W || my > stillFieldH - EDGE_LABEL_HALF_W) return;
+  if (hitsKeepOut(mx - EDGE_LABEL_HALF_W, my - EDGE_LABEL_HALF_H,
+    mx + EDGE_LABEL_HALF_W, my + EDGE_LABEL_HALF_H)) return;
+  for (let s = 0; s < cap; s++) {
+    if (edgeSlotAlpha[s] <= 0.01) continue;
+    if (Math.abs(mx - edgeSlotX[s]) < EDGE_LABEL_HALF_W * 2
+      && Math.abs(my - edgeSlotY[s]) < EDGE_LABEL_HALF_H * 2) return;
+  }
+
+  edgeSlotIdA[free] = idA;
+  edgeSlotIdB[free] = idB;
+  // Dwell rides the same quasi-periodic schedule as the node modes, offset by
+  // the slot index so several annotations never expire on the same frame.
+  edgeSlotHold[free] = infoClockS + stillFieldDwell * MODE_WEIGHTS[free % LABEL_MODE_COUNT];
+  edgeSlotSeen[free] = 1;
+  writeEdgeSlot(free, ax, ay, bx, by, distance, strength, Math.abs(a.z - b.z));
 }
+
+function writeEdgeSlot(s, ax, ay, bx, by, distance, strength, dz) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const angle = Math.atan2(dy, dx);
+  edgeSlotX[s] = (ax + bx) * 0.5;
+  edgeSlotY[s] = (ay + by) * 0.5;
+  edgeSlotAngle[s] = angle;
+  edgeSlotLength[s] = Math.sqrt(dx * dx + dy * dy);
+  edgeSlotDistance[s] = clamp(Math.round(distance), 0, DISTANCE_TEXT.length - 1);
+  edgeSlotDegrees[s] = clamp(Math.round(angle * RAD_TO_DEG), -180, 180);
+  edgeSlotDz[s] = clamp(Math.round(dz * 100), 0, 100);
+  edgeSlotStrength[s] = strength;
+}
+
+// ----------------------------------------------------------
+// Node pass
+// ----------------------------------------------------------
 
 function drawNodes(ctx, nodes, n, intensity) {
   const alphaScale = baseNodeAlpha * (0.55 + intensity * 0.45);
@@ -1038,8 +1779,6 @@ function drawNodes(ctx, nodes, n, intensity) {
   // Two passes: everything flat first, then the few brightest nodes again with
   // a shadow. Setting shadowBlur is a pipeline change on most canvas backends,
   // so doing it 8 times beats doing it 32.
-  // Shell residual: alive nodes keep a visible stroke-circle outline even as
-  // the fill fades, so they never fully vanish while still alive (life < 1).
   for (let pass = 0; pass < 2; pass++) {
     if (pass === 1) {
       if (reducedMotion) break;
@@ -1076,7 +1815,7 @@ function drawNodes(ctx, nodes, n, intensity) {
       }
 
       // Nearness is the depth cue: closer nodes are larger and more opaque.
-      const nearness = (node.scale - MIN_SCALE) / (1 - MIN_SCALE);
+      const nearness = (node.scale - minScale) / (1 - minScale);
       const radius = (2.1 + node.energy * 1.9) * node.scale * radiusScale;
       const alpha = clamp(
         node.fade * (0.42 + nearness * 0.5) * (0.7 + node.energy * 0.45) * alphaScale,
@@ -1095,9 +1834,9 @@ function drawNodes(ctx, nodes, n, intensity) {
       const shellAlpha = clamp(0.14 * nearness * alphaScale, 0.05, 0.28) * node.fade;
 
       // One path, used by both the outline and the fill. Rebuilding the arc for
-      // each would double per-node path construction for 44 nodes a frame.
+      // each would double per-node path construction every frame.
       ctx.beginPath();
-      ctx.arc(node.sx, node.sy, radius, 0, Math.PI * 2);
+      ctx.arc(node.sx, node.sy, radius, 0, TAU);
 
       // The glow pass already carries shadowBlur, the single most expensive
       // thing on this canvas. Bright nodes are well above the shell floor
@@ -1120,101 +1859,265 @@ function drawNodes(ctx, nodes, n, intensity) {
   ctx.shadowBlur = 0;
 }
 
+// ----------------------------------------------------------
+// Info layer
+//
+// Everything below paints on the *info* canvas, which is cleared outright each
+// frame. Nothing here may set shadowBlur, and every glyph origin is snapped to
+// a whole device pixel: a label that moves with its node is only crisp if its
+// baseline lands on the pixel grid.
+// ----------------------------------------------------------
+
+/** Snap a CSS-pixel coordinate to the device pixel grid. */
+function snap(v) {
+  return Math.round(v * stillFieldDpr) / stillFieldDpr;
+}
+
+function drawInfoLayer(nodes, n, dt) {
+  const ctx = infoCtx;
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, stillFieldW, stillFieldH);
+  ctx.shadowBlur = 0;
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+
+  // The listing claims its corner before anything else is placed, so callouts
+  // and dimensions can treat it as one more region to stay out of. It is drawn
+  // last so it sits on top of the field's own lines.
+  layoutCodeTicker();
+  lastEdgeLabelCount = drawEdgeAnnotations(ctx, dt);
+  lastLabelCount = drawCallouts(ctx, nodes, n);
+  if (codeVisible) drawCodeTicker(ctx, dt);
+
+  ctx.globalAlpha = 1;
+  ctx.setTransform(stillFieldDpr, 0, 0, stillFieldDpr, 0, 0);
+}
+
 /**
- * Would a label anchored on this node overlap any keep-out rectangle? The box
- * tested is the text's, not the node's — the readout is drawn centred above the
- * node, so those are not the same place.
+ * Edge annotations, drawn as engineering dimensions: the text rides the line it
+ * measures, flipped so it is never upside-down, with witness ticks at the ends
+ * of the measured span. Reading a length off a diagram works because the number
+ * is parallel to the thing it describes; a horizontal caption floating near a
+ * diagonal line makes the reader do the association themselves.
  */
-function hitsKeepOutBox(sx, sy, halfWidth, height) {
+function drawEdgeAnnotations(ctx, dt) {
+  const attackK = 1 - Math.exp(-EDGE_LABEL_ATTACK * dt);
+  const releaseK = 1 - Math.exp(-EDGE_LABEL_RELEASE * dt);
+  let shown = 0;
+
+  for (let s = 0; s < MAX_EDGE_LABELS; s++) {
+    if (edgeSlotIdA[s] === 0 && edgeSlotAlpha[s] <= 0.01) continue;
+
+    const expired = infoClockS >= edgeSlotHold[s];
+    const alive = edgeSlotSeen[s] === 1 && !expired;
+    edgeSlotAlpha[s] += ((alive ? 1 : 0) - edgeSlotAlpha[s]) * (alive ? attackK : releaseK);
+
+    if (!alive && edgeSlotAlpha[s] <= 0.02) {
+      // Fully faded and no longer tracked: free the slot for a new pair.
+      edgeSlotAlpha[s] = 0;
+      edgeSlotIdA[s] = 0;
+      edgeSlotIdB[s] = 0;
+      continue;
+    }
+
+    const alpha = edgeSlotAlpha[s] * clamp(0.35 + edgeSlotStrength[s] * 0.9, 0, 0.95);
+    if (alpha < 0.02) continue;
+    // Same disc bound as the screen test: the caption's rotation is unknown at
+    // this point, and the listing is drawn last, so an overlap is not a near
+    // miss — it is a caption painted over.
+    if (hitsCodeBlock(edgeSlotX[s] - EDGE_LABEL_HALF_W, edgeSlotY[s] - EDGE_LABEL_HALF_W,
+      edgeSlotX[s] + EDGE_LABEL_HALF_W, edgeSlotY[s] + EDGE_LABEL_HALF_W)) continue;
+
+    // A span shorter than the caption cannot carry it legibly.
+    const span = Math.min(edgeSlotLength[s] * 0.5, EDGE_LABEL_HALF_W);
+    if (span < 22) continue;
+
+    let angle = edgeSlotAngle[s];
+    if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
+
+    ctx.save();
+    ctx.translate(snap(edgeSlotX[s]), snap(edgeSlotY[s]));
+    ctx.rotate(angle);
+
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.strokeStyle = hairlineColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    // Witness ticks: short perpendicular marks bounding the annotated span,
+    // exactly as a dimension line is drawn on a technical drawing.
+    ctx.moveTo(-span, -4.5); ctx.lineTo(-span, 4.5);
+    ctx.moveTo(span, -4.5); ctx.lineTo(span, 4.5);
+    ctx.stroke();
+
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.font = DIM_FONT;
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = inkColor;
+    ctx.fillText(DISTANCE_TEXT[edgeSlotDistance[s]], 0, -5);
+    ctx.textBaseline = 'top';
+    ctx.globalAlpha = alpha * 0.8;
+    ctx.fillStyle = inkMutedColor;
+    ctx.fillText(ANGLE_TEXT[edgeSlotDegrees[s] + 180], -18, 5);
+    ctx.fillText(DZ_TEXT[edgeSlotDz[s]], 26, 5);
+    ctx.restore();
+
+    shown++;
+  }
+
+  return shown;
+}
+
+/**
+ * Would a rectangle overlap any keep-out? Takes the text's own box, not the
+ * node's — a callout is drawn beside its node, so those are not the same place.
+ */
+function hitsKeepOut(left, top, right, bottom) {
   for (let i = 0; i < labelKeepOuts.length; i++) {
     const r = labelKeepOuts[i];
-    if (sx + halfWidth > r.left
-      && sx - halfWidth < r.right
-      && sy > r.top
-      && sy - height < r.bottom) return true;
+    if (right > r.left && left < r.right && bottom > r.top && top < r.bottom) return true;
   }
   return false;
 }
 
 /**
- * Refresh a node's compact callout at one-second cadence. The renderer reuses
- * the cached string between refreshes, avoiding 30 string builds per second.
+ * Refresh a node's callout rows at one-second cadence. The renderer reuses the
+ * cached strings between refreshes, so a 60 fps canvas builds 60× fewer strings
+ * than it draws frames.
+ *
+ * Rows are key/value pairs rather than one packed line. That is what lets the
+ * position mode read like a transform panel — axis letter in its axis colour on
+ * the left, value right-aligned in a monospaced column on the right — instead
+ * of `xyz 124, -33, 0.42`, which asks the reader to count commas.
  */
-function refreshNodeLabel(node, mode) {
+function refreshNodeCallout(node, mode) {
   if (node.labelMode === mode && infoClockS < node.labelNextUpdate) return;
 
   const id = `n${String(node.id).padStart(3, '0')}`;
+  node.calloutAxis = false;
+  node.calloutGauge = -1;
+
   if (mode === 0) {
-    const phase = Math.round(((node.phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) * 180 / Math.PI);
-    node.labelText = `${id} · E ${node.energy.toFixed(2)} · φ ${phase}°`;
+    node.calloutHead = `${id}  ENERGY`;
+    node.rowKey0 = 'E'; node.rowVal0 = node.energy.toFixed(3);
+    node.rowKey1 = 'φ'; node.rowVal1 = `${Math.round(((node.phase % TAU) + TAU) % TAU * RAD_TO_DEG)}°`;
+    node.calloutRows = 2;
+    node.calloutGauge = node.energy;
   } else if (mode === 1) {
-    node.labelText = `${id} · xyz ${Math.round(node.x)}, ${Math.round(node.y)}, ${node.z.toFixed(2)}`;
+    node.calloutHead = `${id}  TRANSFORM`;
+    node.rowKey0 = 'X'; node.rowVal0 = formatAxis(node.x);
+    node.rowKey1 = 'Y'; node.rowVal1 = formatAxis(node.y);
+    node.rowKey2 = 'Z'; node.rowVal2 = node.z.toFixed(3);
+    node.calloutRows = 3;
+    node.calloutAxis = true;
   } else if (mode === 2) {
-    const speed = Math.hypot(node.vx, node.vy);
-    const heading = Math.round(Math.atan2(node.vy, node.vx) * 180 / Math.PI);
-    node.labelText = `${id} · v ${speed.toFixed(1)} · θ ${heading}°`;
+    node.calloutHead = `${id}  VELOCITY`;
+    node.rowKey0 = '|v|'; node.rowVal0 = `${Math.hypot(node.vx, node.vy).toFixed(2)} u/s`;
+    node.rowKey1 = 'θ'; node.rowVal1 = `${Math.round(Math.atan2(node.vy, node.vx) * RAD_TO_DEG)}°`;
+    node.calloutRows = 2;
   } else if (mode === 3) {
-    node.labelText = `${id} · s ${node.scale.toFixed(2)} · life ${Math.round(node.life * 100)}%`;
+    node.calloutHead = `${id}  PROJECTION`;
+    node.rowKey0 = 'scale'; node.rowVal0 = node.scale.toFixed(3);
+    node.rowKey1 = 'depth'; node.rowVal1 = node.z.toFixed(3);
+    node.rowKey2 = 'life'; node.rowVal2 = `${Math.round(node.life * 100)}%`;
+    node.calloutRows = 3;
+    node.calloutGauge = node.life;
   } else {
-    const wave = clockS * WAVE_RATE - (node.x * WAVE_KX + node.y * WAVE_KY);
-    const phase = Math.round((((wave % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 180 / Math.PI);
-    node.labelText = `${id} · wave ${phase}°`;
+    const phase = nodeWavePhase(node);
+    node.calloutHead = `${id}  WAVE`;
+    node.rowKey0 = 'ψ'; node.rowVal0 = `${Math.round(phase * RAD_TO_DEG)}°`;
+    node.rowKey1 = 'k·p'; node.rowVal1 = (node.x * WAVE_KX + node.y * WAVE_KY).toFixed(2);
+    node.calloutRows = 2;
+    node.calloutGauge = 0.5 + 0.5 * Math.sin(phase);
   }
+
   node.labelMode = mode;
   node.labelNextUpdate = infoClockS + LABEL_VALUE_SECONDS;
 }
 
+/** Blender prints world coordinates with a unit and a sign column. So do we. */
+function formatAxis(v) {
+  return `${v >= 0 ? ' ' : ''}${v.toFixed(1)} u`;
+}
+
+function calloutBlockHeight(node) {
+  return CALLOUT_PAD_Y * 2 + CALLOUT_HEAD_H + node.calloutRows * CALLOUT_ROW_H
+    + (node.calloutGauge >= 0 ? CALLOUT_GAUGE_H + 3 : 0);
+}
+
 /**
- * Sparse energy-gated labels on the nodes nearest the viewer. Candidates land
- * in a pre-sized index array, and detail strings are cached on each node.
+ * Sparse, energy-gated callouts on the nodes nearest the viewer.
  *
- * @returns {number} how many labels were drawn, for the stats readout
+ * Selection is sticky: a node that already holds a callout gets a bonus in the
+ * nearest-first contest, so a readout does not hop between neighbours every
+ * time two nodes swap depth by a hair. Everything a placement decision needs is
+ * in pre-sized arrays.
+ *
+ * @returns {number} how many callouts were drawn, for the stats readout
  */
-function drawNerdLabels(ctx, nodes, n) {
-  const maxLabels = stillFieldW >= LABEL_WIDE_VIEWPORT ? MAX_LABELS : PHONE_MAX_LABELS;
-  const mode = Math.floor(infoClockS / LABEL_MODE_SECONDS) % LABEL_MODE_NAMES.length;
-  // Keep the nearest MAX_LABELS of everything that clears the gate. Selecting
-  // the *first* few in array order instead would hand the labels to the same
-  // low-index nodes every frame, however far back in the volume they sit.
+function drawCallouts(ctx, nodes, n) {
+  const maxLabels = labelCapacity();
+  const mode = modeAt(infoClockS);
+
   let count = 0;
   for (let i = 0; i < n; i++) {
     const node = nodes[i];
-    if (node.fade <= 0 || node.energy <= LABEL_ENERGY_GATE) continue;
+    if (!node.labelHeld || node.fade <= 0) continue;
     if (node.sx < LABEL_EDGE_X || node.sx > stillFieldW - LABEL_EDGE_X) continue;
-    if (node.sy < LABEL_EDGE_Y || node.sy > stillFieldH) continue;
-    if (hitsKeepOutBox(node.sx, node.sy, LABEL_BOX_HALF_W, LABEL_BOX_H)) continue;
+    if (node.sy < LABEL_EDGE_Y || node.sy > stillFieldH - LABEL_EDGE_Y) continue;
 
-    const scale = node.scale;
-    if (count === maxLabels && scale <= nodes[labelCandidates[count - 1]].scale) continue;
+    // Nearest first, with a hold bonus. Insertion sort over at most eight
+    // entries beats keeping a sorted structure alive between frames.
+    const score = node.scale * (node.labelAlpha > 0.1 ? 1.4 : 1);
+    if (count === maxLabels && score <= labelScores[count - 1]) continue;
 
     let b = count < maxLabels ? count++ : count - 1;
-    while (b > 0 && nodes[labelCandidates[b - 1]].scale < scale) {
+    while (b > 0 && labelScores[b - 1] < score) {
       labelCandidates[b] = labelCandidates[b - 1];
+      labelScores[b] = labelScores[b - 1];
       b--;
     }
     labelCandidates[b] = i;
+    labelScores[b] = score;
   }
 
   if (count === 0) return 0;
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-
-  let drawn = 0;
+  // --- Placement -------------------------------------------------------
+  let placed = 0;
   for (let k = 0; k < count; k++) {
     const node = nodes[labelCandidates[k]];
+    refreshNodeCallout(node, mode);
+
+    const height = calloutBlockHeight(node);
+    // Prefer a block up and to the right of the node, the way a leader line is
+    // normally drawn; mirror it when the right edge is too close.
+    let side = 1;
+    let left = node.sx + LEADER_RUN + LEADER_SHELF;
+    if (left + CALLOUT_W > stillFieldW - 8) {
+      side = -1;
+      left = node.sx - LEADER_RUN - LEADER_SHELF - CALLOUT_W;
+    }
+    const top = node.sy - LEADER_RUN - height;
+    if (left < 8 || top < 4) continue;
+
+    if (hitsKeepOut(left, top, left + CALLOUT_W, top + height)) continue;
+    if (hitsCodeBlock(left, top, left + CALLOUT_W, top + height)) continue;
+
     let collides = false;
-    for (let i = 0; i < drawn; i++) {
-      if (Math.abs(node.sx - labelDrawnX[i]) < LABEL_BOX_HALF_W * 2
-        && Math.abs(node.sy - labelDrawnY[i]) < LABEL_BOX_H) {
+    for (let d = 0; d < placed; d++) {
+      if (left < calloutLeft[d] + CALLOUT_W && left + CALLOUT_W > calloutLeft[d]
+        && top < calloutTop[d] + calloutHeight[d] && top + height > calloutTop[d]) {
         collides = true;
         break;
       }
     }
     if (!collides) {
-      for (let i = 0; i < lastEdgeLabelCount; i++) {
-        if (Math.abs(node.sx - edgeSampleX[i]) < LABEL_BOX_HALF_W + EDGE_LABEL_BOX_HALF_W
-          && Math.abs(node.sy - edgeSampleY[i]) < LABEL_BOX_H + EDGE_LABEL_BOX_H) {
+      for (let e = 0; e < MAX_EDGE_LABELS; e++) {
+        if (edgeSlotAlpha[e] <= 0.05) continue;
+        if (left < edgeSlotX[e] + EDGE_LABEL_HALF_W && left + CALLOUT_W > edgeSlotX[e] - EDGE_LABEL_HALF_W
+          && top < edgeSlotY[e] + EDGE_LABEL_HALF_H && top + height > edgeSlotY[e] - EDGE_LABEL_HALF_H) {
           collides = true;
           break;
         }
@@ -1222,28 +2125,308 @@ function drawNerdLabels(ctx, nodes, n) {
     }
     if (collides) continue;
 
-    const nearness = (node.scale - MIN_SCALE) / (1 - MIN_SCALE);
-    const radius = (2.1 + node.energy * 1.9) * node.scale * (0.85 + stillFieldIntensity * 0.25);
-    // Ramp in across the band above the gate, and follow the node's own
-    // lifecycle, so a label never snaps into view at a readable opacity.
-    const gate = Math.min(1, (node.energy - LABEL_ENERGY_GATE) / LABEL_ENERGY_BAND);
-    // Readability floor. These sit on a near-black background at 11px, and the
-    // old 0.2–0.55 window put a typical label around alpha 0.3 — measurably
-    // drawn, and invisible in practice.
-    const alpha = clamp(0.42 + nearness * 0.38, 0, 0.86) * gate * node.fade;
-    if (alpha < 0.01) continue;
+    // Winning the contest is what lifts the opacity envelope; update() pulls
+    // every node's envelope down, so losing it fades out rather than cutting.
+    node.labelAlpha += (1 - node.labelAlpha) * labelAttackCoefficient;
+    const nearness = (node.scale - minScale) / (1 - minScale);
+    const alpha = clamp(0.55 + nearness * 0.4, 0, 0.96) * node.labelAlpha * node.fade;
+    if (alpha < 0.02) continue;
 
-    refreshNodeLabel(node, mode);
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = nodePalette[Math.min(COLOR_STEPS - 1, (Math.pow(node.energy, 1.35) * COLOR_STEPS) | 0)];
-    ctx.fillText(node.labelText, node.sx, node.sy - radius - 3);
-    labelDrawnX[drawn] = node.sx;
-    labelDrawnY[drawn] = node.sy;
-    drawn++;
+    calloutNode[placed] = labelCandidates[k];
+    calloutLeft[placed] = left;
+    calloutTop[placed] = top;
+    calloutHeight[placed] = height;
+    calloutSide[placed] = side;
+    calloutAlpha[placed] = alpha;
+    placed++;
   }
 
-  return drawn;
+  if (placed === 0) return 0;
+
+  // --- Paint -----------------------------------------------------------
+  // Three passes over the placed blocks, grouped by the context state each one
+  // needs. Assigning `ctx.font` reparses the shorthand, so the two fonts are
+  // each set once per frame instead of once per block.
+  drawCalloutFurniture(ctx, nodes, placed);
+
+  ctx.font = HEAD_FONT;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  for (let k = 0; k < placed; k++) {
+    const node = nodes[calloutNode[k]];
+    ctx.globalAlpha = calloutAlpha[k];
+    ctx.fillStyle = accentColor;
+    ctx.fillText(node.calloutHead, snap(calloutLeft[k] + CALLOUT_PAD_X), snap(calloutTop[k] + CALLOUT_PAD_Y));
+  }
+
+  ctx.font = MONO_FONT;
+  for (let k = 0; k < placed; k++) {
+    const node = nodes[calloutNode[k]];
+    const left = calloutLeft[k];
+    const alpha = calloutAlpha[k];
+    let y = calloutTop[k] + CALLOUT_PAD_Y + CALLOUT_HEAD_H;
+
+    for (let row = 0; row < node.calloutRows; row++) {
+      const key = row === 0 ? node.rowKey0 : row === 1 ? node.rowKey1 : node.rowKey2;
+      const value = row === 0 ? node.rowVal0 : row === 1 ? node.rowVal1 : node.rowVal2;
+
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.fillStyle = node.calloutAxis ? axisColors[row] : inkMutedColor;
+      ctx.textAlign = 'left';
+      ctx.fillText(key, snap(left + CALLOUT_PAD_X), snap(y));
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = inkColor;
+      ctx.textAlign = 'right';
+      ctx.fillText(value, snap(left + CALLOUT_W - CALLOUT_PAD_X), snap(y));
+
+      y += CALLOUT_ROW_H;
+    }
+  }
+
+  ctx.textAlign = 'left';
+  return placed;
 }
+
+/** Plates, rules, gauges, leader lines and node handles — everything but text. */
+function drawCalloutFurniture(ctx, nodes, placed) {
+  for (let k = 0; k < placed; k++) {
+    const node = nodes[calloutNode[k]];
+    const left = calloutLeft[k];
+    const top = calloutTop[k];
+    const height = calloutHeight[k];
+    const alpha = calloutAlpha[k];
+
+    // Backing plate. This is what replaced the glow: a label is legible over a
+    // busy field either because it is blurred into a halo, or because it has
+    // something behind it. The plate keeps the glyph edges perfectly sharp.
+    ctx.globalAlpha = alpha * 0.82;
+    ctx.fillStyle = plateColor;
+    ctx.beginPath();
+    if (hasRoundRect) ctx.roundRect(snap(left), snap(top), CALLOUT_W, height, 5);
+    else ctx.rect(snap(left), snap(top), CALLOUT_W, height);
+    ctx.fill();
+
+    ctx.globalAlpha = alpha * 0.55;
+    ctx.strokeStyle = hairlineColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Accent spine on the leading edge, and a rule under the head.
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(snap(left), snap(top + 4), 2, height - 8);
+    ctx.globalAlpha = alpha * 0.28;
+    ctx.fillRect(snap(left + CALLOUT_PAD_X), snap(top + CALLOUT_PAD_Y + CALLOUT_HEAD_H - 3), CALLOUT_W - CALLOUT_PAD_X * 2, 1);
+
+    // Gauge, when the mode has a naturally bounded quantity to show.
+    if (node.calloutGauge >= 0) {
+      const gy = top + height - CALLOUT_PAD_Y - CALLOUT_GAUGE_H + 1;
+      const gw = CALLOUT_W - CALLOUT_PAD_X * 2;
+      ctx.globalAlpha = alpha * 0.22;
+      ctx.fillStyle = inkMutedColor;
+      ctx.fillRect(snap(left + CALLOUT_PAD_X), snap(gy), gw, 2);
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(snap(left + CALLOUT_PAD_X), snap(gy), Math.max(1, gw * clamp(node.calloutGauge, 0, 1)), 2);
+    }
+
+    // Leader line: diagonal out of the node, then a horizontal shelf into the
+    // block. Two straight runs read as a drawing annotation; a curve reads as a
+    // speech bubble.
+    const side = calloutSide[k];
+    const anchorX = side > 0 ? left : left + CALLOUT_W;
+    const anchorY = top + height;
+    const elbowX = anchorX - side * LEADER_SHELF;
+    const startX = node.sx + side * NODE_HANDLE;
+    const startY = node.sy - NODE_HANDLE;
+
+    ctx.globalAlpha = alpha * 0.75;
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(snap(startX) + 0.5, snap(startY) + 0.5);
+    ctx.lineTo(snap(elbowX) + 0.5, snap(anchorY) + 0.5);
+    ctx.lineTo(snap(anchorX) + 0.5, snap(anchorY) + 0.5);
+    ctx.stroke();
+
+    // Open square handle on the node itself, so it is obvious which of a dozen
+    // nodes the block belongs to.
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.beginPath();
+    ctx.rect(snap(node.sx - NODE_HANDLE) + 0.5, snap(node.sy - NODE_HANDLE) + 0.5, NODE_HANDLE * 2, NODE_HANDLE * 2);
+    ctx.stroke();
+  }
+}
+
+// ----------------------------------------------------------
+// The code ticker
+// ----------------------------------------------------------
+
+/**
+ * Refresh the live values printed against the source lines. Once a second, on
+ * the same cadence as the callouts, for the same reason.
+ */
+function refreshCodeValues() {
+  if (infoClockS < codeValueNextUpdate) return;
+  codeValueNextUpdate = infoClockS + LABEL_VALUE_SECONDS;
+
+  codeValueText[0] = lastDt.toFixed(4);
+  codeValueText[1] = `${(clockS % 1000).toFixed(1)} s`;
+  codeValueText[2] = `n = ${stillFieldNodes.length}`;
+  codeValueText[3] = `J = ${lastJitter.toFixed(1)}`;
+  codeValueText[4] = `z = ${probeZ.toFixed(3)}`;
+  codeValueText[5] = `s = ${probeScale.toFixed(3)}`;
+  codeValueText[6] = `${lastGridCells} cells`;
+  codeValueText[7] = `${lastPairTests} of ${(stillFieldNodes.length * (stillFieldNodes.length - 1) / 2) | 0}`;
+  codeValueText[8] = `d = ${sampleDistance.toFixed(0)}`;
+  codeValueText[9] = `t = ${sampleTarget.toFixed(3)}`;
+  codeValueText[10] = `s = ${sampleStrength.toFixed(3)}`;
+  codeValueText[11] = `${lastBatches} batches`;
+  codeValueText[12] = `E = ${probeEnergy.toFixed(3)}`;
+  codeValueText[13] = `${lastEdgeCount} edges`;
+  codeValueText[14] = `${measuredFps.toFixed(0)} fps`;
+  codeValueText[15] = `${lastLabelCount} shown`;
+}
+
+/**
+ * Choose a corner for the listing, or decide there is nowhere for it to go.
+ *
+ * Four candidates, tried in order of preference. The bottom-right is the
+ * natural home, but in immersion mode the floating play cluster lives there, so
+ * a single fixed position would mean the listing silently never appeared for
+ * exactly the users most likely to want it.
+ */
+const CODE_CORNERS_X = Int8Array.from([1, 1, -1, -1]);   // +1 right, −1 left
+const CODE_CORNERS_Y = Int8Array.from([1, -1, 1, -1]);   // +1 bottom, −1 top
+
+function layoutCodeTicker() {
+  codeVisible = false;
+  if (!stillFieldCode) return;
+  if (stillFieldW < CODE_MIN_VIEWPORT) return;
+
+  const height = CODE_LINES.length * CODE_LINE_H + 22;
+  if (height + 48 > stillFieldH) return;
+
+  for (let c = 0; c < 4; c++) {
+    const left = CODE_CORNERS_X[c] > 0 ? stillFieldW - CODE_BLOCK_W - 20 : 20;
+    const top = CODE_CORNERS_Y[c] > 0 ? stillFieldH - height - 24 : 24;
+    if (top < 12) continue;
+    if (hitsKeepOut(left, top, left + CODE_BLOCK_W, top + height)) continue;
+    codeLeft = left;
+    codeTop = top;
+    codeHeight = height;
+    codeVisible = true;
+    return;
+  }
+}
+
+/** Does a box overlap the listing? Used by callouts and dimensions. */
+function hitsCodeBlock(left, top, right, bottom) {
+  if (!codeVisible) return false;
+  return right > codeLeft && left < codeLeft + CODE_BLOCK_W
+    && bottom > codeTop && top < codeTop + codeHeight;
+}
+
+/**
+ * A column of this renderer's own source, with a program counter sweeping it.
+ *
+ * The cursor is not decorative timing: each stage's share of the sweep is its
+ * measured share of the frame's work, so the marker genuinely lingers where the
+ * time goes. Watch it for a few seconds with the node density up and you can
+ * see the link pass take over the frame.
+ */
+function drawCodeTicker(ctx, dt) {
+  const lines = CODE_LINES.length;
+  const left = codeLeft;
+  const top = codeTop;
+
+  refreshCodeValues();
+
+  // Stage weights from the measured profile. A stage with no measurable cost
+  // still gets a floor, so the cursor keeps moving rather than stalling on the
+  // first frame before any timing exists.
+  const total = stageUpdateMs + stageLinksMs + stageNodesMs + stageInfoMs;
+  const share0 = total > 0 ? Math.max(0.06, stageUpdateMs / total) : 0.25;
+  const share1 = total > 0 ? Math.max(0.06, stageLinksMs / total) : 0.25;
+  const share2 = total > 0 ? Math.max(0.06, stageNodesMs / total) : 0.25;
+  const share3 = total > 0 ? Math.max(0.06, stageInfoMs / total) : 0.25;
+  const shareSum = share0 + share1 + share2 + share3;
+
+  codeCursor += dt / (reducedMotion ? CODE_SWEEP_S * 3 : CODE_SWEEP_S);
+  if (codeCursor >= 1) codeCursor -= Math.floor(codeCursor);
+
+  // Walk the weighted listing to find the line the counter is on.
+  const target = codeCursor * shareSum;
+  let running = 0;
+  codeActiveLine = 0;
+  for (let i = 0; i < lines; i++) {
+    const stage = CODE_LINES[i][CODE_STAGE];
+    const share = stage === 0 ? share0 : stage === 1 ? share1 : stage === 2 ? share2 : share3;
+    running += share / CODE_STAGE_LINES[stage];
+    if (running >= target) { codeActiveLine = i; break; }
+    codeActiveLine = i;
+  }
+
+  ctx.textBaseline = 'top';
+  ctx.font = CODE_FONT;
+
+  // A very light plate. The listing sits over the field's own lines, and
+  // without something behind it an edge crossing a line of code is read as part
+  // of the code. Kept far more transparent than a callout plate — this is
+  // ambient, not a readout you are meant to stop and study.
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = plateColor;
+  ctx.beginPath();
+  if (hasRoundRect) ctx.roundRect(snap(left - 10), snap(top - 8), CODE_BLOCK_W + 20, codeHeight + 4, 6);
+  else ctx.rect(snap(left - 10), snap(top - 8), CODE_BLOCK_W + 20, codeHeight + 4);
+  ctx.fill();
+
+  // Header rule and caption.
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = inkMutedColor;
+  ctx.textAlign = 'left';
+  ctx.fillText('js/still-field.js — render loop', snap(left + CODE_GUTTER), snap(top));
+  ctx.globalAlpha = 0.28;
+  ctx.fillRect(snap(left), snap(top + 14), CODE_BLOCK_W, 1);
+
+  const bodyTop = top + 20;
+  for (let i = 0; i < lines; i++) {
+    const line = CODE_LINES[i];
+    const y = bodyTop + i * CODE_LINE_H;
+    const active = i === codeActiveLine;
+
+    ctx.globalAlpha = active ? 0.30 : 0;
+    if (active) {
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(snap(left), snap(y - 1), CODE_BLOCK_W, CODE_LINE_H);
+    }
+
+    ctx.textAlign = 'right';
+    ctx.globalAlpha = active ? 0.75 : 0.3;
+    ctx.fillStyle = inkMutedColor;
+    ctx.fillText(String(i + 1).padStart(2, '0'), snap(left + CODE_GUTTER - 6), snap(y));
+
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = active ? 0.95 : 0.42;
+    ctx.fillStyle = active ? accentColor : inkColor;
+    ctx.fillText(line[CODE_TEXT], snap(left + CODE_GUTTER + line[CODE_INDENT] * 12), snap(y));
+
+    const slot = line[CODE_SLOT];
+    if (slot >= 0) {
+      ctx.textAlign = 'right';
+      ctx.globalAlpha = active ? 0.9 : 0.34;
+      ctx.fillStyle = active ? inkColor : inkMutedColor;
+      ctx.fillText(codeValueText[slot], snap(left + CODE_BLOCK_W), snap(y));
+    }
+  }
+
+  ctx.textAlign = 'left';
+}
+
+// ----------------------------------------------------------
+// Loop control
+// ----------------------------------------------------------
 
 function stopLoop() {
   if (stillFieldRaf) {
@@ -1254,9 +2437,12 @@ function stopLoop() {
   // freeze on the last rate it happened to see.
   measuredFps = 0;
   measuredFrameMs = 0;
+  stageUpdateMs = stageLinksMs = stageNodesMs = stageInfoMs = 0;
   lastEdgeCount = 0;
   lastLabelCount = 0;
   lastEdgeLabelCount = 0;
+  lastPairTests = 0;
+  lastBatches = 0;
 }
 
 export function startStillFieldLoop() {
@@ -1266,7 +2452,7 @@ export function startStillFieldLoop() {
   // Reset the clock so the first step after a pause is a normal one rather than
   // however long the app sat idle.
   lastFrameMs = performance.now();
-  lastDrawMs = lastFrameMs - FRAME_INTERVAL_MS;
+  lastDrawMs = lastFrameMs - 1000 / stillFieldFps;
   stillFieldRaf = requestAnimationFrame(frame);
 }
 
@@ -1302,9 +2488,9 @@ export function setStillFieldEnabled(on) {
     stopLoop();
     stillEnergy = 0;
     publishEnergy(0);
-    if (stillFieldCtx) {
-      stillFieldCtx.clearRect(0, 0, stillFieldW, stillFieldH);
-    }
+    if (stillFieldCtx) stillFieldCtx.clearRect(0, 0, stillFieldW, stillFieldH);
+    infoCleared = false;
+    clearInfoCanvas();
   }
   emit();
 }
@@ -1332,13 +2518,100 @@ export function setStillFieldSpeed(v) {
 }
 
 /**
- * Toggle the nerd / info labels layer. Persists the choice.
+ * Toggle the nerd / info layer. Persists the choice.
  * @param {boolean} on
  */
 export function setStillFieldNerd(on) {
   stillFieldNerd = Boolean(on);
   write(STORAGE_KEYS.stillFieldNerd, stillFieldNerd);
-  if (!stillFieldNerd) measuredFrameMs = 0;
+  if (!stillFieldNerd) {
+    measuredFrameMs = 0;
+    stageUpdateMs = stageLinksMs = stageNodesMs = stageInfoMs = 0;
+    resetEdgeSlots();
+    infoCleared = false;
+    clearInfoCanvas();
+  }
+  emit();
+}
+
+/**
+ * Node population multiplier. Persists the choice.
+ * @param {number} v STILL_DENSITY_MIN–STILL_DENSITY_MAX
+ */
+export function setStillFieldDensity(v) {
+  stillFieldDensity = clamp(v, STILL_DENSITY_MIN, STILL_DENSITY_MAX);
+  write(STORAGE_KEYS.stillFieldDensity, stillFieldDensity);
+  applyNodeCount();
+  emit();
+}
+
+/**
+ * Link radius multiplier. Persists the choice.
+ * @param {number} v STILL_REACH_MIN–STILL_REACH_MAX
+ */
+export function setStillFieldReach(v) {
+  stillFieldReach = clamp(v, STILL_REACH_MIN, STILL_REACH_MAX);
+  write(STORAGE_KEYS.stillFieldReach, stillFieldReach);
+  measureWorld();
+  emit();
+}
+
+/**
+ * Trail decay rate, per second. Lower leaves a longer comet tail.
+ * @param {number} v STILL_TRAIL_MIN–STILL_TRAIL_MAX
+ */
+export function setStillFieldTrail(v) {
+  stillFieldTrail = clamp(v, STILL_TRAIL_MIN, STILL_TRAIL_MAX);
+  write(STORAGE_KEYS.stillFieldTrail, stillFieldTrail);
+  emit();
+}
+
+/**
+ * Perspective strength. Persists the choice, and re-derives the world plane —
+ * the world is sized so the far plane still fills the viewport, and the far
+ * plane moves when depth does.
+ * @param {number} v STILL_DEPTH_MIN–STILL_DEPTH_MAX
+ */
+export function setStillFieldDepth(v) {
+  depth = clamp(v, STILL_DEPTH_MIN, STILL_DEPTH_MAX);
+  minScale = 1 / (1 + depth);
+  write(STORAGE_KEYS.stillFieldDepth, depth);
+  measureWorld();
+  applyNodeCount();
+  emit();
+}
+
+/**
+ * Mean seconds a callout detail mode holds. The actual per-mode dwell is this
+ * scaled by that mode's golden-ratio weight — see MODE_WEIGHTS.
+ * @param {number} v STILL_DWELL_MIN–STILL_DWELL_MAX
+ */
+export function setStillFieldDwell(v) {
+  stillFieldDwell = clamp(v, STILL_DWELL_MIN, STILL_DWELL_MAX);
+  write(STORAGE_KEYS.stillFieldDwell, stillFieldDwell);
+  emit();
+}
+
+/**
+ * Frame-rate cap. Motion is integrated from elapsed time, so this changes how
+ * smooth the field looks and nothing about how fast it drifts.
+ * @param {number} v one of STILL_FPS_OPTIONS
+ */
+export function setStillFieldFps(v) {
+  const next = Number(v);
+  if (!STILL_FPS_OPTIONS.includes(next)) return;
+  stillFieldFps = next;
+  write(STORAGE_KEYS.stillFieldFps, stillFieldFps);
+  emit();
+}
+
+/**
+ * Toggle the on-canvas source ticker. Persists the choice.
+ * @param {boolean} on
+ */
+export function setStillFieldCode(on) {
+  stillFieldCode = Boolean(on);
+  write(STORAGE_KEYS.stillFieldCode, stillFieldCode);
   emit();
 }
 

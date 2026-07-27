@@ -38,12 +38,17 @@ there silently.)
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
 - **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Nodes keep a soft residual outline so a quiet node stays legible instead of sinking into the background. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
-- **Info labels** (nerd layer, default on) — stable-ID node callouts and sampled
-  edge measurements on the canvas, plus one integrated Live / Math / Code panel
-  exposing renderer health, graph topology, analyser levels, equations and the
-  operations that drive them
+- **Stats** (the info layer, default on) — engineering-drawing callouts with
+  leader lines and axis-coloured transform rows, edge dimensions rotated onto
+  the lines they measure, a live source listing of the renderer with a
+  profile-driven program counter, and one integrated Live / Math / Code panel
+  exposing renderer health, graph topology, analyser levels, and equations with
+  their operands evaluated live
 - **Background texture** — controllable procedural overlay (default on)
 - **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
+- **Field Lab**: The renderer's own parameters — node density, link reach, trail
+  persistence, perspective, callout dwell, frame cap (30/45/60) and the source
+  overlay — all live, all persisted, with a reset
 - **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
 - Dedicated **Minimise interface** action for immersion, with a floating restore cluster (play + status + Show controls)
 - Seamless mobile scrolling (no visible scrollbars)
@@ -112,9 +117,10 @@ All noise is synthesised in `js/noise.js` → `generateNoiseBuffer(audioCtx, typ
 Buffers are long enough that the loop point is effectively inaudible for these stochastic signals. State (last sample / filter coefficients) is continuous *within* each buffer.
 
 **Still Field visualisation**  
-Full-viewport Canvas 2D layer behind the UI (`js/still-field.js`), 26–44 nodes
-depending on viewport. No WebGL, no library — the depth is real perspective
-maths, not a 3D engine.
+Two full-viewport Canvas 2D layers behind the UI (`js/still-field.js`): the
+field, and an info layer above it. 26–44 nodes depending on viewport, up to
+2.2× that from the Field Lab. No WebGL, no library — the depth is real
+perspective maths, not a 3D engine.
 
 - **Depth.** Each node carries a `z` and projects through a pinhole camera,
   `scale = 1 / (1 + z · 0.75)`, about the screen centre. That gives genuine
@@ -127,6 +133,12 @@ maths, not a 3D engine.
   overlap on screen at different depths stay unconnected. The link radius is
   derived from mean node spacing rather than fixed in pixels, which holds the
   graph at roughly three connections per node on a phone and a desktop alike.
+  Candidate pairs come from a uniform spatial grid rebuilt each frame with a
+  counting sort into pre-sized typed arrays — cells are one link radius across,
+  and each node tests only its own cell and the four neighbours that have not
+  already tested it. That is what makes a raisable node population affordable:
+  at 97 nodes the field visits about 440 pairs a frame instead of 4 656, and
+  both numbers are on screen in the Live view so the claim is checkable.
 - **Lifecycle.** Nodes live 70–150 s, easing in and out. Replacements are placed
   on the R2 low-discrepancy sequence (Roberts, 2018) instead of at random, so
   coverage stays even without any repulsion pass. When a node fades, its links
@@ -143,28 +155,38 @@ maths, not a 3D engine.
 - **New links pulse.** The brightness transient on a fresh connection is just
   the error signal of the link's envelope — the gap between where a link wants
   to be and where it is, which peaks the instant two nodes come into range.
-- **Info labels** (nerd layer, default on). Two halves under one toggle:
-  - *On the canvas* — stable lifetime IDs and compact diagnostic callouts on
-    the nearest energy-qualified nodes. Up to six appear on a wide viewport and
-    four on a phone; collision checks, screen bounds and measured interface
-    keep-outs reduce that cap when the available space is smaller. Detail
-    rotates every eight seconds through energy/phase, world position, velocity,
-    projection/lifecycle and local travelling-wave phase. Values are cached for
-    a second at a time rather than rebuilt at 30 fps. Up to three established
-    edges show the true 3D distance used by the link test and their projected
-    angle, sampled inside the existing pair scan.
-  - *The information panel* — the same top-left surface now has **Live**,
-    **Math** and **Code** views. Live adds renderer work, pair tests, mean graph
-    degree, density, callout mode, wave phase/vector, colour-coded health and
-    analyser meters to the existing source, drift and uptime data. Math and
-    Code expose verified equations and compact versions of the actual renderer
-    operations. Tabs are keyboard navigable; changing values are deliberately
-    not a live region. DOM values still refresh only four times a second and
-    stop entirely while the page is hidden.
-- **Battery.** Runs at 30 fps with motion integrated from real elapsed time (so
-  it drifts identically at 30, 60 or 120 Hz), stops the loop entirely when the
-  page is hidden, allocates nothing per frame, and rations `shadowBlur` to the
-  few highest-energy nodes. `prefers-reduced-motion` slows it and drops the glow.
+- **Crisp instrumentation.** All text lives on a second canvas that is cleared
+  outright every frame. It has to: the field subtracts alpha each frame to leave
+  a trail, and a moving label drawn onto it leaves half a second of decaying
+  copies of itself — the soft halo that used to make the callouts look blurred.
+  Nothing on the info layer sets `shadowBlur`, and glyph origins are snapped to
+  whole device pixels. Legibility over a busy field comes from a plate behind
+  the text, not a glow.
+- **Stats** (the info layer, default on) — three parts under one toggle:
+  - *Callouts* — an open square handle on the node, a two-run leader line, and a
+    plated block of key/value rows. Position mode reads like a 3D application's
+    transform panel: X red, Y green, Z blue, values right-aligned in a
+    monospaced column with units. Detail rotates through energy, position,
+    velocity, projection and wave on a golden-ratio-weighted dwell, acquires and
+    releases on different energy gates, and fades through opacity envelopes — so
+    a readout stays long enough to read and never flickers.
+  - *Edge dimensions* — up to five, with the number rotated onto the line it
+    measures and witness ticks bounding the span, exactly as a length is
+    annotated on a technical drawing. Sampled inside the existing pair scan.
+  - *The information panel and the source overlay* — the top-left surface has
+    **Live**, **Math** and **Code** views: pair tests against brute force, grid
+    occupancy, node turnover, a rolling frame-time trace, equations with their
+    operands evaluated live, and per-stage `performance.now()` timings. On wide
+    viewports the field itself carries a column of the renderer's own source
+    with a program counter whose dwell on each stage *is* that stage's measured
+    share of the frame. Tabs are keyboard navigable; changing values are
+    deliberately not a live region, refresh four times a second, and stop
+    entirely while the page is hidden.
+- **Battery.** Defaults to 30 fps with motion integrated from real elapsed time
+  (so it drifts identically at 30, 60 or 120 Hz — the Field Lab's cap changes
+  smoothness, not speed), stops the loop entirely when the page is hidden,
+  allocates nothing per frame, and rations `shadowBlur` to the few
+  highest-energy nodes. `prefers-reduced-motion` slows it and drops the glow.
 - Colours come from `--still-field-*` custom properties, read once per theme
   change — restyling the field is a CSS edit.
 
@@ -193,6 +215,10 @@ See [AGENTS.md](./AGENTS.md#common-tasks) for step-by-step recipes.
 `complexNoise_stillFieldEnabled` (default true), `complexNoise_stillFieldIntensity`,  
 `complexNoise_stillFieldSpeed` (0.7–4.8, default 2.0),  
 `complexNoise_stillFieldNerd` (default true), `complexNoise_stillFieldTexture` (default true),  
+`complexNoise_stillFieldDensity` (0.5–2.2, default 1.0), `complexNoise_stillFieldReach` (0.6–1.6, default 1.0),  
+`complexNoise_stillFieldTrail` (2–26 /s, default 8.2), `complexNoise_stillFieldDepth` (0.3–1.6, default 0.75),  
+`complexNoise_stillFieldDwell` (4–26 s, default 14), `complexNoise_stillFieldFps` (30/45/60, default 30),  
+`complexNoise_stillFieldCode` (default true),  
 `complexNoise_stillGlassTransparent`, `complexNoise_uiChromeHidden`
 
 All keys are centralised in `js/constants.js` → `STORAGE_KEYS`, and read/written

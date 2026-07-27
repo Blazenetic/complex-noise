@@ -22,6 +22,14 @@
   <canvas id="stillField" aria-hidden="true"></canvas>
 
   <!--
+    Info layer canvas. Separate from the field on purpose: the field subtracts
+    alpha each frame to leave a trail, and text drawn into a trail smears into
+    the soft halo that made every callout look blurred. This surface is cleared
+    outright every frame, so the instrumentation stays crisp while it moves.
+  -->
+  <canvas id="stillFieldInfo" aria-hidden="true"></canvas>
+
+  <!--
     Info layer readout — the other half of the "Info labels" / Stats toggle.
     Foldable on desktop and mobile so it never permanently owns the top-left.
     Values refresh several times a second but are deliberately not a live
@@ -56,6 +64,8 @@
         <dt>Nodes</dt><dd id="nerdNodes">—</dd>
         <dt>Edges</dt><dd id="nerdLinks">—</dd>
         <dt>Pair tests</dt><dd id="nerdPairs">—</dd>
+        <dt>Grid</dt><dd id="nerdGrid">—</dd>
+        <dt>Turnover</dt><dd id="nerdTurnover">—</dd>
         <dt>Mean degree</dt><dd id="nerdDegree">—</dd>
         <dt>Density</dt><dd id="nerdDensity">—</dd>
         <dt>Callouts</dt><dd id="nerdLabels">—</dd>
@@ -65,6 +75,14 @@
         <dt>Drift</dt><dd id="nerdDrift">—</dd>
         <dt>Uptime</dt><dd id="nerdUptime">—</dd>
       </dl>
+
+      <!-- Rolling frame-time trace. Painted by app.js on the same 250 ms tick
+           as the numbers, never from the render loop. -->
+      <figure class="nerd-trace">
+        <canvas id="nerdSpark" width="544" height="64" aria-hidden="true"></canvas>
+        <figcaption id="nerdSparkCaption">frame time</figcaption>
+      </figure>
+
       <div class="nerd-spectrum" aria-label="Normalised analyser and field energy">
         <div><span>Low</span><i><b id="nerdMeterLow"></b></i><span id="nerdLow">0.000</span></div>
         <div><span>Mid</span><i><b id="nerdMeterMid"></b></i><span id="nerdMid">0.000</span></div>
@@ -73,22 +91,87 @@
       </div>
     </section>
 
+    <!--
+      Math view. Every row carries the symbolic form *and* the numbers the
+      renderer is putting through it this instant, evaluated against the
+      highest-energy node on screen and the first strong edge of the frame.
+    -->
     <section class="nerd-hud-view nerd-formulas" id="nerdViewMath" role="tabpanel" aria-labelledby="nerdTabMath" hidden>
-      <div><span>Project</span><code>s(z) = 1 / (1 + 0.75z)</code></div>
-      <div><span>Energy</span><code>E = clamp(.30b + .24w + .46a)</code></div>
-      <div><span>Distance</span><code>d² = Δx² + Δy² + (Δz · z<sub>w</sub>)²</code></div>
-      <div><span>Link target</span><code>t = (1 − d / r)<sup>.65</sup></code></div>
-      <div><span>Envelope</span><code>s ← s + (t − s)(1 − e<sup>−λΔt</sup>)</code></div>
-      <div><span>Drift</span><code>v ← (v + ξJΔt)e<sup>−.55Δt</sup></code></div>
+      <div>
+        <span>Project</span>
+        <code>s(z) = 1 / (1 + δz)</code>
+        <em id="nerdEvalProject">—</em>
+      </div>
+      <div>
+        <span>Energy</span>
+        <code>E = .30b + .24w + .46a</code>
+        <em id="nerdEvalEnergy">—</em>
+      </div>
+      <div>
+        <span>Distance</span>
+        <code>d² = Δx² + Δy² + (Δz · z<sub>w</sub>)²</code>
+        <em id="nerdEvalDistance">—</em>
+      </div>
+      <div>
+        <span>Link target</span>
+        <code>t = (1 − d / r)<sup>.65</sup></code>
+        <em id="nerdEvalTarget">—</em>
+      </div>
+      <div>
+        <span>Envelope</span>
+        <code>s ← s + (t − s)(1 − e<sup>−λΔt</sup>)</code>
+        <em id="nerdEvalEnvelope">—</em>
+      </div>
+      <div>
+        <span>Wave</span>
+        <code>ψ = ωt − k · p</code>
+        <em id="nerdEvalWave">—</em>
+      </div>
+      <div>
+        <span>Schedule</span>
+        <code>T<sub>k</sub> = D(0.72 + 0.56 · frac(kφ))</code>
+        <em id="nerdEvalSchedule">—</em>
+      </div>
+      <div>
+        <span>Grid</span>
+        <code>pairs ≈ n · ρ · 5c² &lt;&lt; n(n−1)/2</code>
+        <em id="nerdEvalGrid">—</em>
+      </div>
     </section>
 
+    <!--
+      Code view. The four pipeline stages with their measured share of the
+      frame, the statements each one runs, and the values those statements are
+      currently producing. The bar and the numbers come from the same
+      performance.now() samples the on-canvas ticker uses.
+    -->
     <section class="nerd-hud-view nerd-code" id="nerdViewCode" role="tabpanel" aria-labelledby="nerdTabCode" hidden>
-      <p><span>01</span><code>scale = 1 / (1 + node.z * DEPTH);</code></p>
-      <p><span>02</span><code>wave = .5 + .5 * sin(ωt − k·p);</code></p>
-      <p><span>03</span><code>target = pow(1 - distance / radius, .65);</code></p>
-      <p><span>04</span><code>attack = 1 - exp(-3.2 * Δt);</code></p>
-      <p><span>05</span><code>node.x += node.vx * Δt;</code></p>
-      <p><span>06</span><code>shade = clamp(energy ** 1.35, 0, 1);</code></p>
+      <div class="nerd-stage" id="nerdStageUpdate">
+        <div class="nerd-stage-head"><span>update(dt)</span><em id="nerdMsUpdate">—</em></div>
+        <div class="nerd-stage-bar"><i id="nerdBarUpdate"></i></div>
+        <code>node.vx *= exp(-0.55 * dt);</code>
+        <code>node.scale = 1 / (1 + node.z * DEPTH);</code>
+        <b id="nerdLiveUpdate">—</b>
+      </div>
+      <div class="nerd-stage" id="nerdStageLinks">
+        <div class="nerd-stage-head"><span>drawLinks()</span><em id="nerdMsLinks">—</em></div>
+        <div class="nerd-stage-bar"><i id="nerdBarLinks"></i></div>
+        <code>for (const [a, b] of grid.pairs())</code>
+        <code>t = pow(1 - d / radius, 0.65);</code>
+        <b id="nerdLiveLinks">—</b>
+      </div>
+      <div class="nerd-stage" id="nerdStageNodes">
+        <div class="nerd-stage-head"><span>drawNodes()</span><em id="nerdMsNodes">—</em></div>
+        <div class="nerd-stage-bar"><i id="nerdBarNodes"></i></div>
+        <code>shade = pow(node.energy, 1.35);</code>
+        <b id="nerdLiveNodes">—</b>
+      </div>
+      <div class="nerd-stage" id="nerdStageInfo">
+        <div class="nerd-stage-head"><span>drawInfoLayer()</span><em id="nerdMsInfo">—</em></div>
+        <div class="nerd-stage-bar"><i id="nerdBarInfo"></i></div>
+        <code>info.clearRect(0, 0, w, h);</code>
+        <b id="nerdLiveInfo">—</b>
+      </div>
     </section>
   </aside>
 
@@ -214,6 +297,83 @@
             <label for="stillEqHigh">High</label>
             <input type="range" id="stillEqHigh" min="-12" max="12" step="0.5" value="0" />
           </div>
+        </div>
+      </details>
+
+      <!--
+        Field Lab — the renderer's own parameters, exposed.
+        Every range here must match the matching STILL_*_MIN / STILL_*_MAX pair
+        in js/constants.js, and every default the matching DEFAULTS entry.
+      -->
+      <details class="still-panel still-lab" id="labPanel" open>
+        <summary>Field Lab</summary>
+        <div class="still-panel-body">
+          <p class="lab-note">Renderer parameters. Changes apply live and persist.</p>
+
+          <div class="still-eq-row">
+            <div class="lab-label-row">
+              <label for="fieldDensity">Node density</label>
+              <span class="lab-value" id="fieldDensityValue" aria-hidden="true">1.00×</span>
+            </div>
+            <input type="range" id="fieldDensity" min="0.5" max="2.2" step="0.05" value="1" />
+          </div>
+
+          <div class="still-eq-row">
+            <div class="lab-label-row">
+              <label for="fieldReach">Link reach</label>
+              <span class="lab-value" id="fieldReachValue" aria-hidden="true">1.00×</span>
+            </div>
+            <input type="range" id="fieldReach" min="0.6" max="1.6" step="0.05" value="1" />
+          </div>
+
+          <div class="still-eq-row">
+            <div class="lab-label-row">
+              <label for="fieldTrail">Trail persistence</label>
+              <span class="lab-value" id="fieldTrailValue" aria-hidden="true">0.12 s</span>
+            </div>
+            <!-- The slider carries the tail's time constant in seconds, which
+                 is the thing a person can actually see; the renderer wants the
+                 reciprocal, and app.js converts. A reversed slider would have
+                 been the alternative, and reversed sliders break arrow keys. -->
+            <input type="range" id="fieldTrail" min="0.04" max="0.5" step="0.01" value="0.12" />
+          </div>
+
+          <div class="still-eq-row">
+            <div class="lab-label-row">
+              <label for="fieldDepth">Perspective</label>
+              <span class="lab-value" id="fieldDepthValue" aria-hidden="true">0.75</span>
+            </div>
+            <input type="range" id="fieldDepth" min="0.3" max="1.6" step="0.05" value="0.75" />
+          </div>
+
+          <div class="still-eq-row">
+            <div class="lab-label-row">
+              <label for="fieldDwell">Callout dwell</label>
+              <span class="lab-value" id="fieldDwellValue" aria-hidden="true">14 s</span>
+            </div>
+            <input type="range" id="fieldDwell" min="4" max="26" step="1" value="14" />
+          </div>
+
+          <div class="still-toggle-row">
+            <span id="fieldFpsLabel">Frame rate</span>
+            <div class="fps-segment" role="group" aria-labelledby="fieldFpsLabel">
+              <button type="button" class="fps-seg" data-fps="30" aria-pressed="true">30</button>
+              <button type="button" class="fps-seg" data-fps="45" aria-pressed="false">45</button>
+              <button type="button" class="fps-seg" data-fps="60" aria-pressed="false">60</button>
+            </div>
+          </div>
+
+          <div class="still-toggle-row is-secondary">
+            <span id="fieldCodeLabel">Source overlay</span>
+            <button type="button" class="still-switch" id="fieldCodeToggle" role="switch" aria-checked="true" aria-labelledby="fieldCodeLabel"></button>
+          </div>
+
+          <button type="button" id="fieldLabReset" class="minimise-btn" aria-label="Reset Field Lab to defaults">
+            <svg class="minimise-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/>
+            </svg>
+            <span>Reset to defaults</span>
+          </button>
         </div>
       </details>
     </div>

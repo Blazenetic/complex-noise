@@ -19,6 +19,7 @@ const browser = {
   getComputedStyle: 'readonly',
   performance: 'readonly',
   Event: 'readonly',
+  CanvasRenderingContext2D: 'readonly',
   Uint8Array: 'readonly',
   Float32Array: 'readonly',
   OfflineAudioContext: 'readonly',

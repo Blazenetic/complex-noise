@@ -66,6 +66,10 @@ const els = {
   /** Dedicated minimise action button inside the Still Field card. */
   chromeMinimise: document.getElementById('uiChromeMinimise'),
   minimisedChrome: document.getElementById('minimisedChrome'),
+  // Package D/E foundations — toggles already in index.html
+  fieldNerdToggle: document.getElementById('stillFieldNerdToggle'),
+  fieldTextureToggle: document.getElementById('stillFieldTextureToggle'),
+  stillTextureEl: document.querySelector('.still-texture'),
 };
 
 // ----------------------------------------------------------
@@ -150,6 +154,23 @@ function renderStillField(state) {
   els.fieldSpeed.disabled = !state.enabled;
   els.fieldIntensity.setAttribute('aria-valuetext', `${Math.round(state.intensity * 100)} percent`);
   els.fieldSpeed.setAttribute('aria-valuetext', `${state.speed.toFixed(2)} times`);
+
+  // Package D/E — info labels + background texture toggles
+  if (els.fieldNerdToggle) {
+    els.fieldNerdToggle.setAttribute('aria-checked', state.nerd ? 'true' : 'false');
+    // Labels are painted on the canvas, so the control is dead while the field
+    // is off — disable it alongside the sliders rather than leaving it live.
+    els.fieldNerdToggle.disabled = !state.enabled;
+  }
+  // The texture is a separate CSS overlay, not part of the canvas, so it stays
+  // available even with the field switched off.
+  if (els.fieldTextureToggle) {
+    els.fieldTextureToggle.setAttribute('aria-checked', state.texture ? 'true' : 'false');
+  }
+  // Clearing the inline value hands opacity back to the per-theme CSS variable.
+  if (els.stillTextureEl) {
+    els.stillTextureEl.style.opacity = state.texture ? '' : '0';
+  }
 }
 
 /** @param {ReturnType<typeof theme.getState>} state */
@@ -277,6 +298,14 @@ function bindEvents() {
   });
 
   bindSwitch(els.glassToggle, () => theme.toggleGlassMode());
+
+  // Package D/E wiring
+  bindSwitch(els.fieldNerdToggle, () => {
+    stillField.setStillFieldNerd(!stillField.getStillFieldNerd());
+  });
+  bindSwitch(els.fieldTextureToggle, () => {
+    stillField.setStillFieldTexture(!stillField.getStillFieldTexture());
+  });
 
   els.fieldIntensity.addEventListener('input', e => {
     stillField.setStillFieldIntensity(parseFloat(e.target.value));

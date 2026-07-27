@@ -100,6 +100,24 @@ once; `tests/run.mjs` now guards against it.
   the full interface is visible.
 - Escape always restores the full interface.
 
+## Still Field controls (current)
+
+- **Field visualisation** toggle (default on)
+- **Intensity** and **Speed** sliders (speed practical range **0.7 – 4.8**, default 2.0)
+- **Info labels** (nerd layer) — default on, sparse, energy-gated (only appear when there is meaningful activity). At most four at a time, on the nearest qualifying nodes, and only where the label actually lands on screen. Disabled alongside the sliders when the field is off. Toggle in the Still Field card.
+- **Background texture** — controllable procedural overlay (default on). Independent of the field, so it stays available with the field off. Toggle in the Still Field card.
+- Nodes keep a soft residual stroke-circle outline so a low-energy node stays
+  legible instead of sinking into the background. The outline is scaled by the
+  lifecycle envelope, so it still eases in at birth and out at death — the floor
+  is against dimness, never against the lifecycle. Do not reintroduce a floor
+  that ignores `node.fade`: nodes would pop on and off, because `update()`
+  respawns a node the instant its life reaches 1, so `life` is never out of
+  range by the time `draw()` runs.
+
+New localStorage keys:
+- `complexNoise_stillFieldNerd`
+- `complexNoise_stillFieldTexture`
+
 ## Common tasks
 
 **Add a noise colour** — add a generator to `GENERATORS` in `js/noise.js`, add
@@ -153,6 +171,11 @@ noise rather than the listening volume.
   new in the render loop must scale by the timestep, or the field will drift at
   double speed on a 120 Hz phone. Exponential smoothing needs
   `1 - Math.exp(-rate * dt)`, not a fixed per-frame coefficient.
+- **The glow pass is not guaranteed to run.** `drawNodes` defers high-energy
+  nodes to a second pass that carries `shadowBlur`, but that pass stops at
+  `MAX_GLOW_NODES` and is skipped entirely under `prefers-reduced-motion`.
+  Anything deferred to it unconditionally is deferred into nothing, and the
+  brightest nodes disappear from the field. Draw them flat in pass 0 instead.
 - **The Still Field canvas must stay transparent.** Its trail effect subtracts
   alpha with `destination-out`. Filling with a background colour instead drives
   the canvas opaque within seconds and buries the background gradient and the
@@ -161,8 +184,9 @@ noise rather than the listening volume.
   node it intends to clean up, or it will tear down whatever happens to be
   playing when it fires.
 - **Defaults live in `constants.js`.** Volume default is intentionally soft
-  (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (range 0.5–4.0).
-  Changing a default without updating the matching test assertion will fail CI.
+  (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (practical range
+  **0.7–4.8**). Changing a default without updating the matching test assertion
+  will fail CI.
 
 ## Conventions
 

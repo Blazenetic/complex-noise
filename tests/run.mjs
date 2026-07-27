@@ -95,6 +95,9 @@ test('defaults: brown noise, field on, standard glass, status Ready', async page
   assertEqual(await page.getAttribute('#playBtn', 'aria-label'), 'Play noise', 'initial play button label');
   assertEqual(await page.inputValue('#timer'), '0', 'timer should default to Off');
   assertEqual((await page.textContent('#timerValue')).trim(), 'Off', 'timer readout should say Off');
+  // New controls default on
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'true', 'Info labels should default to on');
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'true', 'Background texture should default to on');
 });
 
 // ==========================================================
@@ -356,21 +359,157 @@ test('Still Field survives a resize without losing its nodes', async page => {
 
 test('Still Field intensity and speed persist', async page => {
   await setRange(page, 'stillFieldIntensity', 0.85);
-  await setRange(page, 'stillFieldSpeed', 0.6);
+  await setRange(page, 'stillFieldSpeed', 0.8);
   assertEqual(await storage(page, 'complexNoise_stillFieldIntensity'), '0.85', 'intensity should persist');
-  assertEqual(await storage(page, 'complexNoise_stillFieldSpeed'), '0.6', 'speed should persist');
+  assertEqual(await storage(page, 'complexNoise_stillFieldSpeed'), '0.8', 'speed should persist');
 
   await page.reload({ waitUntil: 'load' });
   assertEqual(await page.inputValue('#stillFieldIntensity'), '0.85', 'intensity should restore');
-  assertEqual(await page.inputValue('#stillFieldSpeed'), '0.6', 'speed should restore');
-  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 0.6, 'engine should restore the stored speed');
+  assertEqual(await page.inputValue('#stillFieldSpeed'), '0.8', 'speed should restore');
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 0.8, 'engine should restore the stored speed');
 });
 
 test('speed outside the allowed range is clamped, not trusted', async page => {
   await page.evaluate(() => localStorage.setItem('complexNoise_stillFieldSpeed', '99'));
   await page.reload({ waitUntil: 'load' });
   assertEqual(page.errors.length, 0, `an out-of-range speed should not throw: ${page.errors.join(' | ')}`);
-  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 4, 'speed should clamp to the maximum');
+  // Deliberate update: STILL_SPEED_MAX is now 4.8
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 4.8, 'speed should clamp to the maximum');
+});
+
+test('Info labels and Background texture toggles work and persist', async page => {
+  // Both default on (covered in the defaults test). Toggle them off and confirm.
+  await page.click('#stillFieldNerdToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'false', 'Info labels switch should read unchecked');
+  assertEqual(await storage(page, 'complexNoise_stillFieldNerd'), 'false', 'nerd preference should persist');
+
+  await page.click('#stillFieldTextureToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'false', 'Background texture switch should read unchecked');
+  assertEqual(await storage(page, 'complexNoise_stillFieldTexture'), 'false', 'texture preference should persist');
+
+  // A stored `false` is the interesting case: it is the value a naive
+  // truthiness check would throw away and silently restore as the default.
+  await page.reload({ waitUntil: 'load' });
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'false', 'Info labels should restore as off');
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'false', 'Background texture should restore as off');
+  const restored = await page.evaluate(() => window.complexNoiseStill.getFieldState());
+  assertEqual(restored.nerd, false, 'engine should restore nerd = false');
+  assertEqual(restored.texture, false, 'engine should restore texture = false');
+
+  // Restore
+  await page.click('#stillFieldNerdToggle');
+  await page.click('#stillFieldTextureToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-checked'), 'true', 'Info labels should be back on');
+  assertEqual(await page.getAttribute('#stillFieldTextureToggle', 'aria-checked'), 'true', 'Background texture should be back on');
+});
+
+test('Background texture off actually dims the overlay, on restores the theme value', async page => {
+  const opacityNow = () => page.evaluate(
+    () => getComputedStyle(document.querySelector('.still-texture')).opacity,
+  );
+  const themeValue = await opacityNow();
+  assert(parseFloat(themeValue) > 0, `texture should start visible, got ${themeValue}`);
+
+  await page.click('#stillFieldTextureToggle');
+  await page.waitForTimeout(100);
+  assertEqual(parseFloat(await opacityNow()), 0, 'texture should be fully hidden when off');
+
+  await page.click('#stillFieldTextureToggle');
+  await page.waitForTimeout(100);
+  assertEqual(await opacityNow(), themeValue, 'texture should return to the theme opacity, not a hard-coded one');
+});
+
+test('the brightest nodes still paint under prefers-reduced-motion', async page => {
+  // Under reduced motion the glow pass is skipped entirely, so any node the
+  // flat pass defers to it is never drawn at all. Counting arcs is the only way
+  // to see this: the links keep painting either way, so a pixel count stays
+  // healthy while the highest-energy nodes quietly vanish.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    window.__arcs = 0;
+    const original = CanvasRenderingContext2D.prototype.arc;
+    CanvasRenderingContext2D.prototype.arc = function arc(...args) {
+      window.__arcs++;
+      return original.apply(this, args);
+    };
+  });
+  await page.reload({ waitUntil: 'load' });
+  await setRange(page, 'stillFieldIntensity', 1);
+
+  // Silent: energy comes from the procedural layers alone, so almost nothing
+  // clears GLOW_THRESHOLD and every node goes through the flat pass.
+  const sample = async () => {
+    await page.evaluate(() => { window.__arcs = 0; });
+    await page.waitForTimeout(2000);
+    return page.evaluate(() => window.__arcs);
+  };
+  const quiet = await sample();
+  assert(quiet > 0, 'the field should draw nodes while paused');
+
+  // Energised: white noise at full intensity pushes most nodes past the
+  // threshold. Node count is unchanged, so the arc count must not collapse.
+  await page.click('.type-btn[data-type="white"]');
+  await clickPlay(page);
+  await page.waitForTimeout(1500);
+  const loud = await sample();
+
+  assert(
+    loud > quiet * 0.8,
+    `raising energy must not stop nodes being drawn: ${quiet} arcs quiet vs ${loud} energised`,
+  );
+});
+
+test('Info labels are drawn on screen, and only while the toggle is on', async page => {
+  // Record every fillText the field issues. The world plane is sized so the far
+  // plane fills the viewport, which means near nodes project past the edges —
+  // and a nearest-first label pick walks straight into them.
+  await page.addInitScript(() => {
+    window.__labels = [];
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function fillText(text, x, y) {
+      window.__labels.push({ text, x, y });
+      return original.call(this, text, x, y);
+    };
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.click('.type-btn[data-type="white"]');
+  await clickPlay(page);
+  await setRange(page, 'stillFieldIntensity', 1);
+  await page.waitForTimeout(3000);
+
+  const drawn = await page.evaluate(() => window.__labels);
+  assert(drawn.length > 0, 'labels should be drawn with the toggle on and the field energised');
+
+  const size = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  const offscreen = drawn.filter(l => l.x < 0 || l.x > size.w || l.y < 0 || l.y > size.h);
+  assertEqual(offscreen.length, 0, `every label should land inside the viewport, ${offscreen.length}/${drawn.length} did not`);
+
+  // Two decimals, and never built with toFixed in the loop — the readouts come
+  // from a pre-quantised table, so every one of them must be in that table.
+  const malformed = drawn.filter(l => !/^[01]\.\d{2}$/.test(l.text));
+  assertEqual(malformed.length, 0, `readouts should be two-decimal energies, saw ${JSON.stringify(malformed.slice(0, 3))}`);
+
+  await page.click('#stillFieldNerdToggle');
+  await page.evaluate(() => { window.__labels.length = 0; });
+  await page.waitForTimeout(1000);
+  assertEqual((await page.evaluate(() => window.__labels.length)), 0, 'no labels should be drawn once the toggle is off');
+});
+
+test('Info labels toggle is disabled while the Still Field is off', async page => {
+  assert(!(await page.isDisabled('#stillFieldNerdToggle')), 'labels toggle should start enabled');
+
+  await page.click('#stillFieldToggle');
+  await page.waitForTimeout(100);
+  assert(await page.isDisabled('#stillFieldNerdToggle'), 'labels toggle should be disabled with the field off');
+  // The texture is an independent CSS overlay, so it stays usable.
+  assert(!(await page.isDisabled('#stillFieldTextureToggle')), 'texture toggle should stay enabled with the field off');
+
+  await page.click('#stillFieldToggle');
+  await page.waitForTimeout(100);
+  assert(!(await page.isDisabled('#stillFieldNerdToggle')), 'labels toggle should re-enable with the field on');
 });
 
 test('ultra glass toggles, restyles the surfaces, and persists', async page => {

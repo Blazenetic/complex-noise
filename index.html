@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#0C0C11" id="themeColorMeta" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Complex Noise by Complex State — Seamless brown noise for deep rest. Still Theme, Still Field, Still Equaliser." />
+  <meta name="description" content="Complex Noise by Complex State — Procedural brown noise for deep rest. Still Theme, Still Field, Still Equaliser." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.json" />
@@ -24,7 +24,7 @@
   <header>
     <div class="logo">Complex Noise</div>
     <div class="byline">by Complex State</div>
-    <div class="tagline">Seamless noise for deep rest</div>
+    <div class="tagline">Procedural noise for deep rest</div>
   </header>
 
   <main>
@@ -33,6 +33,11 @@
       <button id="playBtn" aria-label="Play noise" aria-pressed="false" data-icon="play" type="button">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
       </button>
+    </div>
+
+    <!-- Status lives as a calm card directly under the play control -->
+    <div class="status-card" id="statusCard">
+      <div class="status" id="status" role="status" aria-live="polite">Ready</div>
     </div>
 
     <div class="types" role="group" aria-label="Noise type">
@@ -83,15 +88,15 @@
 
         <div class="still-toggle-row">
           <span id="stillThemeRowLabel">Theme</span>
-          <button id="stillThemeToggle" class="still-theme-toggle compact" type="button" aria-label="Toggle Still Theme between Dark and Bone">
-            <span class="still-theme-icon" id="stillThemeIcon" aria-hidden="true">◐</span>
-            <span class="still-theme-label" id="stillThemeLabel">Dark</span>
-          </button>
+          <div class="theme-segment" role="group" aria-label="Still Theme">
+            <button type="button" class="theme-seg" data-theme="dark" aria-pressed="true">Dark</button>
+            <button type="button" class="theme-seg" data-theme="bone" aria-pressed="false">Bone</button>
+          </div>
         </div>
 
         <div class="still-toggle-row">
-          <span id="uiChromeLabel">Interface</span>
-          <button type="button" class="still-switch" id="uiChromeSwitch" role="switch" aria-checked="true" aria-labelledby="uiChromeLabel" title="Show or hide the main controls"></button>
+          <span id="uiChromeLabel">Minimise interface</span>
+          <button type="button" class="still-switch" id="uiChromeSwitch" role="switch" aria-checked="true" aria-labelledby="uiChromeLabel" title="Hide the main controls for immersion"></button>
         </div>
 
         <div class="still-toggle-row is-secondary">
@@ -119,8 +124,6 @@
         </div>
       </details>
     </div>
-
-    <div class="status" id="status" role="status" aria-live="polite">Ready</div>
   </main>
 
   <footer>
@@ -135,12 +138,27 @@
     Complex State
   </footer>
 
-  <!-- Restore control — only visible when chrome is hidden so the field can fill the night. -->
-  <button id="uiChromeToggle" class="ui-chrome-toggle" type="button" aria-label="Show controls" aria-pressed="false" title="Show controls">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M4 7h16M4 12h16M4 17h16"/>
-    </svg>
-  </button>
+  <!--
+    Minimised chrome — only interactive when data-ui-chrome="hidden".
+    Provides play/pause, a calm status line, and the restore control so the
+    user can still steer the session without the full interface.
+  -->
+  <div id="minimisedChrome" class="minimised-chrome" aria-hidden="true">
+    <button id="minimisedPlayBtn" class="minimised-play" type="button" aria-label="Play noise" aria-pressed="false" data-icon="play">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+
+    <div class="minimised-status-card">
+      <div id="minimisedStatus" class="minimised-status" role="status" aria-live="polite">Ready</div>
+    </div>
+
+    <button id="uiChromeToggle" class="ui-chrome-toggle" type="button" aria-label="Show controls" aria-pressed="false" title="Show controls">
+      <svg class="chrome-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+      </svg>
+      <span class="chrome-toggle-text">Show controls</span>
+    </button>
+  </div>
 
   <!-- ES modules — load order is resolved by the import graph from app.js -->
   <script type="module" src="js/app.js"></script>

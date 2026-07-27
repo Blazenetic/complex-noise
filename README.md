@@ -1,7 +1,7 @@
 # Complex Noise
 
 **Seamless noise for deep rest**  
-by **Complex State**
+by **[Blazenetic](https://github.com/Blazenetic)**
 
 A pure client-side procedural noise generator (Brown, Pink, White) optimized for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
@@ -34,12 +34,14 @@ there silently.)
 - **Brown** (default, deep & calming for sleep), **Pink**, **White**
 - Procedural generation → infinite, pattern-free, seamless 10+ hour playback
 - Volume control with smooth ramps
-- Sleep timer (Off / 1h / 2h / 4h / 8h / 10h) with gentle fade-out
+- Continuous sleep timer (0–10 h slider, 0.5 h steps) with gentle fade-out
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
 - **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders
-- **Still EQ**: Simple 3-band (low / mid / high) equaliser with calm sliders
+- **Still EQ**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
 - **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
+- Dedicated **Minimise interface** action for immersion, with a floating restore control
+- Seamless mobile scrolling (no visible scrollbars)
 - Refined vibrant purple play button (gradient + soft glow) that remains the clear focal point
 - Clean inline SVG icons for play/pause (no external assets)
 - Large touch targets, mobile-first, improved focus rings and ARIA for accessibility
@@ -159,7 +161,8 @@ See [AGENTS.md](./AGENTS.md#common-tasks) for step-by-step recipes.
 `complexNoise_type`, `complexNoise_volume`, `complexNoise_timer`,  
 `complexNoise_stillTheme`, `complexNoise_stillEqLow/Mid/High`,  
 `complexNoise_stillFieldEnabled` (default true), `complexNoise_stillFieldIntensity`,  
-`complexNoise_stillFieldSpeed` (0.4–2.0, default 1.25), `complexNoise_stillGlassTransparent`
+`complexNoise_stillFieldSpeed` (0.5–4.0, default 2.0), `complexNoise_stillGlassTransparent`,
+`complexNoise_uiChromeHidden`
 
 All keys are centralised in `js/constants.js` → `STORAGE_KEYS`, and read/written
 through `js/storage.js`, which degrades gracefully when storage is unavailable
@@ -206,13 +209,13 @@ AudioContext requires a user gesture to start/resume — handled by the play but
 
 ## Branding
 
-Titanium dark surfaces + vibrant purple accents (Still Theme). Subtle silver-titanium Still Field. Glass panels that reveal the living field. Professional, calm, premium feel for Complex State.
+Titanium dark surfaces + vibrant purple accents (Still Theme). Subtle silver-titanium Still Field. Glass panels that reveal the living field. Professional, calm, premium feel by Blazenetic.
 
 ## License
 
 MIT License
 
-Copyright (c) 2026 Complex State / Blazenetic
+Copyright (c) 2026 Blazenetic
 
 ---
 

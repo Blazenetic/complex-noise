@@ -21,6 +21,31 @@
   <!-- Still Field — full-page nodes + edges visualisation -->
   <canvas id="stillField" aria-hidden="true"></canvas>
 
+  <!--
+    Info layer readout — the other half of the "Info labels" toggle. The
+    per-node numbers on the canvas can only appear where there is open
+    background, which on a phone is almost nowhere; this panel carries the
+    field and signal statistics regardless of viewport.
+
+    Decorative and refreshed several times a second, so it is aria-hidden
+    (a live region here would talk over everything) and never takes pointer
+    events. Every value in it is written by app.js.
+  -->
+  <div id="nerdHud" class="nerd-hud" aria-hidden="true" hidden>
+    <div class="nerd-hud-title">Still Field</div>
+    <dl class="nerd-hud-grid">
+      <dt>Frame</dt><dd id="nerdFps">—</dd>
+      <dt>Nodes</dt><dd id="nerdNodes">—</dd>
+      <dt>Links</dt><dd id="nerdLinks">—</dd>
+      <dt>Labels</dt><dd id="nerdLabels">—</dd>
+      <dt>Energy</dt><dd id="nerdEnergy">—</dd>
+      <dt>Bands</dt><dd id="nerdBands">—</dd>
+      <dt>Source</dt><dd id="nerdSource">—</dd>
+      <dt>Drift</dt><dd id="nerdDrift">—</dd>
+      <dt>Uptime</dt><dd id="nerdUptime">—</dd>
+    </dl>
+  </div>
+
   <header>
     <div class="logo">Complex Noise</div>
     <div class="byline">by <a href="https://github.com/Blazenetic" target="_blank" rel="noopener noreferrer">Blazenetic</a></div>

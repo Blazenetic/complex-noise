@@ -70,6 +70,20 @@ const els = {
   fieldNerdToggle: document.getElementById('stillFieldNerdToggle'),
   fieldTextureToggle: document.getElementById('stillFieldTextureToggle'),
   stillTextureEl: document.querySelector('.still-texture'),
+  // Info layer readout
+  nerdHud: document.getElementById('nerdHud'),
+  nerdFps: document.getElementById('nerdFps'),
+  nerdNodes: document.getElementById('nerdNodes'),
+  nerdLinks: document.getElementById('nerdLinks'),
+  nerdLabels: document.getElementById('nerdLabels'),
+  nerdEnergy: document.getElementById('nerdEnergy'),
+  nerdBands: document.getElementById('nerdBands'),
+  nerdSource: document.getElementById('nerdSource'),
+  nerdDrift: document.getElementById('nerdDrift'),
+  nerdUptime: document.getElementById('nerdUptime'),
+  header: document.querySelector('header'),
+  main: document.querySelector('main'),
+  footer: document.querySelector('footer'),
 };
 
 // ----------------------------------------------------------
@@ -97,6 +111,124 @@ function updateTimerDisplay(hours) {
   if (els.timerValue) {
     els.timerValue.textContent = formatTimerHours(h);
   }
+}
+
+// ----------------------------------------------------------
+// Info layer — stats readout and canvas label placement
+// ----------------------------------------------------------
+
+/**
+ * Readout refresh interval. Fast enough that the frame rate and band levels
+ * feel live, slow enough that it is nowhere near the render loop's budget —
+ * writing text forces a style recalculation, so this deliberately does not run
+ * per frame.
+ */
+const NERD_HUD_INTERVAL_MS = 250;
+
+let nerdHudTimerId = null;
+/** performance.now() when playback started, or 0 while stopped. */
+let playingSinceMs = 0;
+
+/** Write only when the value actually changed — every write costs a recalc. */
+function setText(el, value) {
+  if (el && el.textContent !== value) el.textContent = value;
+}
+
+/** mm:ss, or h:mm:ss once it runs past an hour. */
+function formatUptime(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const s = total % 60;
+  const m = Math.floor(total / 60) % 60;
+  const h = Math.floor(total / 3600);
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** Pull the current numbers and paint them into the readout. */
+function updateNerdHud() {
+  const stats = stillField.getStillFieldStats();
+  const metrics = stillField.getStillAudioMetrics();
+  const audioState = audio.getState();
+  const ctx = audio.getAudioContext();
+
+  setText(els.nerdFps, stats.fps > 0
+    ? `${stats.fps.toFixed(1)} fps${stats.reducedMotion ? ' ·  reduced' : ''}`
+    : 'idle');
+  setText(els.nerdNodes, String(stats.nodes));
+  setText(els.nerdLinks, String(stats.edges));
+  setText(els.nerdLabels, `${stats.labels} / 4`);
+  setText(els.nerdEnergy, stats.energy.toFixed(3));
+  setText(els.nerdBands, `${Math.round(metrics.low * 99)} · ${Math.round(metrics.mid * 99)} · ${Math.round(metrics.high * 99)}`);
+
+  const typeName = audioState.type.charAt(0).toUpperCase() + audioState.type.slice(1);
+  setText(els.nerdSource, ctx
+    ? `${typeName} · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`
+    : `${typeName} · idle`);
+
+  setText(els.nerdDrift, `${stats.speed.toFixed(2)}× · ${Math.round(stats.intensity * 100)}%`);
+  setText(els.nerdUptime, playingSinceMs > 0
+    ? formatUptime(performance.now() - playingSinceMs)
+    : '—');
+}
+
+/**
+ * Show the readout only when the info layer is actually on, and stop polling
+ * whenever it is not visible. A hidden page must not keep a timer alive: this
+ * app is left running overnight on a locked phone.
+ */
+function syncNerdHud(state) {
+  const on = Boolean(state.nerd && state.enabled);
+
+  if (els.nerdHud) els.nerdHud.hidden = !on;
+
+  const shouldRun = on && document.visibilityState !== 'hidden';
+  if (shouldRun && nerdHudTimerId === null) {
+    updateNerdHud();
+    nerdHudTimerId = setInterval(updateNerdHud, NERD_HUD_INTERVAL_MS);
+  } else if (!shouldRun && nerdHudTimerId !== null) {
+    clearInterval(nerdHudTimerId);
+    nerdHudTimerId = null;
+  }
+
+  // The readout is itself something the canvas labels must dodge.
+  scheduleKeepOutMeasure();
+}
+
+let keepOutFrameId = null;
+
+/**
+ * Measure the chrome and hand the rectangles to the Still Field, so canvas
+ * labels are never drawn underneath a card they cannot be read through.
+ *
+ * Coalesced into one animation frame: resize and scroll both fire in bursts,
+ * and `getBoundingClientRect` forces layout.
+ */
+function scheduleKeepOutMeasure() {
+  if (keepOutFrameId !== null) return;
+  keepOutFrameId = requestAnimationFrame(() => {
+    keepOutFrameId = null;
+    measureKeepOuts();
+  });
+}
+
+function measureKeepOuts() {
+  const rects = [];
+
+  // The readout floats above everything, so it is in the way in both layouts.
+  if (els.nerdHud && !els.nerdHud.hidden) rects.push(els.nerdHud.getBoundingClientRect());
+
+  if (uiChrome.isHidden()) {
+    // Immersion mode: the full interface is gone and the field is open. Only
+    // the floating cluster is left to avoid.
+    if (els.minimisedChrome) rects.push(els.minimisedChrome.getBoundingClientRect());
+  } else {
+    if (els.header) rects.push(els.header.getBoundingClientRect());
+    if (els.main) rects.push(els.main.getBoundingClientRect());
+    if (els.footer) rects.push(els.footer.getBoundingClientRect());
+  }
+
+  stillField.setLabelKeepOuts(rects);
 }
 
 // ----------------------------------------------------------
@@ -145,6 +277,15 @@ function renderAudio(state) {
 
   // Keep the timer readout in sync when the engine changes the value
   updateTimerDisplay(state.timerHours);
+
+  // Uptime is a display concern, so it is derived here rather than kept in the
+  // engine. Only restart the clock on an actual stopped → playing transition;
+  // renderAudio also fires for volume and timer changes mid-session.
+  if (state.isPlaying && playingSinceMs === 0) {
+    playingSinceMs = performance.now();
+  } else if (!state.isPlaying) {
+    playingSinceMs = 0;
+  }
 }
 
 /** @param {ReturnType<typeof stillField.getState>} state */
@@ -171,6 +312,10 @@ function renderStillField(state) {
   if (els.stillTextureEl) {
     els.stillTextureEl.style.opacity = state.texture ? '' : '0';
   }
+
+  // The stats readout is the other half of the info layer, so it follows the
+  // same toggle as the on-canvas labels.
+  syncNerdHud(state);
 }
 
 /** @param {ReturnType<typeof theme.getState>} state */
@@ -211,6 +356,10 @@ function renderChrome(state) {
   if (els.minimisedChrome) {
     els.minimisedChrome.setAttribute('aria-hidden', hidden ? 'false' : 'true');
   }
+
+  // Minimising frees most of the screen; restoring takes it back. Either way
+  // the label keep-out has just changed shape.
+  scheduleKeepOutMeasure();
 
   // After restore, move focus to the minimise button so keyboard users
   // are not stranded on the now-inert floating control (or the body).
@@ -346,6 +495,19 @@ function bindEvents() {
 
   window.addEventListener('resize', stillField.handleResize);
   window.addEventListener('orientationchange', stillField.handleResize);
+
+  // The chrome moves under the canvas as the page scrolls or reflows, so the
+  // label keep-out has to follow it.
+  window.addEventListener('resize', scheduleKeepOutMeasure);
+  window.addEventListener('orientationchange', scheduleKeepOutMeasure);
+  window.addEventListener('scroll', scheduleKeepOutMeasure, { passive: true });
+
+  // Opening or closing the equaliser resizes the control column.
+  const stillPanel = document.getElementById('stillPanel');
+  if (stillPanel) stillPanel.addEventListener('toggle', scheduleKeepOutMeasure);
+
+  // Never leave the readout's timer running against a locked screen.
+  document.addEventListener('visibilitychange', () => syncNerdHud(stillField.getState()));
 }
 
 // ----------------------------------------------------------
@@ -366,6 +528,11 @@ function boot() {
   theme.subscribe(renderTheme);
   uiChrome.subscribe(renderChrome);
 
+  // Measure synchronously rather than on the next animation frame: the render
+  // loop starts inside initStillField(), and its first frame would otherwise
+  // run against an empty keep-out and paint labels under the controls.
+  measureKeepOuts();
+
   // Debug surface for future agents and for the browser smoke tests.
   // Keep this in sync with tests/run.mjs.
   window.complexNoiseStill = {
@@ -375,6 +542,7 @@ function boot() {
     getMetrics: stillField.getStillAudioMetrics,
     getAudioState: audio.getState,
     getFieldState: stillField.getState,
+    getFieldStats: stillField.getStillFieldStats,
     getChromeState: uiChrome.getState,
     getIsPlaying: audio.getIsPlaying,
     getCurrentType: audio.getCurrentType,

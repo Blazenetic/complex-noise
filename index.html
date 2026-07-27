@@ -22,11 +22,8 @@
   <canvas id="stillField" aria-hidden="true"></canvas>
 
   <!--
-    Info layer readout — the other half of the "Info labels" toggle. The
-    per-node numbers on the canvas can only appear where there is open
-    background, which on a phone is almost nowhere; this panel carries the
-    field and signal statistics regardless of viewport.
-
+    Info layer readout — the other half of the "Info labels" / Stats toggle.
+    Foldable on desktop and mobile so it never permanently owns the top-left.
     Values refresh several times a second but are deliberately not a live
     region, so screen readers are not flooded with implicit announcements.
     Every changing value in it is written by app.js.
@@ -37,7 +34,14 @@
         <span class="nerd-hud-kicker">Procedural field</span>
         <strong>Still Field</strong>
       </div>
-      <span class="nerd-hud-health"><i aria-hidden="true"></i><span id="nerdHealth">sampling</span></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="nerd-hud-health"><i aria-hidden="true"></i><span id="nerdHealth">sampling</span></span>
+        <button type="button" id="nerdFoldBtn" class="nerd-hud-fold" aria-label="Fold stats panel" aria-expanded="true" title="Fold">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <div class="nerd-hud-tabs" role="tablist" aria-label="Information views">
       <button type="button" role="tab" id="nerdTabLive" data-nerd-view="live" aria-controls="nerdViewLive" aria-selected="true">Live</button>
@@ -87,6 +91,14 @@
       <p><span>06</span><code>shade = clamp(energy ** 1.35, 0, 1);</code></p>
     </section>
   </aside>
+
+  <!-- Mobile-only Stats launcher (top-left). Hidden when the HUD itself is open. -->
+  <button type="button" id="nerdMobileToggle" class="nerd-mobile-toggle" aria-label="Toggle stats" aria-pressed="false">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 19V9M12 19V5M20 19v-7"/>
+    </svg>
+    <span>Stats</span>
+  </button>
 
   <header>
     <div class="logo">Complex Noise</div>
@@ -149,10 +161,13 @@
           <input type="range" id="stillFieldSpeed" min="0.7" max="4.8" step="0.05" value="2" />
         </div>
 
-        <div class="still-toggle-row is-secondary">
-          <span id="stillNerdLabel">Info labels</span>
-          <button type="button" class="still-switch" id="stillFieldNerdToggle" role="switch" aria-checked="true" aria-labelledby="stillNerdLabel"></button>
-        </div>
+        <!-- Distinctive Stats control (replaces plain switch for the nerd layer) -->
+        <button type="button" id="stillFieldNerdToggle" class="nerd-card-btn" aria-pressed="true" aria-label="Toggle stats and info labels">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 19V9M12 19V5M20 19v-7"/>
+          </svg>
+          <span>Stats</span>
+        </button>
 
         <div class="still-toggle-row is-secondary">
           <span id="stillTextureLabel">Background texture</span>

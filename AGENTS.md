@@ -50,7 +50,7 @@ js/
   storage.js        safe typed localStorage access
   noise.js          the noise generators
   audio.js          Web Audio graph, transport, EQ, sleep timer, wake lock
-  still-field.js    the canvas visualisation (+ live stats for the info layer)
+  still-field.js    the two canvases (+ live stats for the info layer)
   theme.js          dark ↔ bone theme, and standard ↔ ultra glass
   ui-chrome.js      immersion hide/show of the main controls
   app.js            DOM wiring — the only module that touches the app's DOM
@@ -104,27 +104,32 @@ once; `tests/run.mjs` now guards against it.
 
 - **Field visualisation** toggle (default on)
 - **Intensity** and **Speed** sliders (speed practical range **0.7 – 4.8**, default 2.0)
-- **Info labels** (nerd layer) — default on, one toggle governing two things:
-  - Stable lifetime node IDs with energy-gated diagnostic callouts. Detail
-    rotates every eight seconds through energy/phase, world position, velocity,
-    projection/lifecycle and local wave phase. The cap is six on a wide
-    viewport and four on a phone, reduced by screen bounds, interface keep-outs
-    and callout collision checks. Dynamic strings refresh once a second rather
-    than at canvas frame rate.
-  - Up to three deterministic edge annotations, gathered inside the existing
-    link pass, showing the true 3D distance and projected angle. Do not add a
-    second graph scan or per-frame sorting.
+- **Stats** (the info layer) — default on, one toggle governing three things.
+  The full description is in [docs/INFO_LAYER.md](docs/INFO_LAYER.md); the parts
+  that constrain a change are:
+  - Engineering-drawing callouts on the info canvas: node handle, leader line,
+    plate, key/value rows. Detail rotates through energy, position (axis-coloured
+    transform rows), velocity, projection and wave on a golden-ratio-weighted
+    dwell. Caps are 8 / 6 / 4 by viewport width, reduced by screen bounds,
+    interface keep-outs, the source overlay's corner and block collisions.
+    Dynamic strings refresh once a second, not at frame rate.
+  - Up to five edge dimensions, rotated onto the lines they measure, gathered
+    inside the existing link pass. Do not add a second graph scan or per-frame
+    sorting.
   - One top-left panel (`#nerdHud`) with keyboard-navigable **Live**, **Math**
-    and **Code** views. Live carries frame rate/work, graph topology, callout
-    mode, wave phase/vector, analyser meters, source, drift and uptime. Math and
-    Code expose verified renderer equations/operations. Dynamic DOM values are
-    rendered by `app.js` on a 250 ms interval — *not* in the render loop — and
-    the interval is cleared whenever the page is hidden or the layer is off.
-    Values are ordinary text, never live regions or `<output>` elements.
+    and **Code** views. Math rows carry live evaluated operands; Code carries
+    per-stage `performance.now()` timings. Dynamic DOM values are rendered by
+    `app.js` on a 250 ms interval — *not* in the render loop — and the interval
+    is cleared whenever the page is hidden or the layer is off. Values are
+    ordinary text, never live regions or `<output>` elements.
 
-  Both are disabled alongside the sliders when the field is off. Toggle in the
-  Still Field card.
+  All of it is disabled alongside the sliders when the field is off.
 - **Background texture** — controllable procedural overlay (default on). Independent of the field, so it stays available with the field off. Toggle in the Still Field card.
+- **Field Lab** (`#labPanel`, under the equaliser, open by default) — node
+  density, link reach, trail persistence, perspective, callout dwell, frame cap
+  (30/45/60) and the source overlay, plus a reset. Every range must match the
+  matching `STILL_*_MIN` / `STILL_*_MAX` pair in `constants.js` and every default
+  the matching `DEFAULTS` entry; `tests/run.mjs` asserts the defaults.
 - Nodes keep a soft residual stroke-circle outline so a low-energy node stays
   legible instead of sinking into the background. The outline is scaled by the
   lifecycle envelope, so it still eases in at birth and out at death — the floor
@@ -136,6 +141,13 @@ once; `tests/run.mjs` now guards against it.
 New localStorage keys:
 - `complexNoise_stillFieldNerd`
 - `complexNoise_stillFieldTexture`
+- `complexNoise_stillFieldDensity`
+- `complexNoise_stillFieldReach`
+- `complexNoise_stillFieldTrail`
+- `complexNoise_stillFieldDepth`
+- `complexNoise_stillFieldDwell`
+- `complexNoise_stillFieldFps`
+- `complexNoise_stillFieldCode`
 
 ## Common tasks
 
@@ -181,11 +193,33 @@ noise rather than the listening volume.
   from a real click.
 - **This runs for eight hours straight on a phone**, and the Still Field is now
   on by default, so every per-frame cost is an overnight battery cost. Before
-  touching `still-field.js`, read its header comment: it runs at 30 fps on
-  purpose, stops the loop outright when the page is hidden, allocates nothing
+  touching `still-field.js`, read its header comment: it defaults to 30 fps,
+  stops the loop outright when the page is hidden, allocates nothing
   per frame, and rations `shadowBlur`. `getComputedStyle` and writing CSS custom
   properties both force style recalculation — it caches the former and throttles
   the latter, so don't reintroduce either into the render loop.
+- **The frame cap is a setting now (30/45/60), so nothing may be per-frame.**
+  Anything expressed as "x per frame" silently changes meaning when the cap
+  moves. The trail decay is the example: it is a rate per second run through
+  `1 - Math.exp(-rate * dt)`, and it used to be a fixed alpha. If you add a
+  decay, a fade or a smoothing anywhere, write it the same way.
+- **Text and the trail cannot share a canvas.** `#stillField` subtracts alpha
+  each frame; a moving label drawn onto it leaves half a second of decaying
+  copies of itself, which is exactly the soft halo that made the callouts look
+  blurred. All instrumentation goes on `#stillFieldInfo`, which is cleared
+  outright each frame, never sets `shadowBlur`, and snaps glyph origins to whole
+  device pixels. Legibility comes from a plate behind the text, not a glow.
+- **Linking is a spatial grid, and that has a sharp edge.** Only pairs inside
+  the 5-cell half-neighbourhood are visited, so a pair that stops being visited
+  freezes its envelope at whatever strength it held. `update()` calls
+  `clearLinksFor()` on world wrap for exactly this reason, alongside the
+  existing call on respawn. If you add another way for a node to move
+  discontinuously, clear its links too.
+- **Callout timing is procedural, not an interval.** Mode dwell is
+  `D · (0.72 + 0.56 · frac(kφ))`, acquisition and release use different energy
+  gates, and opacity runs through attack/release envelopes on the *real* clock
+  rather than the drift clock. Replacing any of that with a fixed timer brings
+  back the flicker it was written to remove.
 - **Motion is integrated from elapsed time, not counted in frames.** Anything
   new in the render loop must scale by the timestep, or the field will drift at
   double speed on a 120 Hz phone. Exponential smoothing needs
@@ -232,8 +266,14 @@ noise rather than the listening volume.
   playing when it fires.
 - **Defaults live in `constants.js`.** Volume default is intentionally soft
   (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (practical range
-  **0.7–4.8**). Changing a default without updating the matching test assertion
-  will fail CI.
+  **0.7–4.8**). The Field Lab defaults (density 1.0, reach 1.0, trail 8.2/s,
+  depth 0.75, dwell 14 s, 30 fps, source overlay on) all reproduce the behaviour
+  the field had before the panel existed. Changing a default without updating
+  the matching test assertion will fail CI.
+- **Node density multiplies the clamped 26–44 window, not the raw viewport
+  area.** Applying it to the raw figure opens a 1440×900 display on 132 nodes at
+  the *default* setting, which is a redesign for every user who never touches
+  the Lab. See `targetNodeCount()`.
 
 ## Conventions
 

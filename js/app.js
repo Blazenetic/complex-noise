@@ -22,7 +22,7 @@
  * on "pause" after a timer fires.
  */
 
-import { PLAY_ICON, PAUSE_ICON } from './constants.js';
+import { PLAY_ICON, PAUSE_ICON, DEFAULTS } from './constants.js';
 import * as audio from './audio.js';
 import * as stillField from './still-field.js';
 import * as theme from './theme.js';
@@ -61,6 +61,22 @@ const els = {
   fieldSpeed: document.getElementById('stillFieldSpeed'),
   glassToggle: document.getElementById('stillGlassToggle'),
   fieldCanvas: document.getElementById('stillField'),
+  fieldInfoCanvas: document.getElementById('stillFieldInfo'),
+  // Field Lab — renderer parameters exposed under the equaliser
+  labPanel: document.getElementById('labPanel'),
+  fieldDensity: document.getElementById('fieldDensity'),
+  fieldDensityValue: document.getElementById('fieldDensityValue'),
+  fieldReach: document.getElementById('fieldReach'),
+  fieldReachValue: document.getElementById('fieldReachValue'),
+  fieldTrail: document.getElementById('fieldTrail'),
+  fieldTrailValue: document.getElementById('fieldTrailValue'),
+  fieldDepth: document.getElementById('fieldDepth'),
+  fieldDepthValue: document.getElementById('fieldDepthValue'),
+  fieldDwell: document.getElementById('fieldDwell'),
+  fieldDwellValue: document.getElementById('fieldDwellValue'),
+  fpsSegs: Array.from(document.querySelectorAll('.fps-seg')),
+  fieldCodeToggle: document.getElementById('fieldCodeToggle'),
+  fieldLabReset: document.getElementById('fieldLabReset'),
   /** Floating restore button — only visible when chrome is hidden. */
   chromeToggle: document.getElementById('uiChromeToggle'),
   /** Dedicated minimise action button inside the Still Field card. */
@@ -82,6 +98,8 @@ const els = {
   nerdNodes: document.getElementById('nerdNodes'),
   nerdLinks: document.getElementById('nerdLinks'),
   nerdPairs: document.getElementById('nerdPairs'),
+  nerdGrid: document.getElementById('nerdGrid'),
+  nerdTurnover: document.getElementById('nerdTurnover'),
   nerdDegree: document.getElementById('nerdDegree'),
   nerdDensity: document.getElementById('nerdDensity'),
   nerdLabels: document.getElementById('nerdLabels'),
@@ -100,6 +118,46 @@ const els = {
   nerdSource: document.getElementById('nerdSource'),
   nerdDrift: document.getElementById('nerdDrift'),
   nerdUptime: document.getElementById('nerdUptime'),
+  nerdSpark: document.getElementById('nerdSpark'),
+  nerdSparkCaption: document.getElementById('nerdSparkCaption'),
+  // Math view — the symbolic rows each carry a live evaluation
+  nerdEval: {
+    project: document.getElementById('nerdEvalProject'),
+    energy: document.getElementById('nerdEvalEnergy'),
+    distance: document.getElementById('nerdEvalDistance'),
+    target: document.getElementById('nerdEvalTarget'),
+    envelope: document.getElementById('nerdEvalEnvelope'),
+    wave: document.getElementById('nerdEvalWave'),
+    schedule: document.getElementById('nerdEvalSchedule'),
+    grid: document.getElementById('nerdEvalGrid'),
+  },
+  // Code view — one block per pipeline stage
+  nerdStage: {
+    update: {
+      root: document.getElementById('nerdStageUpdate'),
+      ms: document.getElementById('nerdMsUpdate'),
+      bar: document.getElementById('nerdBarUpdate'),
+      live: document.getElementById('nerdLiveUpdate'),
+    },
+    links: {
+      root: document.getElementById('nerdStageLinks'),
+      ms: document.getElementById('nerdMsLinks'),
+      bar: document.getElementById('nerdBarLinks'),
+      live: document.getElementById('nerdLiveLinks'),
+    },
+    nodes: {
+      root: document.getElementById('nerdStageNodes'),
+      ms: document.getElementById('nerdMsNodes'),
+      bar: document.getElementById('nerdBarNodes'),
+      live: document.getElementById('nerdLiveNodes'),
+    },
+    info: {
+      root: document.getElementById('nerdStageInfo'),
+      ms: document.getElementById('nerdMsInfo'),
+      bar: document.getElementById('nerdBarInfo'),
+      live: document.getElementById('nerdLiveInfo'),
+    },
+  },
   header: document.querySelector('header'),
   main: document.querySelector('main'),
   footer: document.querySelector('footer'),
@@ -159,6 +217,72 @@ function setMeter(el, value) {
   if (el.style.width !== width) el.style.width = width;
 }
 
+/**
+ * Rolling frame-time trace.
+ *
+ * Sampled on the readout's own 250 ms tick rather than from the render loop —
+ * the loop's contract is that it does no DOM work and no measuring it does not
+ * need, and a history buffer it never reads is exactly that. At four samples a
+ * second the buffer covers the last seventeen seconds of work.
+ */
+const SPARK_SAMPLES = 68;
+const sparkHistory = new Float32Array(SPARK_SAMPLES);
+let sparkWrite = 0;
+let sparkFilled = 0;
+let sparkCtx = null;
+/** Trace colours, re-read on theme change for the same reason the canvas does. */
+const sparkColors = { ink: '#8a8a9c', accent: '#a78bfa', warn: '#f59e0b', grid: '#3a3a48' };
+
+function refreshSparkColors() {
+  const style = getComputedStyle(document.documentElement);
+  const read = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
+  sparkColors.ink = read('--text-muted', '#8a8a9c');
+  sparkColors.accent = read('--purple-bright', '#a78bfa');
+  sparkColors.grid = read('--titanium', '#3a3a48');
+}
+
+function pushSparkSample(ms) {
+  sparkHistory[sparkWrite] = ms;
+  sparkWrite = (sparkWrite + 1) % SPARK_SAMPLES;
+  if (sparkFilled < SPARK_SAMPLES) sparkFilled++;
+}
+
+/**
+ * Paint the trace. Bars are scaled against the current frame budget, so the
+ * dashed rule across the middle is always "one frame's worth of time" whatever
+ * cap the Field Lab is set to.
+ */
+function drawSpark(budgetMs) {
+  const canvas = els.nerdSpark;
+  if (!canvas) return;
+  if (!sparkCtx) sparkCtx = canvas.getContext('2d');
+  const ctx = sparkCtx;
+  if (!ctx) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const barW = w / SPARK_SAMPLES;
+  const scale = h / Math.max(budgetMs, 1);
+
+  // Budget rule at 50% of the visible range, i.e. half a frame of work.
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = sparkColors.grid;
+  ctx.fillRect(0, h - Math.min(h - 1, budgetMs * 0.5 * scale), w, 1);
+
+  for (let i = 0; i < sparkFilled; i++) {
+    // Oldest sample first, so the trace reads left to right in time.
+    const idx = (sparkWrite - sparkFilled + i + SPARK_SAMPLES * 2) % SPARK_SAMPLES;
+    const value = sparkHistory[idx];
+    const barH = Math.max(1, Math.min(h, value * scale));
+    ctx.globalAlpha = value > budgetMs * 0.5 ? 0.95 : 0.6;
+    ctx.fillStyle = value > budgetMs * 0.5 ? sparkColors.warn : sparkColors.accent;
+    ctx.fillRect(Math.round(i * barW), h - barH, Math.max(1, barW - 1), barH);
+  }
+  ctx.globalAlpha = 1;
+}
+
 /** mm:ss, or h:mm:ss once it runs past an hour. */
 function formatUptime(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -176,19 +300,30 @@ function updateNerdHud() {
   const metrics = stillField.getStillAudioMetrics();
   const audioState = audio.getState();
   const ctx = audio.getAudioContext();
+  const budgetMs = 1000 / stats.fpsCap;
 
   setText(els.nerdFps, stats.fps > 0
-    ? `${stats.fps.toFixed(1)} fps${stats.reducedMotion ? ' ·  reduced' : ''}`
+    ? `${stats.fps.toFixed(1)} / ${stats.fpsCap} fps${stats.reducedMotion ? ' · reduced' : ''}`
     : 'idle');
-  setText(els.nerdWork, stats.frameMs > 0 ? `${stats.frameMs.toFixed(2)} ms` : 'idle');
-  setText(els.nerdNodes, String(stats.nodes));
+  setText(els.nerdWork, stats.frameMs > 0
+    ? `${stats.frameMs.toFixed(2)} ms · ${Math.round(stats.frameMs / budgetMs * 100)}% budget`
+    : 'idle');
+  setText(els.nerdNodes, `${stats.nodes} · ${stats.densityScale.toFixed(2)}×`);
   setText(els.nerdLinks, String(stats.edges));
-  setText(els.nerdPairs, String(stats.pairChecks));
+  // The interesting number is not how many pairs we tested but how many we did
+  // not have to: the grid is the whole reason the node count is a control.
+  setText(els.nerdPairs, stats.bruteTests > 0
+    ? `${stats.pairTests} / ${stats.bruteTests} · ${(stats.bruteTests / Math.max(1, stats.pairTests)).toFixed(1)}× saved`
+    : '—');
+  setText(els.nerdGrid, `${stats.gridCells} cells · r ${Math.round(stats.linkRadius)} u`);
+  setText(els.nerdTurnover, stats.turnover > 0
+    ? `${stats.turnover.toFixed(1)}/min · life ${stats.meanLifeS.toFixed(0)} s`
+    : 'settling');
   setText(els.nerdDegree, stats.meanDegree.toFixed(2));
   setText(els.nerdDensity, `${(stats.density * 100).toFixed(1)}%`);
   setText(els.nerdLabels, `${stats.labels}/${stats.labelCapacity} nodes · ${stats.edgeLabels} edges`);
-  setText(els.nerdMode, `${stats.labelMode} · 8 s`);
-  setText(els.nerdWave, `${stats.wavePhase.toFixed(0)}° · vector ${stats.waveAngle.toFixed(1)}°`);
+  setText(els.nerdMode, `${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s left`);
+  setText(els.nerdWave, `${stats.wavePhase.toFixed(0)}° · ∠${stats.waveAngle.toFixed(1)}° · λ ${Math.round(stats.waveLength)} u`);
   setText(els.nerdEnergy, stats.energy.toFixed(3));
   setText(els.nerdLow, metrics.low.toFixed(3));
   setText(els.nerdMid, metrics.mid.toFixed(3));
@@ -208,11 +343,65 @@ function updateNerdHud() {
     ? formatUptime(performance.now() - playingSinceMs)
     : '—');
 
+  pushSparkSample(stats.frameMs);
+  drawSpark(budgetMs);
+  setText(els.nerdSparkCaption, `frame work · ${budgetMs.toFixed(1)} ms budget · ${stats.stage} heaviest`);
+
+  updateMathView(stats);
+  updateCodeView(stats);
+
+  // Health is scaled to the chosen cap rather than to a fixed 30 fps, so
+  // choosing 60 does not read as "strained" the moment it is selected.
   const health = stats.fps <= 0 ? 'sampling'
-    : stats.fps >= 27 && stats.frameMs < 8 ? 'nominal'
-      : stats.fps >= 22 && stats.frameMs < 16 ? 'loaded' : 'strained';
+    : stats.fps >= stats.fpsCap * 0.9 && stats.frameMs < budgetMs * 0.35 ? 'nominal'
+      : stats.fps >= stats.fpsCap * 0.72 && stats.frameMs < budgetMs * 0.7 ? 'loaded' : 'strained';
   if (els.nerdHud) els.nerdHud.dataset.health = health;
   setText(els.nerdHealth, health);
+}
+
+/**
+ * The Math view's second line: the same equation, with the numbers the renderer
+ * is putting through it right now. A formula nobody can check against live
+ * values is decoration; a formula with its operands beside it is instrumentation.
+ */
+function updateMathView(stats) {
+  const e = els.nerdEval;
+  setText(e.project, `z ${stats.probeZ.toFixed(3)} · δ ${stats.depth.toFixed(2)} → s ${stats.probeScale.toFixed(3)}`);
+  setText(e.energy, `b ${stats.probeBreath.toFixed(2)} · w ${stats.probeWave.toFixed(2)} · a ${stats.probeAudio.toFixed(2)} → ${stats.probeEnergy.toFixed(3)}`);
+  setText(e.distance, `d ${stats.sampleDistance.toFixed(0)} u · z_w ${Math.round(stats.zWorld)} u`);
+  setText(e.target, `r ${Math.round(stats.linkRadius)} u → t ${stats.sampleTarget.toFixed(3)}`);
+  setText(e.envelope, `λ 3.2 · Δt ${stats.dt.toFixed(4)} → k ${stats.attackK.toFixed(3)} · s ${stats.sampleStrength.toFixed(3)}`);
+  setText(e.wave, `ω 0.55 · ψ ${stats.wavePhase.toFixed(0)}° · λ ${Math.round(stats.waveLength)} u`);
+  setText(e.schedule, `D ${stats.dwell} s · ${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s left`);
+  setText(e.grid, `${stats.pairTests} of ${stats.bruteTests} pairs · ${stats.gridCells} cells`);
+}
+
+/**
+ * The Code view: four pipeline stages, their measured share of the frame, and
+ * the values their statements are producing. `data-hot` marks whichever stage
+ * currently dominates, which is the same signal that paces the on-canvas ticker.
+ */
+function updateCodeView(stats) {
+  const total = stats.msUpdate + stats.msLinks + stats.msNodes + stats.msInfo;
+  const s = els.nerdStage;
+  paintStage(s.update, stats.msUpdate, total, stats.stage === 'update',
+    `n ${stats.nodes} · dt ${(stats.dt * 1000).toFixed(1)} ms`);
+  paintStage(s.links, stats.msLinks, total, stats.stage === 'links',
+    `${stats.pairTests} pairs · ${stats.edges} edges · ${stats.batches} paths`);
+  paintStage(s.nodes, stats.msNodes, total, stats.stage === 'nodes',
+    `${stats.nodes} arcs · E ${stats.probeEnergy.toFixed(2)}`);
+  paintStage(s.info, stats.msInfo, total, stats.stage === 'info',
+    `${stats.labels} callouts · ${stats.edgeLabels} dimensions`);
+}
+
+function paintStage(stage, ms, total, hot, live) {
+  if (!stage || !stage.root) return;
+  const share = total > 0 ? ms / total : 0;
+  setText(stage.ms, total > 0 ? `${ms.toFixed(2)} ms · ${Math.round(share * 100)}%` : '—');
+  setMeter(stage.bar, share);
+  setText(stage.live, live);
+  const flag = hot ? 'true' : 'false';
+  if (stage.root.dataset.hot !== flag) stage.root.dataset.hot = flag;
 }
 
 /**
@@ -369,6 +558,8 @@ function renderStillField(state) {
     els.stillTextureEl.style.opacity = state.texture ? '' : '0';
   }
 
+  renderFieldLab(state);
+
   els.nerdTabs.forEach(tab => {
     const active = tab.dataset.nerdView === state.nerdView;
     tab.setAttribute('aria-selected', active ? 'true' : 'false');
@@ -383,6 +574,62 @@ function renderStillField(state) {
   syncNerdHud(state);
 }
 
+/**
+ * Field Lab renderer.
+ *
+ * Slider positions are written here too, not only in `restoreControlValues()`:
+ * the reset button changes the settings rather than the inputs, and this is the
+ * one path that puts the inputs back where the state says they belong.
+ *
+ * @param {ReturnType<typeof stillField.getState>} state
+ */
+function renderFieldLab(state) {
+  // Everything in the Lab shapes the canvas, so it is all dead while the field
+  // is off — same reasoning as the intensity and speed sliders.
+  const off = !state.enabled;
+
+  setRange(els.fieldDensity, state.density, `${state.density.toFixed(2)} times`, off);
+  setText(els.fieldDensityValue, `${state.density.toFixed(2)}×`);
+
+  setRange(els.fieldReach, state.reach, `${state.reach.toFixed(2)} times`, off);
+  setText(els.fieldReachValue, `${state.reach.toFixed(2)}×`);
+
+  // The slider carries the tail's time constant; the renderer holds its rate.
+  // Rounded to the slider's own step, or the input would snap the value it is
+  // handed and disagree with this renderer on every subsequent pass.
+  const tau = Math.round(100 / state.trail) / 100;
+  setRange(els.fieldTrail, tau, `${tau.toFixed(2)} seconds`, off);
+  setText(els.fieldTrailValue, `${tau.toFixed(2)} s`);
+
+  setRange(els.fieldDepth, state.depth, `${state.depth.toFixed(2)} depth`, off);
+  setText(els.fieldDepthValue, state.depth.toFixed(2));
+
+  setRange(els.fieldDwell, state.dwell, `${state.dwell} seconds`, off);
+  setText(els.fieldDwellValue, `${state.dwell} s`);
+
+  els.fpsSegs.forEach(btn => {
+    const active = Number(btn.dataset.fps) === state.fps;
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    btn.disabled = off;
+  });
+
+  if (els.fieldCodeToggle) {
+    els.fieldCodeToggle.setAttribute('aria-checked', state.code ? 'true' : 'false');
+    // The overlay is drawn by the info layer, so it needs both switches on.
+    els.fieldCodeToggle.disabled = off || !state.nerd;
+  }
+  if (els.fieldLabReset) els.fieldLabReset.disabled = off;
+}
+
+/** Set a range's position, its spoken value and its disabled state in one go. */
+function setRange(el, value, valueText, disabled) {
+  if (!el) return;
+  const next = String(value);
+  if (el.value !== next) el.value = next;
+  el.setAttribute('aria-valuetext', valueText);
+  el.disabled = disabled;
+}
+
 /** @param {ReturnType<typeof theme.getState>} state */
 function renderTheme(state) {
   // Segmented control — mark the active side
@@ -394,8 +641,9 @@ function renderTheme(state) {
   els.glassToggle.setAttribute('aria-checked', state.glass === 'ultra' ? 'true' : 'false');
 
   // Canvas colours come from CSS custom properties, so they must be re-read
-  // whenever the token set changes.
+  // whenever the token set changes. The frame-time trace is a canvas too.
   stillField.refreshThemeColors();
+  refreshSparkColors();
 }
 
 /** @param {ReturnType<typeof uiChrome.getState>} state */
@@ -555,6 +803,52 @@ function bindEvents() {
     stillField.setStillFieldSpeed(parseFloat(e.target.value));
   });
 
+  // --- Field Lab ---
+  if (els.fieldDensity) {
+    els.fieldDensity.addEventListener('input', e => {
+      stillField.setStillFieldDensity(parseFloat(e.target.value));
+    });
+  }
+  if (els.fieldReach) {
+    els.fieldReach.addEventListener('input', e => {
+      stillField.setStillFieldReach(parseFloat(e.target.value));
+    });
+  }
+  if (els.fieldTrail) {
+    // Slider is the tail's time constant in seconds; the renderer wants a rate.
+    els.fieldTrail.addEventListener('input', e => {
+      const tau = parseFloat(e.target.value);
+      if (tau > 0) stillField.setStillFieldTrail(1 / tau);
+    });
+  }
+  if (els.fieldDepth) {
+    els.fieldDepth.addEventListener('input', e => {
+      stillField.setStillFieldDepth(parseFloat(e.target.value));
+    });
+  }
+  if (els.fieldDwell) {
+    els.fieldDwell.addEventListener('input', e => {
+      stillField.setStillFieldDwell(parseFloat(e.target.value));
+    });
+  }
+  els.fpsSegs.forEach(btn => {
+    btn.addEventListener('click', () => stillField.setStillFieldFps(Number(btn.dataset.fps)));
+  });
+  bindSwitch(els.fieldCodeToggle, () => {
+    stillField.setStillFieldCode(!stillField.getStillFieldCode());
+  });
+  if (els.fieldLabReset) {
+    els.fieldLabReset.addEventListener('click', () => {
+      stillField.setStillFieldDensity(DEFAULTS.stillFieldDensity);
+      stillField.setStillFieldReach(DEFAULTS.stillFieldReach);
+      stillField.setStillFieldTrail(DEFAULTS.stillFieldTrail);
+      stillField.setStillFieldDepth(DEFAULTS.stillFieldDepth);
+      stillField.setStillFieldDwell(DEFAULTS.stillFieldDwell);
+      stillField.setStillFieldFps(DEFAULTS.stillFieldFps);
+      stillField.setStillFieldCode(DEFAULTS.stillFieldCode);
+    });
+  }
+
   // Theme segmented control — each side sets the theme directly
   els.themeSegs.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -593,9 +887,10 @@ function bindEvents() {
   window.addEventListener('orientationchange', scheduleKeepOutMeasure);
   window.addEventListener('scroll', scheduleKeepOutMeasure, { passive: true });
 
-  // Opening or closing the equaliser resizes the control column.
+  // Opening or closing either disclosure panel resizes the control column.
   const stillPanel = document.getElementById('stillPanel');
   if (stillPanel) stillPanel.addEventListener('toggle', scheduleKeepOutMeasure);
+  if (els.labPanel) els.labPanel.addEventListener('toggle', scheduleKeepOutMeasure);
 
   // Never leave the readout's timer running against a locked screen.
   document.addEventListener('visibilitychange', () => syncNerdHud(stillField.getState()));
@@ -611,7 +906,8 @@ function boot() {
   restoreControlValues();
   bindEvents();
 
-  stillField.initStillField(els.fieldCanvas);
+  refreshSparkColors();
+  stillField.initStillField(els.fieldCanvas, els.fieldInfoCanvas);
 
   // subscribe() fires immediately, so this is also the initial render.
   audio.subscribe(renderAudio);

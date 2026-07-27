@@ -34,6 +34,20 @@
   --still-field-mid: #A78BFA;
   --still-field-spark: #22D3EE;
   --still-field-glow: rgba(124, 58, 237, 0.60);
+  /* Instrumentation ink. Separate tokens from the field ramp because text has
+     a contrast requirement the field does not: the ramp may sink into the
+     background, a readout may not. --still-plate is the backing behind a
+     callout, which is what replaced the old text glow — a plate keeps glyph
+     edges sharp where a halo blurred them. */
+  --still-ink: #DCDCE6;
+  --still-ink-muted: #8E8EA0;
+  --still-ink-accent: #B9A2FF;
+  --still-plate: rgba(9, 9, 14, 0.74);
+  /* Axis colours follow the convention every 3D tool shares (Blender, and the
+     gizmo in most CAD packages): X warm red, Y green, Z blue. */
+  --still-axis-x: #E8656B;
+  --still-axis-y: #8BD05A;
+  --still-axis-z: #6096E8;
   --still-texture-opacity: 0.025;
   --still-energy: 0;
   --radius: 16px;
@@ -72,6 +86,15 @@
   --still-field-mid: #7C3AED;
   --still-field-spark: #0E9BB5;
   --still-field-glow: rgba(124, 58, 237, 0.36);
+  /* Bone inverts the plate: dark ink on a light backing. The axis hues are
+     darkened so they still clear contrast against a bone plate. */
+  --still-ink: #2A2A32;
+  --still-ink-muted: #6A6A76;
+  --still-ink-accent: #6D28D9;
+  --still-plate: rgba(240, 234, 224, 0.82);
+  --still-axis-x: #C0393F;
+  --still-axis-y: #4E8C2A;
+  --still-axis-z: #2F5FAE;
   --still-texture-opacity: 0.07;
   --glass-blur: blur(14px) saturate(1.18);
   /* Minimised chrome */
@@ -179,8 +202,12 @@ body {
   mix-blend-mode: overlay;
 }
 
-/* Still Field canvas — full page, behind UI */
-#stillField {
+/* Still Field canvases — full page, behind UI.
+   Two surfaces: the field (which keeps a trail) and the info layer (cleared
+   every frame so its text stays crisp). The info layer is later in the DOM, so
+   it paints over the field without needing its own stacking context. */
+#stillField,
+#stillFieldInfo {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -191,7 +218,8 @@ body {
   transition: opacity 0.6s ease;
 }
 
-#stillField.still-field-off {
+#stillField.still-field-off,
+#stillFieldInfo.still-field-off {
   opacity: 0;
 }
 
@@ -214,7 +242,7 @@ body {
   top: calc(10px + var(--safe-top));
   left: 10px;
   z-index: 6;
-  width: min(300px, calc(100vw - 20px));
+  width: min(330px, calc(100vw - 20px));
   pointer-events: none;
   user-select: none;
   padding: 11px;
@@ -426,9 +454,31 @@ body {
   text-align: left;
 }
 
+/* Rolling frame-time trace. The canvas is fixed-resolution and scaled down by
+   CSS, which is the cheapest way to stay sharp on a 2× display. */
+.nerd-trace {
+  margin: 9px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.nerd-trace canvas {
+  display: block;
+  width: 100%;
+  height: 32px;
+}
+
+.nerd-trace figcaption {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .nerd-formulas {
   display: grid;
-  gap: 7px;
+  gap: 8px;
 }
 
 .nerd-formulas div {
@@ -452,11 +502,98 @@ body {
   font-size: 0.58rem;
 }
 
-.nerd-code p {
+/* The live evaluation under each formula — the numbers currently going through
+   it. Muted relative to the symbolic line so the equation still leads. */
+.nerd-formulas em {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.55rem;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Code view — one block per pipeline stage, with its measured share. */
+.nerd-code {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 5px;
-  margin: 0 0 5px;
+  gap: 8px;
+}
+
+.nerd-stage {
+  display: grid;
+  gap: 3px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-elevated) 45%, transparent);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+/* The stage currently taking the most time. Same signal the on-canvas ticker
+   uses to pace its program counter. */
+.nerd-stage[data-hot="true"] {
+  border-color: color-mix(in srgb, var(--purple) 42%, transparent);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
+}
+
+.nerd-stage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nerd-stage-head span {
+  color: var(--purple-bright);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.nerd-stage-head em {
+  color: var(--text-secondary);
+  font-size: 0.54rem;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nerd-stage-bar {
+  height: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+}
+
+.nerd-stage-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--purple), var(--still-field-spark));
+  transition: width 0.22s linear;
+}
+
+.nerd-stage code {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nerd-stage b {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.52rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Mobile Stats launcher — sits in the same top-left corner when the HUD is off.
@@ -608,11 +745,16 @@ body {
     box-shadow: none;
   }
 
-  .nerd-spectrum b {
+  .nerd-spectrum b,
+  .nerd-stage-bar i {
     transition: none;
   }
 
   .nerd-hud-fold svg {
+    transition: none;
+  }
+
+  .nerd-stage {
     transition: none;
   }
 }
@@ -1104,6 +1246,110 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* ------------------------------------------------------------
+   Field Lab — renderer parameters, under the equaliser.
+   Same panel chrome as the equaliser, with a value readout beside each
+   label so a slider position is a number rather than a guess.
+   ------------------------------------------------------------ */
+.lab-note {
+  margin: 0 0 2px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.lab-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lab-value {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.still-lab .still-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.still-lab .still-toggle-row span {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.still-lab .still-toggle-row.is-secondary {
+  border-top: 1px solid var(--border);
+  padding-top: 13px;
+}
+
+.still-lab .still-toggle-row.is-secondary span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Frame-rate segmented control. Mirrors the theme segment so the two read as
+   the same kind of control; each button clears the 44px touch target. */
+.fps-segment {
+  display: inline-flex;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+  min-height: 50px;
+}
+
+.fps-seg {
+  flex: 1;
+  min-width: 48px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.fps-seg[aria-pressed="true"] {
+  background: var(--purple);
+  color: white;
+  box-shadow: 0 1px 8px var(--purple-glow);
+}
+
+.fps-seg:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+.fps-seg:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.still-lab input[type="range"]:disabled,
+.still-field-row input[type="range"]:disabled {
+  opacity: 0.4;
+}
+
+.minimise-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 /* Toggle switch.

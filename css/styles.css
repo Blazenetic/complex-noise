@@ -1,0 +1,589 @@
+/* ============================================================
+   Still Theme system — premium brushed titanium (default) + bone-white calm
+   All theme tokens live here. Switch via data-still-theme on <html>
+   Glass surfaces let Still Field show through
+   ============================================================ */
+:root,
+[data-still-theme="dark"] {
+  --bg: #0C0C11;
+  --bg-sheen: linear-gradient(160deg, #0E0E15 0%, #0A0A0F 45%, #12121A 100%);
+  --surface: rgba(20, 20, 28, 0.58);
+  --surface-elevated: rgba(28, 28, 38, 0.72);
+  --titanium: #3A3A48;
+  --text-primary: #D4D4DC;
+  --text-secondary: #9A9AA8;
+  --text-muted: #6E6E7C;
+  --purple: #7C3AED;
+  --purple-deep: #5B21B6;
+  --purple-bright: #A78BFA;
+  --purple-glow: rgba(124, 58, 237, 0.55);
+  --border: rgba(255, 255, 255, 0.11);
+  --still-accent: var(--purple);
+  /* Still Field — subtle silver / brushed titanium (no purple blobs) */
+  --still-field-node: rgba(190, 195, 210, 0.55);
+  --still-field-edge: rgba(160, 165, 180, 0.22);
+  --still-texture-opacity: 0.025;
+  --still-energy: 0;
+  --radius: 16px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --glass-blur: blur(16px) saturate(1.35);
+  color-scheme: dark;
+}
+
+[data-still-theme="bone"] {
+  --bg: #F4F0E8;
+  --bg-sheen: linear-gradient(165deg, #F8F4EC 0%, #F0EBE2 100%);
+  --surface: rgba(249, 246, 240, 0.68);
+  --surface-elevated: rgba(237, 232, 223, 0.82);
+  --titanium: #C4BCB0;
+  --text-primary: #2C2C34;
+  --text-secondary: #5A5A66;
+  --text-muted: #8A8A96;
+  --purple: #7C3AED;
+  --purple-deep: #5B21B6;
+  --purple-bright: #8B5CF6;
+  --purple-glow: rgba(124, 58, 237, 0.32);
+  --border: rgba(0, 0, 0, 0.09);
+  --still-accent: #7C3AED;
+  /* Still Field — muted warm grey for bone theme */
+  --still-field-node: rgba(95, 90, 85, 0.42);
+  --still-field-edge: rgba(100, 95, 90, 0.18);
+  --still-texture-opacity: 0.065;
+  --glass-blur: blur(14px) saturate(1.2);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  background-image: var(--bg-sheen);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(18px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+  min-height: 100dvh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Still Texture — procedural SVG noise overlay (feTurbulence) */
+.still-texture {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--still-texture-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+
+/* Still Field canvas — full page, behind UI */
+#stillField {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+#stillField.still-field-off {
+  opacity: 0;
+}
+
+header {
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 2;
+}
+
+.logo {
+  font-size: 1.65rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.byline {
+  margin-top: 3px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.tagline {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Still Theme toggle — calm switch */
+.still-theme-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.still-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  /* 44px is the minimum comfortable touch target (WCAG 2.5.5) — this app is
+     tapped one-handed in the dark, so no control goes below it. */
+  min-height: 44px;
+}
+
+.still-theme-toggle:hover,
+.still-theme-toggle:focus-visible {
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  border-color: var(--purple);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+.still-theme-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+  gap: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Play button — focal point, richer purple, glass-friendly */
+.play-wrap {
+  position: relative;
+}
+
+#playBtn {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(155deg, var(--purple-bright) 0%, var(--purple) 45%, var(--purple-deep) 100%);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.35s ease, box-shadow 0.4s ease, filter 0.25s;
+  box-shadow: 0 4px 24px var(--purple-glow), 0 0 0 0 var(--purple-glow);
+  /* Still Field gentle influence via CSS custom property */
+  transform: scale(calc(1 + var(--still-energy, 0) * 0.028));
+  -webkit-tap-highlight-color: transparent;
+}
+
+#playBtn:hover,
+#playBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 6px 32px var(--purple-glow), 0 0 0 4px var(--purple-glow);
+  filter: brightness(1.05);
+}
+
+#playBtn:active {
+  transform: scale(0.96);
+}
+
+#playBtn.playing {
+  box-shadow: 0 0 calc(32px + var(--still-energy, 0) * 20px) calc(8px + var(--still-energy, 0) * 6px) var(--purple-glow);
+  animation: still-pulse 4s ease-in-out infinite;
+}
+
+#playBtn svg {
+  display: block;
+  pointer-events: none;
+}
+
+@keyframes still-pulse {
+  0%, 100% { transform: scale(calc(1 + var(--still-energy, 0) * 0.028)); }
+  50% { transform: scale(calc(1.025 + var(--still-energy, 0) * 0.028)); }
+}
+
+/* Type selector */
+.types {
+  display: flex;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 999px;
+  padding: 5px;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.type-btn {
+  flex: 1;
+  padding: 14px 8px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 48px;
+}
+
+.type-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+.type-btn.active {
+  background: var(--purple);
+  color: white;
+  box-shadow: 0 2px 14px var(--purple-glow);
+}
+
+/* Controls */
+.controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-group {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.control-group label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Range inputs — larger touch thumbs for phone */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--titanium);
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--purple-bright);
+  cursor: pointer;
+  box-shadow: 0 0 12px var(--purple-glow);
+  border: 2px solid var(--bg);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--purple-bright);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+input[type="range"]:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+input[type="range"]:focus-visible {
+  outline: none;
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--purple-glow);
+}
+
+/* Timer select */
+select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  outline: none;
+  cursor: pointer;
+  min-height: 46px;
+}
+
+select:focus,
+select:focus-visible {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+/* Still Field controls — always visible for easy access */
+.still-field-controls {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.still-field-controls .still-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.still-field-controls .still-toggle-row span {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.still-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.still-field-row label {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Still settings panel (collapsible — EQ only) */
+.still-panel {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+
+.still-panel summary {
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  min-height: 48px;
+}
+
+.still-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.still-panel summary::after {
+  content: "▾";
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.still-panel[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.still-panel summary:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--purple);
+}
+
+.still-panel-body {
+  padding: 4px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.still-eq-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.still-eq-row label {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Toggle switch.
+   The button itself is a transparent 48×44 touch target; the visible 48×28
+   track is drawn by ::before and the knob by ::after, both vertically centred.
+   This keeps the switch looking small while staying comfortably tappable. */
+.still-switch {
+  position: relative;
+  width: 48px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Track */
+.still-switch::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 48px;
+  height: 28px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--titanium);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.still-switch[aria-checked="true"]::before {
+  background: var(--purple);
+}
+
+.still-switch:focus-visible {
+  outline: none;
+}
+
+/* Ring hugs the visible track, not the invisible touch area. */
+.still-switch:focus-visible::before {
+  box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+/* Knob */
+.still-switch::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.still-switch[aria-checked="true"]::after {
+  transform: translateY(-50%) translateX(20px);
+}
+
+.status {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+  text-align: center;
+  z-index: 2;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  width: 100%;
+  max-width: 420px;
+  z-index: 2;
+  line-height: 1.55;
+  padding-top: 4px;
+}
+
+footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+footer a:hover,
+footer a:focus-visible {
+  color: var(--purple-bright);
+  border-bottom-color: var(--purple);
+  outline: none;
+}
+
+footer .sep {
+  opacity: 0.45;
+  margin: 0 5px;
+}
+
+/* Small phone safety */
+@media (max-height: 700px) {
+  main { gap: 16px; }
+  #playBtn { width: 88px; height: 88px; }
+  .tagline { display: none; }
+}

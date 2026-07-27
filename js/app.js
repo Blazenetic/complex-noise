@@ -25,6 +25,11 @@ import { PLAY_ICON, PAUSE_ICON } from './constants.js';
 import * as audio from './audio.js';
 import * as stillField from './still-field.js';
 import * as theme from './theme.js';
+import * as uiChrome from './ui-chrome.js';
+
+/** Calm line icons for the chrome hide / restore control. */
+const HIDE_CHROME_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16"/></svg>';
+const SHOW_CHROME_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 
 // ----------------------------------------------------------
 // DOM references
@@ -46,6 +51,7 @@ const els = {
   fieldSpeed: document.getElementById('stillFieldSpeed'),
   glassToggle: document.getElementById('stillGlassToggle'),
   fieldCanvas: document.getElementById('stillField'),
+  chromeToggle: document.getElementById('uiChromeToggle'),
 };
 
 /** Human-readable labels for the theme toggle, keyed by theme name. */
@@ -104,6 +110,25 @@ function renderTheme(state) {
   // Canvas colours come from CSS custom properties, so they must be re-read
   // whenever the token set changes.
   stillField.refreshThemeColors();
+}
+
+/** @param {ReturnType<typeof uiChrome.getState>} state */
+function renderChrome(state) {
+  const hidden = state.hidden;
+  document.documentElement.setAttribute('data-ui-chrome', hidden ? 'hidden' : 'visible');
+
+  if (!els.chromeToggle) return;
+  const label = hidden ? 'Show controls' : 'Hide controls';
+  els.chromeToggle.setAttribute('aria-label', label);
+  els.chromeToggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+  els.chromeToggle.title = label;
+  els.chromeToggle.innerHTML = hidden ? SHOW_CHROME_ICON : HIDE_CHROME_ICON;
+
+  // After restore, move focus back to the floating control so keyboard users
+  // are not stranded on a now-invisible play button.
+  if (!hidden && document.activeElement === document.body) {
+    els.chromeToggle.focus({ preventScroll: true });
+  }
 }
 
 // ----------------------------------------------------------
@@ -183,6 +208,18 @@ function bindEvents() {
 
   els.themeToggle.addEventListener('click', () => theme.toggleStillTheme());
 
+  if (els.chromeToggle) {
+    els.chromeToggle.addEventListener('click', () => uiChrome.toggle());
+  }
+
+  // Escape always restores chrome when hidden — desktop / keyboard safety net.
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && uiChrome.isHidden()) {
+      e.preventDefault();
+      uiChrome.setHidden(false);
+    }
+  });
+
   // Prevent accidental pinch-zoom on some Android browsers
   document.addEventListener('gesturestart', e => e.preventDefault());
 
@@ -206,6 +243,7 @@ function boot() {
   audio.subscribe(renderAudio);
   stillField.subscribe(renderStillField);
   theme.subscribe(renderTheme);
+  uiChrome.subscribe(renderChrome);
 
   // Debug surface for future agents and for the browser smoke tests.
   // Keep this in sync with tests/smoke.mjs.
@@ -216,6 +254,7 @@ function boot() {
     getMetrics: stillField.getStillAudioMetrics,
     getAudioState: audio.getState,
     getFieldState: stillField.getState,
+    getChromeState: uiChrome.getState,
     getIsPlaying: audio.getIsPlaying,
     getCurrentType: audio.getCurrentType,
     getAudioContext: audio.getAudioContext,

@@ -85,9 +85,12 @@ test('defaults: brown noise, field on, standard glass, status Ready', async page
   assertEqual(await page.getAttribute('#stillFieldToggle', 'aria-checked'), 'true', 'Still Field should default to on');
   assert(!(await page.isDisabled('#stillFieldIntensity')), 'intensity slider should be live while the field is on');
   assert(!(await page.isDisabled('#stillFieldSpeed')), 'speed slider should be live while the field is on');
-  assertEqual(await page.inputValue('#stillFieldSpeed'), '1.25', 'default drift speed');
+  assertEqual(await page.inputValue('#stillFieldSpeed'), '2', 'default drift speed (old max is new medium)');
+  assertEqual(await page.inputValue('#stillFieldIntensity'), '0.7', 'default intensity');
+  assertEqual(await page.inputValue('#volume'), '0.22', 'default volume should start soft');
   assertEqual(await page.getAttribute('html', 'data-glass'), 'standard', 'glass should default to standard');
   assertEqual(await page.getAttribute('#stillGlassToggle', 'aria-checked'), 'false', 'glass switch should read unchecked');
+  assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'visible', 'chrome should start visible');
   assertEqual((await page.textContent('#status')).trim(), 'Ready', 'initial status');
   assertEqual(await page.getAttribute('#playBtn', 'aria-label'), 'Play noise', 'initial play button label');
 });
@@ -237,7 +240,7 @@ test('corrupt stored values fall back to defaults instead of breaking', async pa
 
   assertEqual(page.errors.length, 0, `corrupt storage should not throw: ${page.errors.join(' | ')}`);
   const state = await audioState(page);
-  assertEqual(state.volume, 0.4, 'volume should fall back to the default');
+  assertEqual(state.volume, 0.22, 'volume should fall back to the default');
   assertEqual(state.type, 'brown', 'unknown noise type should fall back to brown');
   assertEqual(await page.getAttribute('html', 'data-still-theme'), 'dark', 'unknown theme should fall back to dark');
 });
@@ -361,7 +364,7 @@ test('speed outside the allowed range is clamped, not trusted', async page => {
   await page.evaluate(() => localStorage.setItem('complexNoise_stillFieldSpeed', '99'));
   await page.reload({ waitUntil: 'load' });
   assertEqual(page.errors.length, 0, `an out-of-range speed should not throw: ${page.errors.join(' | ')}`);
-  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 2, 'speed should clamp to the maximum');
+  assertEqual((await page.evaluate(() => window.complexNoiseStill.getFieldState())).speed, 4, 'speed should clamp to the maximum');
 });
 
 test('ultra glass toggles, restyles the surfaces, and persists', async page => {
@@ -389,6 +392,37 @@ test('ultra glass survives a theme change', async page => {
 
   assertEqual(await page.getAttribute('html', 'data-still-theme'), 'bone', 'theme should switch');
   assertEqual(await page.getAttribute('html', 'data-glass'), 'ultra', 'glass mode is a separate axis and must survive');
+});
+
+// ==========================================================
+// UI chrome (immersion hide)
+// ==========================================================
+
+test('hiding chrome fades the main UI and persists, Escape restores', async page => {
+  await page.click('#uiChromeToggle');
+  await page.waitForTimeout(150);
+
+  assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'html should mark chrome as hidden');
+  assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-label'), 'Show controls', 'floating control should offer restore');
+  assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-pressed'), 'true', 'toggle pressed while chrome is hidden');
+  assertEqual(await storage(page, 'complexNoise_uiChromeHidden'), 'true', 'chrome hide should persist');
+
+  // Main chrome is not interactive while hidden.
+  const mainHidden = await page.evaluate(() => {
+    const main = document.querySelector('main');
+    const style = getComputedStyle(main);
+    return style.visibility === 'hidden' || style.pointerEvents === 'none';
+  });
+  assert(mainHidden, 'main should be non-interactive while chrome is hidden');
+
+  await page.reload({ waitUntil: 'load' });
+  assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'hidden', 'hidden chrome should restore after reload');
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+  assertEqual(await page.getAttribute('html', 'data-ui-chrome'), 'visible', 'Escape should restore chrome');
+  assertEqual(await page.getAttribute('#uiChromeToggle', 'aria-label'), 'Hide controls', 'floating control should offer hide again');
+  assertEqual(await storage(page, 'complexNoise_uiChromeHidden'), 'false', 'restored chrome should persist');
 });
 
 // ==========================================================

@@ -6,6 +6,7 @@ This folder holds product requirements and implementation context for Complex No
 
 | File | Purpose |
 |------|---------|
+| [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance |
 
@@ -27,6 +28,8 @@ merged and substantially evolved on `main`:
 - Playwright browser smoke suite + CI (ESLint + tests on every PR).
 - Still Field rewritten with real perspective depth, node lifecycle, energy
   ramp (violet → cyan), and battery-conscious 30 fps loop. Default **on**.
+- Integrated Info layer with stable-ID node callouts, sampled edge measurements,
+  and Live / Math / Code views for graph metrics and renderer operations.
 - Glass transparency as an independent axis (`standard` / `ultra`).
 - Immersion path: dedicated Minimise interface button + floating restore
   cluster (play + status + Show controls). Escape restores.

@@ -27,24 +27,66 @@
     background, which on a phone is almost nowhere; this panel carries the
     field and signal statistics regardless of viewport.
 
-    Decorative and refreshed several times a second, so it is aria-hidden
-    (a live region here would talk over everything) and never takes pointer
-    events. Every value in it is written by app.js.
+    Values refresh several times a second but are deliberately not a live
+    region, so screen readers are not flooded with implicit announcements.
+    Every changing value in it is written by app.js.
   -->
-  <div id="nerdHud" class="nerd-hud" aria-hidden="true" hidden>
-    <div class="nerd-hud-title">Still Field</div>
-    <dl class="nerd-hud-grid">
-      <dt>Frame</dt><dd id="nerdFps">—</dd>
-      <dt>Nodes</dt><dd id="nerdNodes">—</dd>
-      <dt>Links</dt><dd id="nerdLinks">—</dd>
-      <dt>Labels</dt><dd id="nerdLabels">—</dd>
-      <dt>Energy</dt><dd id="nerdEnergy">—</dd>
-      <dt>Bands</dt><dd id="nerdBands">—</dd>
-      <dt>Source</dt><dd id="nerdSource">—</dd>
-      <dt>Drift</dt><dd id="nerdDrift">—</dd>
-      <dt>Uptime</dt><dd id="nerdUptime">—</dd>
-    </dl>
-  </div>
+  <aside id="nerdHud" class="nerd-hud" aria-label="Still Field information" data-health="sampling" hidden>
+    <div class="nerd-hud-head">
+      <div>
+        <span class="nerd-hud-kicker">Procedural field</span>
+        <strong>Still Field</strong>
+      </div>
+      <span class="nerd-hud-health"><i aria-hidden="true"></i><span id="nerdHealth">sampling</span></span>
+    </div>
+    <div class="nerd-hud-tabs" role="tablist" aria-label="Information views">
+      <button type="button" role="tab" id="nerdTabLive" data-nerd-view="live" aria-controls="nerdViewLive" aria-selected="true">Live</button>
+      <button type="button" role="tab" id="nerdTabMath" data-nerd-view="math" aria-controls="nerdViewMath" aria-selected="false" tabindex="-1">Math</button>
+      <button type="button" role="tab" id="nerdTabCode" data-nerd-view="code" aria-controls="nerdViewCode" aria-selected="false" tabindex="-1">Code</button>
+    </div>
+
+    <section class="nerd-hud-view" id="nerdViewLive" role="tabpanel" aria-labelledby="nerdTabLive">
+      <dl class="nerd-hud-grid">
+        <dt>Frame</dt><dd id="nerdFps">—</dd>
+        <dt>Work</dt><dd id="nerdWork">—</dd>
+        <dt>Nodes</dt><dd id="nerdNodes">—</dd>
+        <dt>Edges</dt><dd id="nerdLinks">—</dd>
+        <dt>Pair tests</dt><dd id="nerdPairs">—</dd>
+        <dt>Mean degree</dt><dd id="nerdDegree">—</dd>
+        <dt>Density</dt><dd id="nerdDensity">—</dd>
+        <dt>Callouts</dt><dd id="nerdLabels">—</dd>
+        <dt>Mode</dt><dd id="nerdMode">—</dd>
+        <dt>Wave</dt><dd id="nerdWave">—</dd>
+        <dt>Source</dt><dd id="nerdSource">—</dd>
+        <dt>Drift</dt><dd id="nerdDrift">—</dd>
+        <dt>Uptime</dt><dd id="nerdUptime">—</dd>
+      </dl>
+      <div class="nerd-spectrum" aria-label="Normalised analyser and field energy">
+        <div><span>Low</span><i><b id="nerdMeterLow"></b></i><span id="nerdLow">0.000</span></div>
+        <div><span>Mid</span><i><b id="nerdMeterMid"></b></i><span id="nerdMid">0.000</span></div>
+        <div><span>High</span><i><b id="nerdMeterHigh"></b></i><span id="nerdHigh">0.000</span></div>
+        <div><span>Field</span><i><b id="nerdMeterEnergy"></b></i><span id="nerdEnergy">0.000</span></div>
+      </div>
+    </section>
+
+    <section class="nerd-hud-view nerd-formulas" id="nerdViewMath" role="tabpanel" aria-labelledby="nerdTabMath" hidden>
+      <div><span>Project</span><code>s(z) = 1 / (1 + 0.75z)</code></div>
+      <div><span>Energy</span><code>E = clamp(.30b + .24w + .46a)</code></div>
+      <div><span>Distance</span><code>d² = Δx² + Δy² + (Δz · z<sub>w</sub>)²</code></div>
+      <div><span>Link target</span><code>t = (1 − d / r)<sup>.65</sup></code></div>
+      <div><span>Envelope</span><code>s ← s + (t − s)(1 − e<sup>−λΔt</sup>)</code></div>
+      <div><span>Drift</span><code>v ← (v + ξJΔt)e<sup>−.55Δt</sup></code></div>
+    </section>
+
+    <section class="nerd-hud-view nerd-code" id="nerdViewCode" role="tabpanel" aria-labelledby="nerdTabCode" hidden>
+      <p><span>01</span><code>scale = 1 / (1 + node.z * DEPTH);</code></p>
+      <p><span>02</span><code>wave = .5 + .5 * sin(ωt − k·p);</code></p>
+      <p><span>03</span><code>target = pow(1 - distance / radius, .65);</code></p>
+      <p><span>04</span><code>attack = 1 - exp(-3.2 * Δt);</code></p>
+      <p><span>05</span><code>node.x += node.vx * Δt;</code></p>
+      <p><span>06</span><code>shade = clamp(energy ** 1.35, 0, 1);</code></p>
+    </section>
+  </aside>
 
   <header>
     <div class="logo">Complex Noise</div>

@@ -20,7 +20,8 @@ import { write, readEnum, readBool } from './storage.js';
 /** Per-theme browser chrome colours, keyed by theme name. */
 export const THEME_META = {
   dark: { themeColor: '#0C0C11', colorScheme: 'dark' },
-  bone: { themeColor: '#F4F0E8', colorScheme: 'light' },
+  // Deep bone — denser, less creamy, premium stone-white feel
+  bone: { themeColor: '#E0D6C8', colorScheme: 'light' },
 };
 
 let stillTheme = readEnum(STORAGE_KEYS.stillTheme, THEMES, DEFAULTS.theme);

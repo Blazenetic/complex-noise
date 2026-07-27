@@ -33,6 +33,8 @@ export const DEFAULTS = {
   stillFieldEnabled: true,
   stillFieldIntensity: 0.7,
   stillFieldSpeed: 2.0,
+  stillFieldNerd: true,
+  stillFieldTexture: true,
   stillGlassTransparent: false,
   uiChromeHidden: false,
 };
@@ -43,11 +45,11 @@ export const EQ_MAX_DB = 12;
 
 /**
  * Still Field drift speed multiplier — must match the slider min/max in
- * index.html. The previous maximum (2.0) is now the default medium so the
- * field feels alive; the new max (4.0) is for people who want more motion.
+ * index.html. Practical floor raised so the field never feels stuck; ceiling
+ * modestly raised for users who want more motion. Default stays calm at 2.0.
  */
-export const STILL_SPEED_MIN = 0.5;
-export const STILL_SPEED_MAX = 4.0;
+export const STILL_SPEED_MIN = 0.7;
+export const STILL_SPEED_MAX = 4.8;
 
 /** Clean SVG icons (simple paths — free to use, no external assets) */
 export const PLAY_ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -65,6 +67,8 @@ export const STORAGE_KEYS = {
   stillFieldEnabled: 'complexNoise_stillFieldEnabled',
   stillFieldIntensity: 'complexNoise_stillFieldIntensity',
   stillFieldSpeed: 'complexNoise_stillFieldSpeed',
+  stillFieldNerd: 'complexNoise_stillFieldNerd',
+  stillFieldTexture: 'complexNoise_stillFieldTexture',
   stillGlassTransparent: 'complexNoise_stillGlassTransparent',
   uiChromeHidden: 'complexNoise_uiChromeHidden',
 };

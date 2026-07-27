@@ -51,7 +51,7 @@ js/
   noise.js          the noise generators
   audio.js          Web Audio graph, transport, EQ, sleep timer, wake lock
   still-field.js    the canvas visualisation
-  theme.js          dark ↔ bone theme
+  theme.js          dark ↔ bone theme, and standard ↔ ultra glass
   app.js            DOM wiring — the only module that touches the app's DOM
 tests/run.mjs       browser smoke tests
 docs/               product requirements and historical context
@@ -62,9 +62,11 @@ docs/               product requirements and historical context
 **State modules own state and publish it. `app.js` renders it. Event handlers
 never update the UI directly.**
 
-`audio.js`, `still-field.js`, and `theme.js` each expose `subscribe(fn)`, which
-fires immediately with the current state and again on every change. `app.js`
-subscribes and does all DOM writing in those callbacks.
+`audio.js`, `still-field.js`, and `theme.js` each expose `getState()` and
+`subscribe(fn)`. `subscribe` fires immediately with the current state snapshot
+and again on every change. `app.js` subscribes and does all DOM writing in those
+callbacks. Every snapshot is an object, so a module can grow a field without
+every caller changing shape.
 
 ```js
 // Wrong — misses every state change that has no click behind it.
@@ -99,6 +101,14 @@ existing colours.
 **Add a theme** — add a token block in `css/styles.css`, the name to `THEMES`
 in `js/constants.js`, an entry in `THEME_META` in `js/theme.js`, and a label in
 `THEME_LABELS` in `js/app.js`. The toggle cycles through `THEMES` in order.
+Themes and glass modes are independent axes on `<html>` (`data-still-theme` and
+`data-glass`), so a new theme also needs an `[data-glass="ultra"]` block.
+
+**Restyle the Still Field** — it is a CSS edit. The canvas reads
+`--still-field-node`, `--still-field-edge`, `--still-field-mid`,
+`--still-field-spark` and `--still-field-glow` once per theme change and
+pre-builds a quantised ramp from them. Alpha on the node and edge tokens sets
+the field's baseline opacity; mid and spark supply hue only.
 
 **Add a persisted setting** — add the key to `STORAGE_KEYS` in
 `js/constants.js` and read/write it through `js/storage.js`. Never call
@@ -119,10 +129,21 @@ noise rather than the listening volume.
   read takes the whole app down before first paint.
 - **AudioContext needs a user gesture.** The first `play()` must be reached
   from a real click.
-- **This runs for eight hours straight on a phone.** Anything per-frame is
-  worth scrutinising. `getComputedStyle` and writing CSS custom properties both
-  force style recalculation — `still-field.js` caches the former and throttles
+- **This runs for eight hours straight on a phone**, and the Still Field is now
+  on by default, so every per-frame cost is an overnight battery cost. Before
+  touching `still-field.js`, read its header comment: it runs at 30 fps on
+  purpose, stops the loop outright when the page is hidden, allocates nothing
+  per frame, and rations `shadowBlur`. `getComputedStyle` and writing CSS custom
+  properties both force style recalculation — it caches the former and throttles
   the latter, so don't reintroduce either into the render loop.
+- **Motion is integrated from elapsed time, not counted in frames.** Anything
+  new in the render loop must scale by the timestep, or the field will drift at
+  double speed on a 120 Hz phone. Exponential smoothing needs
+  `1 - Math.exp(-rate * dt)`, not a fixed per-frame coefficient.
+- **The Still Field canvas must stay transparent.** Its trail effect subtracts
+  alpha with `destination-out`. Filling with a background colour instead drives
+  the canvas opaque within seconds and buries the background gradient and the
+  Still Texture underneath it. `tests/run.mjs` guards this.
 - **Fades are asynchronous.** Anything scheduled after a fade must capture the
   node it intends to clean up, or it will tear down whatever happens to be
   playing when it fires.

@@ -27,8 +27,7 @@ import * as stillField from './still-field.js';
 import * as theme from './theme.js';
 import * as uiChrome from './ui-chrome.js';
 
-/** Calm line icons for the chrome hide / restore control. */
-const HIDE_CHROME_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16"/></svg>';
+/** Calm line icons for the chrome restore control (only shown when hidden). */
 const SHOW_CHROME_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 
 // ----------------------------------------------------------
@@ -51,13 +50,16 @@ const els = {
   fieldSpeed: document.getElementById('stillFieldSpeed'),
   glassToggle: document.getElementById('stillGlassToggle'),
   fieldCanvas: document.getElementById('stillField'),
+  /** Floating restore button — only visible when chrome is hidden. */
   chromeToggle: document.getElementById('uiChromeToggle'),
+  /** Switch inside the Still Field card that hides/shows the main interface. */
+  chromeSwitch: document.getElementById('uiChromeSwitch'),
 };
 
 /** Human-readable labels for the theme toggle, keyed by theme name. */
 const THEME_LABELS = {
-  dark: { icon: '◐', text: 'Still · Dark' },
-  bone: { icon: '◑', text: 'Still · Bone' },
+  dark: { icon: '◐', text: 'Dark' },
+  bone: { icon: '◑', text: 'Bone' },
 };
 
 // ----------------------------------------------------------
@@ -104,7 +106,10 @@ function renderTheme(state) {
   const meta = THEME_LABELS[state.theme] || THEME_LABELS.dark;
   if (els.themeIcon) els.themeIcon.textContent = meta.icon;
   if (els.themeLabel) els.themeLabel.textContent = meta.text;
-  els.themeToggle.setAttribute('aria-pressed', state.theme === 'bone' ? 'true' : 'false');
+  if (els.themeToggle) {
+    els.themeToggle.setAttribute('aria-pressed', state.theme === 'bone' ? 'true' : 'false');
+    els.themeToggle.setAttribute('aria-label', `Theme: ${meta.text}. Toggle between Dark and Bone`);
+  }
   els.glassToggle.setAttribute('aria-checked', state.glass === 'ultra' ? 'true' : 'false');
 
   // Canvas colours come from CSS custom properties, so they must be re-read
@@ -117,17 +122,24 @@ function renderChrome(state) {
   const hidden = state.hidden;
   document.documentElement.setAttribute('data-ui-chrome', hidden ? 'hidden' : 'visible');
 
-  if (!els.chromeToggle) return;
-  const label = hidden ? 'Show controls' : 'Hide controls';
-  els.chromeToggle.setAttribute('aria-label', label);
-  els.chromeToggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-  els.chromeToggle.title = label;
-  els.chromeToggle.innerHTML = hidden ? SHOW_CHROME_ICON : HIDE_CHROME_ICON;
+  // In-card switch reflects whether the interface is currently visible.
+  if (els.chromeSwitch) {
+    els.chromeSwitch.setAttribute('aria-checked', hidden ? 'false' : 'true');
+  }
 
-  // After restore, move focus back to the floating control so keyboard users
-  // are not stranded on a now-invisible play button.
-  if (!hidden && document.activeElement === document.body) {
-    els.chromeToggle.focus({ preventScroll: true });
+  // Floating restore button — only meaningful when chrome is hidden.
+  if (els.chromeToggle) {
+    const label = 'Show controls';
+    els.chromeToggle.setAttribute('aria-label', label);
+    els.chromeToggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    els.chromeToggle.title = label;
+    els.chromeToggle.innerHTML = SHOW_CHROME_ICON;
+  }
+
+  // After restore, move focus back toward the Interface switch so keyboard
+  // users are not stranded on a now-invisible element.
+  if (!hidden && document.activeElement === document.body && els.chromeSwitch) {
+    els.chromeSwitch.focus({ preventScroll: true });
   }
 }
 
@@ -157,6 +169,7 @@ function restoreControlValues() {
  * @param {() => void} toggle
  */
 function bindSwitch(el, toggle) {
+  if (!el) return;
   el.addEventListener('click', toggle);
   el.addEventListener('keydown', e => {
     if (e.key === ' ' || e.key === 'Spacebar') {
@@ -206,10 +219,16 @@ function bindEvents() {
     stillField.setStillFieldSpeed(parseFloat(e.target.value));
   });
 
-  els.themeToggle.addEventListener('click', () => theme.toggleStillTheme());
+  if (els.themeToggle) {
+    els.themeToggle.addEventListener('click', () => theme.toggleStillTheme());
+  }
 
+  // Interface switch inside the card hides the chrome.
+  bindSwitch(els.chromeSwitch, () => uiChrome.toggle());
+
+  // Floating restore button (only present / interactive when hidden).
   if (els.chromeToggle) {
-    els.chromeToggle.addEventListener('click', () => uiChrome.toggle());
+    els.chromeToggle.addEventListener('click', () => uiChrome.setHidden(false));
   }
 
   // Escape always restores chrome when hidden — desktop / keyboard safety net.

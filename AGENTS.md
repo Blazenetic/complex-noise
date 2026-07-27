@@ -63,7 +63,7 @@ docs/               product requirements and historical context
 **State modules own state and publish it. `app.js` renders it. Event handlers
 never update the UI directly.**
 
-`audio.js`, `still-field.js`, and `theme.js` each expose `getState()` and
+`audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` each expose `getState()` and
 `subscribe(fn)`. `subscribe` fires immediately with the current state snapshot
 and again on every change. `app.js` subscribes and does all DOM writing in those
 callbacks. Every snapshot is an object, so a module can grow a field without
@@ -90,7 +90,7 @@ once; `tests/run.mjs` now guards against it.
 
 ## UI chrome & immersion
 
-- The main interface can be minimised via the **Minimise interface** switch
+- The main interface can be minimised via the **Minimise interface** button
   (inside the Still Field card). State lives in `ui-chrome.js`.
 - When hidden, a floating cluster appears bottom-right: minimised play/pause,
   a compact status line, and a **Show controls** pill. The cluster starts a
@@ -98,6 +98,7 @@ once; `tests/run.mjs` now guards against it.
 - Theme is a two-sided pill (Dark | Bone) rather than a single toggle.
 - Status lives in a dedicated card directly under the main play button when
   the full interface is visible.
+- Escape always restores the full interface.
 
 ## Common tasks
 
@@ -159,6 +160,9 @@ noise rather than the listening volume.
 - **Fades are asynchronous.** Anything scheduled after a fade must capture the
   node it intends to clean up, or it will tear down whatever happens to be
   playing when it fires.
+- **Defaults live in `constants.js`.** Volume default is intentionally soft
+  (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (range 0.5–4.0).
+  Changing a default without updating the matching test assertion will fail CI.
 
 ## Conventions
 

@@ -1,9 +1,9 @@
 # Complex Noise
 
-**Seamless noise for deep rest**  
+**Procedural noise for deep rest**  
 by **[Blazenetic](https://github.com/Blazenetic)**
 
-A pure client-side procedural noise generator (Brown, Pink, White) optimized for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
+A pure client-side procedural noise generator (Brown, Pink, White) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
 ## Quick Start
 
@@ -33,20 +33,20 @@ there silently.)
 
 - **Brown** (default, deep & calming for sleep), **Pink**, **White**
 - Procedural generation → infinite, pattern-free, seamless 10+ hour playback
-- Volume control with smooth ramps
+- Volume control with smooth ramps (soft default 0.22 on first start)
 - Continuous sleep timer (0–10 h slider, 0.5 h steps) with gentle fade-out
 - Settings remembered in localStorage
 - **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
 - **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders
-- **Still EQ**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
+- **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
 - **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
-- Dedicated **Minimise interface** action for immersion, with a floating restore control
+- Dedicated **Minimise interface** action for immersion, with a floating restore cluster (play + status + Show controls)
 - Seamless mobile scrolling (no visible scrollbars)
 - Refined vibrant purple play button (gradient + soft glow) that remains the clear focal point
 - Clean inline SVG icons for play/pause (no external assets)
 - Large touch targets, mobile-first, improved focus rings and ARIA for accessibility
 - Wake Lock support (keeps screen from sleeping while playing, where supported)
-- Zero dependencies and zero network calls once loaded — all audio is synthesized on device
+- Zero dependencies and zero network calls once loaded — all audio is synthesised on device
 - MIT License · Made in Australia with the help of AI agents
 
 > **Note on offline use:** nothing is fetched at runtime, so a loaded tab keeps
@@ -74,6 +74,7 @@ complex-noise/
 │   ├── audio.js            # AudioContext, EQ chain, play/stop, volume, timer, wake lock
 │   ├── still-field.js      # Canvas 3D nodes+edges visualisation driven by analyser
 │   ├── theme.js            # Still Theme (dark ↔ bone) + glass mode + meta updates
+│   ├── ui-chrome.js        # Immersion hide/show of the main controls
 │   └── app.js              # DOM wiring, event listeners, boot sequence
 ├── tests/
 │   └── run.mjs             # Browser smoke tests (Playwright)
@@ -81,10 +82,10 @@ complex-noise/
 ├── AGENTS.md               # Contributor / agent guide
 ├── README.md
 ├── LICENSE
-└── docs/
+└── docs/                   # Historical product requirements + context
 ```
 
-**State flows one way.** `audio.js`, `still-field.js` and `theme.js` own state
+**State flows one way.** `audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` own state
 and publish it through `subscribe(fn)`; `app.js` is the only module that writes
 to the app's DOM, and it does so exclusively in those subscription callbacks.
 Event handlers just call into the state modules.
@@ -98,7 +99,7 @@ See [AGENTS.md](./AGENTS.md#the-one-architectural-rule).
 `AudioContext` → `AudioBufferSourceNode` (looping ~12 s procedural buffer) → Still EQ (3× BiquadFilterNode) → `AnalyserNode` → `GainNode` → destination
 
 **Noise generation**  
-All noise is synthesized in `js/noise.js` → `generateNoiseBuffer(audioCtx, type, durationSec)`.  
+All noise is synthesised in `js/noise.js` → `generateNoiseBuffer(audioCtx, type, durationSec)`.  
 - White: pure uniform random  
 - Brown (Brownian / red): leaky integrator of white noise (classic noisehack formula)  
 - Pink: multi-pole IIR filter approximation (Paul Kellet refined method)

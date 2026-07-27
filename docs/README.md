@@ -15,17 +15,28 @@ the app looks and behaves the way it does. They are not current specifications.
 For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running,
 testing, architecture) and the [README](../README.md).
 
-## Current status
+## Current status (as of 28 July 2026)
 
-The Still Theme, Still Field, and Still EQ features from the original requirements have been merged to `main`.
+The original Still Theme, Still Field and Still EQ features have been fully
+merged and substantially evolved on `main`:
 
-A subsequent modularisation split the former single `index.html` into focused ES modules under `js/` and `css/` so AI coding agents can operate on one concern at a time without loading a 40 kB monolith. That refactor also introduced:
+- Modular ES-module architecture (`js/` + `css/`) with one-way state flow
+  (state modules publish via `subscribe()`, `app.js` is the sole DOM writer).
+- `js/storage.js` for safe typed persistence (handles Private Browsing throws
+  and a stored volume of `0`).
+- Playwright browser smoke suite + CI (ESLint + tests on every PR).
+- Still Field rewritten with real perspective depth, node lifecycle, energy
+  ramp (violet → cyan), and battery-conscious 30 fps loop. Default **on**.
+- Glass transparency as an independent axis (`standard` / `ultra`).
+- Immersion path: dedicated Minimise interface button + floating restore
+  cluster (play + status + Show controls). Escape restores.
+- Continuous sleep-timer slider (0–10 h), Still Equaliser open by default,
+  theme as a two-sided Dark | Bone pill, Blazenetic branding throughout.
 
-- A one-way state flow — state modules publish via `subscribe()`, `app.js` renders. This fixed the play button freezing on "pause" after the sleep timer fired.
-- `js/storage.js`, so a stored volume of `0` survives a reload and disabled storage no longer breaks boot.
-- A Playwright smoke suite (`npm test`) and CI.
+Additional noise colours remain out of scope for now. Accessibility is
+partially addressed — controls are labelled and all touch targets clear 44 px —
+but a full audit (screen-reader walkthrough, contrast check beyond the current
+reduced-motion support) has not been done.
 
-Additional noise colours remain out of scope. Accessibility is partially
-addressed — controls are labelled and all touch targets now clear 44px — but a
-full audit (screen reader walkthrough, contrast check, reduced-motion support)
-has not been done.
+A fuller work report and changelog (covering the intensive 26–28 July
+development) lives in the project Google Drive under Complex noise → reports.

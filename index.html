@@ -33,8 +33,9 @@
       --purple-glow: rgba(107, 63, 160, 0.48);
       --border: rgba(255, 255, 255, 0.075);
       --still-accent: var(--purple);
-      --still-field-particle: rgba(155, 107, 255, 0.32);
-      --still-field-core: rgba(180, 140, 255, 0.18);
+      /* Still Field — subtle silver / brushed titanium (no purple blobs) */
+      --still-field-node: rgba(190, 195, 210, 0.55);
+      --still-field-edge: rgba(160, 165, 180, 0.22);
       --still-texture-opacity: 0.025;
       --still-energy: 0;
       --radius: 16px;
@@ -58,8 +59,9 @@
       --purple-glow: rgba(122, 107, 138, 0.28);
       --border: rgba(0, 0, 0, 0.07);
       --still-accent: #8A7B6A;
-      --still-field-particle: rgba(110, 95, 85, 0.22);
-      --still-field-core: rgba(130, 115, 100, 0.12);
+      /* Still Field — muted warm grey for bone theme */
+      --still-field-node: rgba(95, 90, 85, 0.42);
+      --still-field-edge: rgba(100, 95, 90, 0.18);
       --still-texture-opacity: 0.065;
       color-scheme: light;
     }
@@ -347,7 +349,46 @@
       border-color: var(--purple);
     }
 
-    /* Still settings panel (collapsible) */
+    /* Still Field controls — always visible for easy access */
+    .still-field-controls {
+      background: var(--surface);
+      background-image: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 45%);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .still-field-controls .still-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .still-field-controls .still-toggle-row span {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .still-field-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .still-field-row label {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Still settings panel (collapsible — EQ only) */
     .still-panel {
       width: 100%;
       border: 1px solid var(--border);
@@ -392,31 +433,17 @@
       border-top: 1px solid var(--border);
     }
 
-    .still-eq-row,
-    .still-field-row {
+    .still-eq-row {
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
 
-    .still-eq-row label,
-    .still-field-row label {
+    .still-eq-row label {
       font-size: 0.76rem;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-    }
-
-    .still-toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .still-toggle-row span {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
     }
 
     .still-switch {
@@ -494,7 +521,7 @@
   <!-- Procedural texture layer (Still Theme) -->
   <div class="still-texture" aria-hidden="true"></div>
 
-  <!-- Still Field — full-page mathematical visualisation -->
+  <!-- Still Field — full-page nodes + edges visualisation -->
   <canvas id="stillField" aria-hidden="true"></canvas>
 
   <header>
@@ -538,32 +565,33 @@
         </select>
       </div>
 
-      <!-- Still settings: EQ + Field (collapsible to keep main surface calm) -->
+      <!-- Still Field — always visible for easy on/off -->
+      <div class="still-field-controls">
+        <div class="still-toggle-row">
+          <span>Still Field</span>
+          <button type="button" class="still-switch" id="stillFieldToggle" role="switch" aria-checked="false" aria-label="Enable Still Field"></button>
+        </div>
+        <div class="still-field-row">
+          <label for="stillFieldIntensity">Intensity</label>
+          <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.55" />
+        </div>
+      </div>
+
+      <!-- Still EQ (collapsible to keep main surface calm) -->
       <details class="still-panel" id="stillPanel">
-        <summary>Still settings</summary>
+        <summary>Still EQ</summary>
         <div class="still-panel-body">
-          <!-- Still EQ -->
           <div class="still-eq-row">
-            <label for="stillEqLow">Still EQ · Low</label>
+            <label for="stillEqLow">Low</label>
             <input type="range" id="stillEqLow" min="-12" max="12" step="0.5" value="0" />
           </div>
           <div class="still-eq-row">
-            <label for="stillEqMid">Still EQ · Mid</label>
+            <label for="stillEqMid">Mid</label>
             <input type="range" id="stillEqMid" min="-12" max="12" step="0.5" value="0" />
           </div>
           <div class="still-eq-row">
-            <label for="stillEqHigh">Still EQ · High</label>
+            <label for="stillEqHigh">High</label>
             <input type="range" id="stillEqHigh" min="-12" max="12" step="0.5" value="0" />
-          </div>
-
-          <!-- Still Field controls -->
-          <div class="still-toggle-row">
-            <span>Still Field</span>
-            <button type="button" class="still-switch" id="stillFieldToggle" role="switch" aria-checked="true" aria-label="Enable Still Field"></button>
-          </div>
-          <div class="still-field-row">
-            <label for="stillFieldIntensity">Still Field intensity</label>
-            <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.55" />
           </div>
         </div>
       </details>
@@ -584,7 +612,7 @@
     // ============================================================
     // Complex Noise by Complex State
     // Procedural seamless noise generator (Web Audio API)
-    // Upgraded with Still Theme · Still Field · Still EQ
+    // Still Theme · Still Field (nodes + edges) · Still EQ
     // Optimized for long sleep sessions on mobile browsers
     // ============================================================
 
@@ -599,8 +627,8 @@
     let stillEqMid = parseFloat(localStorage.getItem('complexNoise_stillEqMid')) || 0;
     let stillEqHigh = parseFloat(localStorage.getItem('complexNoise_stillEqHigh')) || 0;
 
-    // --- Still Field state ---
-    let stillFieldEnabled = localStorage.getItem('complexNoise_stillFieldEnabled') !== 'false';
+    // --- Still Field state (default OFF) ---
+    let stillFieldEnabled = localStorage.getItem('complexNoise_stillFieldEnabled') === 'true';
     let stillFieldIntensity = parseFloat(localStorage.getItem('complexNoise_stillFieldIntensity'));
     if (isNaN(stillFieldIntensity)) stillFieldIntensity = 0.55;
 
@@ -618,8 +646,8 @@
     let timerId = null;
     let wakeLock = null;
 
-    // --- Still Field runtime ---
-    let stillFieldParticles = [];
+    // --- Still Field runtime (nodes + edges) ---
+    let stillFieldNodes = [];
     let stillFieldRaf = null;
     let stillFieldLastTs = 0;
     let stillEnergy = 0; // 0–1 smoothed energy for UI influence
@@ -654,8 +682,10 @@
     stillEqHighSlider.value = stillEqHigh;
     stillFieldIntensitySlider.value = stillFieldIntensity;
     stillFieldToggle.setAttribute('aria-checked', stillFieldEnabled ? 'true' : 'false');
-    // Keep the intensity control in sync with the toggle state for clarity
     stillFieldIntensitySlider.disabled = !stillFieldEnabled;
+    if (!stillFieldEnabled) {
+      stillFieldCanvas.classList.add('still-field-off');
+    }
 
     // ----------------------------------------------------------
     // Still Theme
@@ -670,8 +700,8 @@
       if (themeColorMeta) themeColorMeta.content = isBone ? '#F4F0E8' : '#0C0C11';
       const schemeMeta = document.querySelector('meta[name="color-scheme"]');
       if (schemeMeta) schemeMeta.content = isBone ? 'light' : 'dark';
-      // Re-seed particles so colours update immediately with the new theme
-      if (stillFieldParticles.length) initStillFieldParticles(true);
+      // Re-seed nodes so colours update immediately with the new theme
+      if (stillFieldNodes.length) initStillFieldNodes(true);
     }
 
     applyStillTheme(stillTheme);
@@ -937,8 +967,9 @@
     });
 
     // ----------------------------------------------------------
-    // Still Field — full-page procedural visualisation
-    // Soft particle field driven by analyser, gentle UI influence
+    // Still Field — nodes + edges graph visualisation
+    // Subtle silver/titanium nodes, soft distance-based edges
+    // Slow calm drift, gently driven by analyser metrics
     // ----------------------------------------------------------
     const stillFieldCtx = stillFieldCanvas.getContext('2d', { alpha: true });
     let stillFieldW = 0;
@@ -954,28 +985,22 @@
       stillFieldCanvas.style.width = stillFieldW + 'px';
       stillFieldCanvas.style.height = stillFieldH + 'px';
       stillFieldCtx.setTransform(stillFieldDpr, 0, 0, stillFieldDpr, 0, 0);
-      if (stillFieldParticles.length === 0) initStillFieldParticles();
+      if (stillFieldNodes.length === 0) initStillFieldNodes();
     }
 
-    function initStillFieldParticles(force = false) {
-      if (stillFieldParticles.length && !force) return;
-      // Cap particle count for mid-range mobile performance while keeping the field present
-      const count = Math.min(42, Math.max(24, Math.floor((stillFieldW * stillFieldH) / 20000)));
-      stillFieldParticles = [];
-      const style = getComputedStyle(document.documentElement);
-      const particleColor = style.getPropertyValue('--still-field-particle').trim() || 'rgba(155,107,255,0.3)';
-      const coreColor = style.getPropertyValue('--still-field-core').trim() || 'rgba(180,140,255,0.15)';
+    function initStillFieldNodes(force = false) {
+      if (stillFieldNodes.length && !force) return;
+      // Conservative count for mid-range mobile — still enough for a living graph
+      const count = Math.min(34, Math.max(22, Math.floor((stillFieldW * stillFieldH) / 28000)));
+      stillFieldNodes = [];
 
       for (let i = 0; i < count; i++) {
-        stillFieldParticles.push({
+        stillFieldNodes.push({
           x: Math.random() * stillFieldW,
           y: Math.random() * stillFieldH,
-          vx: (Math.random() - 0.5) * 0.25,
-          vy: (Math.random() - 0.5) * 0.25,
-          baseR: 18 + Math.random() * 42,
-          phase: Math.random() * Math.PI * 2,
-          color: particleColor,
-          core: coreColor
+          vx: (Math.random() - 0.5) * 0.12,
+          vy: (Math.random() - 0.5) * 0.12,
+          phase: Math.random() * Math.PI * 2
         });
       }
     }
@@ -988,7 +1013,6 @@
       const data = new Uint8Array(bins);
       analyser.getByteFrequencyData(data);
 
-      // Rough band averages (fftSize 256 → ~ bin width ~ sampleRate/256)
       let lowSum = 0, midSum = 0, highSum = 0, total = 0;
       const lowEnd = Math.floor(bins * 0.12);
       const midEnd = Math.floor(bins * 0.45);
@@ -1015,7 +1039,6 @@
           cancelAnimationFrame(stillFieldRaf);
           stillFieldRaf = null;
         }
-        // Force energy to zero so play button influence disappears cleanly
         stillEnergy = 0;
         document.documentElement.style.setProperty('--still-energy', '0');
         return;
@@ -1031,65 +1054,80 @@
       stillFieldLastTs = ts;
 
       const metrics = getStillAudioMetrics();
-      // Smooth energy for UI — much quieter when not actively playing
-      const targetEnergy = metrics.overall * stillFieldIntensity * (isPlaying ? 1 : 0.08);
-      stillEnergy += (targetEnergy - stillEnergy) * 0.1;
+      // Smooth energy for UI — quieter when paused
+      const targetEnergy = metrics.overall * stillFieldIntensity * (isPlaying ? 1 : 0.06);
+      stillEnergy += (targetEnergy - stillEnergy) * 0.09;
       document.documentElement.style.setProperty('--still-energy', stillEnergy.toFixed(4));
 
-      // Soft residual clear (calm trails, never harsh)
+      // Soft residual clear (calm trails)
       stillFieldCtx.fillStyle = stillTheme === 'bone'
-        ? 'rgba(244, 240, 232, 0.22)'
-        : 'rgba(12, 12, 17, 0.18)';
+        ? 'rgba(244, 240, 232, 0.28)'
+        : 'rgba(12, 12, 17, 0.22)';
       stillFieldCtx.fillRect(0, 0, stillFieldW, stillFieldH);
 
       const intensity = stillFieldIntensity;
-      const energyBoost = 0.4 + metrics.overall * 1.4;
+      const energyBoost = 0.35 + metrics.overall * 1.1;
+      const maxDist = 110 + intensity * 55; // connection range scales a little with intensity
 
-      // Soft attraction points (play button approx centre, lower controls)
-      const anchors = [
-        { x: stillFieldW * 0.5, y: stillFieldH * 0.38, strength: 0.012 + metrics.low * 0.02 },
-        { x: stillFieldW * 0.5, y: stillFieldH * 0.62, strength: 0.006 + metrics.mid * 0.012 }
-      ];
+      // Read current theme colours once per frame
+      const style = getComputedStyle(document.documentElement);
+      const nodeColor = style.getPropertyValue('--still-field-node').trim() || 'rgba(190,195,210,0.5)';
+      const edgeColor = style.getPropertyValue('--still-field-edge').trim() || 'rgba(160,165,180,0.2)';
 
-      for (const p of stillFieldParticles) {
-        // Very gentle random walk + audio energy (kept calm)
-        p.vx += (Math.random() - 0.5) * 0.028 * energyBoost;
-        p.vy += (Math.random() - 0.5) * 0.028 * energyBoost;
+      // --- Update + draw nodes ---
+      for (const n of stillFieldNodes) {
+        // Extremely gentle random walk
+        n.vx += (Math.random() - 0.5) * 0.018 * energyBoost;
+        n.vy += (Math.random() - 0.5) * 0.018 * energyBoost;
 
-        // Gentle attraction to anchors
-        for (const a of anchors) {
-          const dx = a.x - p.x;
-          const dy = a.y - p.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) + 1;
-          p.vx += (dx / dist) * a.strength * intensity;
-          p.vy += (dy / dist) * a.strength * intensity;
-        }
+        // Strong damping → premium slow drift
+        n.vx *= 0.978;
+        n.vy *= 0.978;
 
-        // Strong damping keeps motion calm and premium
-        p.vx *= 0.972;
-        p.vy *= 0.972;
-
-        p.x += p.vx * (1 + metrics.mid * 0.6);
-        p.y += p.vy * (1 + metrics.mid * 0.6);
+        n.x += n.vx * (0.9 + metrics.mid * 0.4);
+        n.y += n.vy * (0.9 + metrics.mid * 0.4);
 
         // Soft wrap
-        if (p.x < -60) p.x = stillFieldW + 60;
-        if (p.x > stillFieldW + 60) p.x = -60;
-        if (p.y < -60) p.y = stillFieldH + 60;
-        if (p.y > stillFieldH + 60) p.y = -60;
+        if (n.x < -20) n.x = stillFieldW + 20;
+        if (n.x > stillFieldW + 20) n.x = -20;
+        if (n.y < -20) n.y = stillFieldH + 20;
+        if (n.y > stillFieldH + 20) n.y = -20;
 
-        // Breathing radius
-        p.phase += 0.008 + metrics.high * 0.015;
-        const r = p.baseR * (0.75 + Math.sin(p.phase) * 0.18) * (0.85 + metrics.overall * 0.45) * intensity;
+        n.phase += 0.006 + metrics.high * 0.01;
+      }
 
-        // Draw soft particle
-        const grad = stillFieldCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-        grad.addColorStop(0, p.core);
-        grad.addColorStop(0.45, p.color);
-        grad.addColorStop(1, 'transparent');
+      // --- Draw edges (O(n²) is fine at n ≤ 34) ---
+      stillFieldCtx.lineWidth = 0.9;
+      for (let i = 0; i < stillFieldNodes.length; i++) {
+        const a = stillFieldNodes[i];
+        for (let j = i + 1; j < stillFieldNodes.length; j++) {
+          const b = stillFieldNodes[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < maxDist) {
+            const alpha = (1 - dist / maxDist) * 0.55 * intensity;
+            stillFieldCtx.strokeStyle = edgeColor.replace(/[\d.]+\)$/, alpha.toFixed(3) + ')');
+            // Fallback if colour parse fails
+            if (!stillFieldCtx.strokeStyle || stillFieldCtx.strokeStyle === edgeColor) {
+              stillFieldCtx.globalAlpha = alpha;
+              stillFieldCtx.strokeStyle = edgeColor;
+            }
+            stillFieldCtx.beginPath();
+            stillFieldCtx.moveTo(a.x, a.y);
+            stillFieldCtx.lineTo(b.x, b.y);
+            stillFieldCtx.stroke();
+            stillFieldCtx.globalAlpha = 1;
+          }
+        }
+      }
+
+      // --- Draw nodes (small, subtle) ---
+      for (const n of stillFieldNodes) {
+        const r = 1.6 + Math.sin(n.phase) * 0.4;
         stillFieldCtx.beginPath();
-        stillFieldCtx.fillStyle = grad;
-        stillFieldCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        stillFieldCtx.fillStyle = nodeColor;
+        stillFieldCtx.arc(n.x, n.y, r * (0.85 + intensity * 0.25), 0, Math.PI * 2);
         stillFieldCtx.fill();
       }
 
@@ -1118,7 +1156,6 @@
         stillFieldCanvas.classList.add('still-field-off');
         stillEnergy = 0;
         document.documentElement.style.setProperty('--still-energy', '0');
-        // Clear residual particles so the next enable starts clean
         if (stillFieldCtx) {
           stillFieldCtx.clearRect(0, 0, stillFieldW || stillFieldCanvas.width, stillFieldH || stillFieldCanvas.height);
         }
@@ -1176,10 +1213,10 @@
     // Init Still Field
     window.addEventListener('resize', () => {
       resizeStillField();
-      initStillFieldParticles(true);
+      initStillFieldNodes(true);
     });
     resizeStillField();
-    initStillFieldParticles();
+    initStillFieldNodes();
     if (stillFieldEnabled) startStillFieldLoop();
 
     // Expose a few helpers for future agents / debugging (optional)

@@ -72,12 +72,29 @@ const els = {
   stillTextureEl: document.querySelector('.still-texture'),
   // Info layer readout
   nerdHud: document.getElementById('nerdHud'),
+  nerdTabs: Array.from(document.querySelectorAll('[data-nerd-view]')),
+  nerdViews: Array.from(document.querySelectorAll('.nerd-hud-view')),
+  nerdHealth: document.getElementById('nerdHealth'),
   nerdFps: document.getElementById('nerdFps'),
+  nerdWork: document.getElementById('nerdWork'),
   nerdNodes: document.getElementById('nerdNodes'),
   nerdLinks: document.getElementById('nerdLinks'),
+  nerdPairs: document.getElementById('nerdPairs'),
+  nerdDegree: document.getElementById('nerdDegree'),
+  nerdDensity: document.getElementById('nerdDensity'),
   nerdLabels: document.getElementById('nerdLabels'),
+  nerdMode: document.getElementById('nerdMode'),
+  nerdWave: document.getElementById('nerdWave'),
   nerdEnergy: document.getElementById('nerdEnergy'),
-  nerdBands: document.getElementById('nerdBands'),
+  nerdLow: document.getElementById('nerdLow'),
+  nerdMid: document.getElementById('nerdMid'),
+  nerdHigh: document.getElementById('nerdHigh'),
+  nerdMeters: {
+    low: document.getElementById('nerdMeterLow'),
+    mid: document.getElementById('nerdMeterMid'),
+    high: document.getElementById('nerdMeterHigh'),
+    energy: document.getElementById('nerdMeterEnergy'),
+  },
   nerdSource: document.getElementById('nerdSource'),
   nerdDrift: document.getElementById('nerdDrift'),
   nerdUptime: document.getElementById('nerdUptime'),
@@ -134,6 +151,12 @@ function setText(el, value) {
   if (el && el.textContent !== value) el.textContent = value;
 }
 
+function setMeter(el, value) {
+  if (!el) return;
+  const width = `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
+  if (el.style.width !== width) el.style.width = width;
+}
+
 /** mm:ss, or h:mm:ss once it runs past an hour. */
 function formatUptime(ms) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -155,11 +178,23 @@ function updateNerdHud() {
   setText(els.nerdFps, stats.fps > 0
     ? `${stats.fps.toFixed(1)} fps${stats.reducedMotion ? ' ·  reduced' : ''}`
     : 'idle');
+  setText(els.nerdWork, stats.frameMs > 0 ? `${stats.frameMs.toFixed(2)} ms` : 'idle');
   setText(els.nerdNodes, String(stats.nodes));
   setText(els.nerdLinks, String(stats.edges));
-  setText(els.nerdLabels, `${stats.labels} / 4`);
+  setText(els.nerdPairs, String(stats.pairChecks));
+  setText(els.nerdDegree, stats.meanDegree.toFixed(2));
+  setText(els.nerdDensity, `${(stats.density * 100).toFixed(1)}%`);
+  setText(els.nerdLabels, `${stats.labels}/${stats.labelCapacity} nodes · ${stats.edgeLabels} edges`);
+  setText(els.nerdMode, `${stats.labelMode} · 8 s`);
+  setText(els.nerdWave, `${stats.wavePhase.toFixed(0)}° · vector ${stats.waveAngle.toFixed(1)}°`);
   setText(els.nerdEnergy, stats.energy.toFixed(3));
-  setText(els.nerdBands, `${Math.round(metrics.low * 99)} · ${Math.round(metrics.mid * 99)} · ${Math.round(metrics.high * 99)}`);
+  setText(els.nerdLow, metrics.low.toFixed(3));
+  setText(els.nerdMid, metrics.mid.toFixed(3));
+  setText(els.nerdHigh, metrics.high.toFixed(3));
+  setMeter(els.nerdMeters.low, metrics.low);
+  setMeter(els.nerdMeters.mid, metrics.mid);
+  setMeter(els.nerdMeters.high, metrics.high);
+  setMeter(els.nerdMeters.energy, stats.energy);
 
   const typeName = audioState.type.charAt(0).toUpperCase() + audioState.type.slice(1);
   setText(els.nerdSource, ctx
@@ -170,6 +205,12 @@ function updateNerdHud() {
   setText(els.nerdUptime, playingSinceMs > 0
     ? formatUptime(performance.now() - playingSinceMs)
     : '—');
+
+  const health = stats.fps <= 0 ? 'sampling'
+    : stats.fps >= 27 && stats.frameMs < 8 ? 'nominal'
+      : stats.fps >= 22 && stats.frameMs < 16 ? 'loaded' : 'strained';
+  if (els.nerdHud) els.nerdHud.dataset.health = health;
+  setText(els.nerdHealth, health);
 }
 
 /**
@@ -313,6 +354,15 @@ function renderStillField(state) {
     els.stillTextureEl.style.opacity = state.texture ? '' : '0';
   }
 
+  els.nerdTabs.forEach(tab => {
+    const active = tab.dataset.nerdView === state.nerdView;
+    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    tab.tabIndex = active ? 0 : -1;
+  });
+  els.nerdViews.forEach(view => {
+    view.hidden = view.id !== `nerdView${state.nerdView[0].toUpperCase()}${state.nerdView.slice(1)}`;
+  });
+
   // The stats readout is the other half of the info layer, so it follows the
   // same toggle as the on-canvas labels.
   syncNerdHud(state);
@@ -454,6 +504,18 @@ function bindEvents() {
   });
   bindSwitch(els.fieldTextureToggle, () => {
     stillField.setStillFieldTexture(!stillField.getStillFieldTexture());
+  });
+
+  els.nerdTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => stillField.setNerdView(tab.dataset.nerdView));
+    tab.addEventListener('keydown', event => {
+      const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+      if (!direction) return;
+      event.preventDefault();
+      const next = els.nerdTabs[(index + direction + els.nerdTabs.length) % els.nerdTabs.length];
+      stillField.setNerdView(next.dataset.nerdView);
+      next.focus();
+    });
   });
 
   els.fieldIntensity.addEventListener('input', e => {

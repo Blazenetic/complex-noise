@@ -17,8 +17,10 @@ const browser = {
   setTimeout: 'readonly',
   clearTimeout: 'readonly',
   getComputedStyle: 'readonly',
+  performance: 'readonly',
   Event: 'readonly',
   Uint8Array: 'readonly',
+  Float32Array: 'readonly',
   OfflineAudioContext: 'readonly',
 };
 

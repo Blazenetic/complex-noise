@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#0C0C11" id="themeColorMeta" />
   <meta name="color-scheme" content="dark" />
-  <meta name="description" content="Complex Noise by Complex State — Seamless brown noise for deep rest. Still Theme, Still Field, Still EQ." />
+  <meta name="description" content="Complex Noise by Complex State — Seamless brown noise for deep rest. Still Theme, Still Field, Still Equaliser." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.json" />
@@ -25,12 +25,6 @@
     <div class="logo">Complex Noise</div>
     <div class="byline">by Complex State</div>
     <div class="tagline">Seamless noise for deep rest</div>
-    <div class="still-theme-row">
-      <button id="stillThemeToggle" class="still-theme-toggle" type="button" aria-label="Toggle Still Theme between Dark and Bone">
-        <span class="still-theme-icon" id="stillThemeIcon" aria-hidden="true">◐</span>
-        <span class="still-theme-label" id="stillThemeLabel">Still · Dark</span>
-      </button>
-    </div>
   </header>
 
   <main>
@@ -65,30 +59,50 @@
         </select>
       </div>
 
-      <!-- Still Field — always visible for easy on/off -->
+      <!-- Still Field + interface controls — theme, visualisation, chrome hide, glass -->
       <div class="still-field-controls">
+        <div class="card-title">Still Field</div>
+
         <div class="still-toggle-row">
-          <span id="stillFieldLabel">Still Field</span>
+          <span id="stillFieldLabel">Field visualisation</span>
           <button type="button" class="still-switch" id="stillFieldToggle" role="switch" aria-checked="true" aria-labelledby="stillFieldLabel"></button>
         </div>
+
         <div class="still-field-row">
           <label for="stillFieldIntensity">Intensity</label>
           <input type="range" id="stillFieldIntensity" min="0" max="1" step="0.05" value="0.7" />
         </div>
+
         <!-- Range must match STILL_SPEED_MIN / STILL_SPEED_MAX in js/constants.js -->
         <div class="still-field-row">
           <label for="stillFieldSpeed">Speed</label>
           <input type="range" id="stillFieldSpeed" min="0.5" max="4" step="0.05" value="2" />
         </div>
+
+        <div class="still-section-divider" aria-hidden="true"></div>
+
+        <div class="still-toggle-row">
+          <span id="stillThemeRowLabel">Theme</span>
+          <button id="stillThemeToggle" class="still-theme-toggle compact" type="button" aria-label="Toggle Still Theme between Dark and Bone">
+            <span class="still-theme-icon" id="stillThemeIcon" aria-hidden="true">◐</span>
+            <span class="still-theme-label" id="stillThemeLabel">Dark</span>
+          </button>
+        </div>
+
+        <div class="still-toggle-row">
+          <span id="uiChromeLabel">Interface</span>
+          <button type="button" class="still-switch" id="uiChromeSwitch" role="switch" aria-checked="true" aria-labelledby="uiChromeLabel" title="Show or hide the main controls"></button>
+        </div>
+
         <div class="still-toggle-row is-secondary">
           <span id="stillGlassLabel">Ultra-transparent glass</span>
           <button type="button" class="still-switch" id="stillGlassToggle" role="switch" aria-checked="false" aria-labelledby="stillGlassLabel"></button>
         </div>
       </div>
 
-      <!-- Still EQ (collapsible to keep main surface calm) -->
+      <!-- Still Equaliser (collapsible to keep main surface calm) -->
       <details class="still-panel" id="stillPanel">
-        <summary>Still EQ</summary>
+        <summary>Still Equaliser</summary>
         <div class="still-panel-body">
           <div class="still-eq-row">
             <label for="stillEqLow">Low</label>
@@ -121,10 +135,10 @@
     Complex State
   </footer>
 
-  <!-- Immersion control — hides/restores the main chrome so the field can fill the night. -->
-  <button id="uiChromeToggle" class="ui-chrome-toggle" type="button" aria-label="Hide controls" aria-pressed="false" title="Hide controls">
+  <!-- Restore control — only visible when chrome is hidden so the field can fill the night. -->
+  <button id="uiChromeToggle" class="ui-chrome-toggle" type="button" aria-label="Show controls" aria-pressed="false" title="Show controls">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M4 9h16M4 15h16"/>
+      <path d="M4 7h16M4 12h16M4 17h16"/>
     </svg>
   </button>
 

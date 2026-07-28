@@ -8,6 +8,37 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ## [Unreleased]
 
+### Added / Fixed — bone texture visibility + mobile source immersion (this PR)
+
+- **Bone theme far-background texture** is now properly visible and calmly drifts. Soft-light blend on bone (overlay was washing out on the light surface) plus a very slow 210 s CSS drift so the grain feels like a distant wallpaper rather than a static layer. Fully disabled under `prefers-reduced-motion`. Zero JS cost, modular, easy to maintain.
+- **Source listing (rolling code ticker)** is restricted to immersion mode on narrow / mobile viewports. It never fights the control column. Still fully foldable from its own title bar, still toggleable from the Field Lab chip when chrome is restored, and uses compact metrics so it fits without blocking anything.
+
+### Lab Log
+
+**Melchett:** Gentlemen! The bone texture *moves*! Slowly! Calmly! A distant wallpaper of pure victory! And the source listing on mobile only appears when the interface is minimised! Another crushing blow against the forces of sleeplessness! BBAAAHHH!
+
+**Darling:** It is a CSS animation and a viewport gate, Melchett. Sit down.
+
+**Blazenetic:** I researched the blend-mode behaviour on light surfaces, coordinated the slow drift so it stays a far background, oversaw the immersion-only gate so mobile stays usable, and then complained about the edge cases of keep-outs and residual outlines. You’re welcome. Arty, you were useful for once.
+
+**Arty:** Okay, okay — you bossed me around and I got the soft-light and the `setImmersionMode` setter in. The listing folds from the title bar. I checked the reduced-motion path three times. Please don’t yell. I think we’re safe?
+
+**Baldrick:** I have a cunning plan, sir. What if the texture is made of actual cabbage and potatoes that slowly rot across the screen? Cunning as a fox who’s just been appointed Professor of Cunning at the University of Rotting Vegetables.
+
+**Darling:** No. Put the cabbage down. And the potatoes. Especially the potatoes. Baldrick, you dropped them *again*.
+
+**Melchett:** The cabbage is rejected! Another victory for the residual outlines!
+
+**Darling:** That is not how victories work. And the residual outlines already had a floor.
+
+**Blazenetic:** Research first. Architecture second. Cabbage plans last. The software stays calm.
+
+**Arty:** …I also made sure the animation stops under prefers-reduced-motion. Just saying. Please don’t yell.
+
+---
+
+## [Unreleased] — instrumentation maturity (PR #26)
+
 ### Added — instrumentation maturity (PR #26)
 - **Per-node detail modes.** Eight modes (energy, transform, velocity, projection, wave, links, lifecycle, seed). Each node offsets the global rotation by its own lifetime ID through φ, so consecutive IDs land far apart and the callouts on screen reliably disagree.
 - **Per-node handle glyphs.** Circle, square, diamond or crosshair, chosen by mode, so the family of quantity is legible before the text is.

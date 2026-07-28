@@ -33,14 +33,15 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ### Documentation & Lab Voice (this pass)
 
-Public narrative surfaces cleaned of any name-checks that belonged only in the private Drive Spec. The mystery stays behind the wall. Statistics tightened from the full PR and commit trail. Cross-links and varied closers restored.
+Public narrative surfaces cleaned of any name-checks that belonged only in the private Drive Spec. The mystery stays behind the wall. Statistics tightened from the full PR and commit trail. Cross-links and varied closers restored. HISTORY rewritten as a proper chronological timeline with team attribution.
 
 #### Sprint by the numbers (research summary)
 
 | Metric | Value | Notes |
 |--------|-------|-------|
 | Calendar time | ~36–48 hours | 26–28 July 2026 intensive sprint |
-| Merged PRs | 26 | From modularisation through instrumentation maturity |
+| Merged pull requests | 22 | From modularisation through instrumentation maturity |
+| Supporting commits | dozens | Heavy volume on 27–28 July; many docs-only and CI recovery commits |
 | Public release | 0.1.0 | 28 July 2026 |
 | Test suite | 5 → 33+ assertions | Playwright + real Web Audio; sleep-timer test is sacred |
 | Node population (default) | 26–44 (clamped) | Density multiplies the clamp, never the raw viewport |
@@ -53,11 +54,11 @@ Public narrative surfaces cleaned of any name-checks that belonged only in the p
 
 #### Lab Log
 
-**Melchett:** Gentlemen! We have returned with *statistics*! Tables! Numbers! A documentation offensive of historic scale! The forces of dry open-source READMEs are in full retreat! BBAAAHHH!
+**Melchett:** Gentlemen! We have returned with *statistics*! Twenty-two pull requests! Tables! Numbers! A documentation offensive of historic scale! The forces of dry open-source READMEs are in full retreat! BBAAAHHH!
 
 **Darling:** It is still a set of markdown files, Melchett. Sit down.
 
-**Blazenetic:** I researched the full PR trail, the pair-test numbers the Live view already publishes, the test-suite growth from a handful of smoke checks to thirty-three assertions, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording and removed a few name-checks that belonged only behind the wall. You’re welcome.
+**Blazenetic:** I researched the full PR trail, the pair-test numbers the Live view already publishes, the test-suite growth from a handful of smoke checks to thirty-three assertions, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording, attributed the work to the people who actually did it, and removed a few name-checks that belonged only behind the wall. You’re welcome.
 
 **Arty:** Cross-links checked. AGENTS.md is still completely clean. I ran the mental checklist three times. Please don’t yell.
 
@@ -128,7 +129,7 @@ First public release after intensive iterative development (26–28 July 2026).
 
 ### Lab Log
 
-**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The spatial grid saves thousands of pair tests! The war is as good as won! BBAAAHHH!
+**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The spatial grid saves thousands of pair tests! Twenty-two pull requests! The war is as good as won! BBAAAHHH!
 
 **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.
 

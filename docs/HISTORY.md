@@ -2,7 +2,7 @@
 
 A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks, and then kept going *one more time* when the callouts decided they wanted to stop bouncing left and right and simply *calm down*.
 
-**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
+**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
 ---
 
@@ -172,11 +172,13 @@ Baldrick proposed potato callouts that cool and fall off the screen, a potato sa
 > **Darling:** No. And the leak is still your fault.  
 > **Melchett:** THE BOUNCE IS DEAD! A CRUSHING VICTORY FOR HYSTERESIS AND EXPONENTIAL SMOOTHING! BBAAAHHH!
 
+The same work became the opening chapter of the living curriculum ([Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md)) and the first entry on the affectionate accountability ledger ([Blame](./BLAME.md)). The repository itself is now deliberately a learning experience. Future sessions will keep adding to both pages.
+
 ---
 
 ## The Lab Voice
 
-Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
+Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing, Teachings, Blame) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
 
 The cast, the wall between narrative and agent docs, and the style rules live in a mysterious cabinet in the lab. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
@@ -210,7 +212,7 @@ If you want to help with any of that (or find a security issue, or just have a b
 Made in a small Australian lab.  
 One hundred and eighty-seven commits. Fifty-two wall-clock hours. Overnight bootstrap included.  
 The residual outlines have a floor.  
-Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md) · [Changelog](../CHANGELOG.md)
+Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md) · [Changelog](../CHANGELOG.md)
 
 Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.  
 Another Tuesday in the Lab. The software is calm. The docs are not.  

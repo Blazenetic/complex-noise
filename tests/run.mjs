@@ -5,16 +5,74 @@
  * exist because a plausible-looking refactor broke something that only shows up
  * after the app has been running for a while — the transparent-canvas guard in
  * particular. Add to them rather than replacing them.
+ *
+ * ## How it runs
+ *
+ * One browser, one static server, and a pool of workers that each own a fresh
+ * `BrowserContext`. Contexts are already the isolation boundary — separate
+ * localStorage, separate page — so tests were never sharing anything; running
+ * them one at a time was simply leaving the machine idle.
+ *
+ * That idleness was most of the suite. The tests that matter here are about
+ * behaviour that emerges over *seconds* — a callout that must not change side
+ * more than four times in six, a canvas that must not go opaque as the trail
+ * accumulates — so they spend their time waiting on the app, not on the CPU.
+ * Waiting concurrently costs nothing and is the whole speed-up.
+ *
+ *     npm test                      # all tests, auto-sized worker pool
+ *     npm test -- --filter=colour   # only tests whose name contains "colour"
+ *     npm test -- --workers=1       # serialise, e.g. when bisecting a flake
+ *     npm test -- --repeat=20       # run the selection 20x to hunt a flake
+ *     npm test -- --headed          # watch it (implies --workers=1)
+ *     npm test -- --list            # print the test names and exit
+ *
+ * ## Waiting well
+ *
+ * Prefer `until(page, fn, ms)` over a bare `page.waitForTimeout`. Polling for
+ * the condition with a deadline is *strictly stronger* than sleeping and then
+ * checking once: it fails no later than the sleep would have, passes as soon as
+ * the app is ready, and reports how long it actually took. Use a plain sleep
+ * only when the elapsed time is itself the thing under test — the trail has to
+ * accumulate for real seconds before "is the canvas opaque?" means anything.
  */
 
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { availableParallelism } from 'node:os';
 import { chromium } from 'playwright';
 import { startServer } from './server.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const HEADED = process.argv.includes('--headed');
 const CHROMIUM_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
+
+/** `--flag`, `--key=value` and `-t value` in one small pass. */
+function parseArgs(argv) {
+  const opts = { headed: false, list: false, filter: '', workers: 0, repeat: 1 };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    const eq = arg.indexOf('=');
+    const key = eq > 0 ? arg.slice(2, eq) : arg.replace(/^--/, '');
+    const value = eq > 0 ? arg.slice(eq + 1) : argv[i + 1];
+    if (arg === '--headed') opts.headed = true;
+    else if (arg === '--list') opts.list = true;
+    else if (key === 'filter' || arg === '-t') { opts.filter = value || ''; if (eq < 0) i++; }
+    else if (key === 'workers') { opts.workers = Number(value) || 0; if (eq < 0) i++; }
+    else if (key === 'repeat') { opts.repeat = Math.max(1, Number(value) || 1); if (eq < 0) i++; }
+  }
+  return opts;
+}
+
+const opts = parseArgs(process.argv.slice(2));
+
+/**
+ * Worker count. Headed runs serialise so there is one window to watch, and CI
+ * runners are small enough that oversubscribing a browser costs more in context
+ * startup than it wins back. Four is plenty: the wall time floor is the single
+ * longest test, not the pool size.
+ */
+const WORKERS = opts.headed
+  ? 1
+  : Math.max(1, opts.workers || Number(process.env.TEST_WORKERS) || Math.min(4, availableParallelism()));
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -30,6 +88,27 @@ function assertEqual(actual, expected, message) {
 }
 
 const storage = (page, key) => page.evaluate(k => localStorage.getItem(k), key);
+
+/**
+ * Poll an in-page predicate until it holds, or fail with `message` at `timeout`.
+ *
+ * The timeout is a *budget*, not a duration: a passing run leaves as soon as the
+ * condition holds. Swapping a `waitForTimeout(3000)` for this never weakens the
+ * assertion — the old code would have slept the full three seconds and then
+ * checked the same predicate once, so anything that fails here failed there too.
+ *
+ * @param {import('playwright').Page} page
+ * @param {Function|string} fn evaluated in the page; truthy return ends the wait
+ * @param {number} timeout milliseconds before giving up
+ * @param {string} message shown on timeout
+ */
+async function until(page, fn, timeout, message) {
+  try {
+    await page.waitForFunction(fn, null, { timeout, polling: 100 });
+  } catch (err) {
+    throw new Error(`${message} (waited ${timeout}ms)`);
+  }
+}
 
 test('loads with no console or page errors', async page => {
   assertEqual(page.errors.length, 0, `page reported errors: ${page.errors.join(' | ')}`);
@@ -66,17 +145,22 @@ test('the info layer has its own canvas, and clears when Stats is off', async pa
   // canvas is genuinely emptied rather than merely stopped being drawn to.
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.click('#uiChromeMinimise');
-  await page.waitForTimeout(1600);
 
-  const countInk = () => page.evaluate(() => {
+  const inkExpression = () => {
     const c = document.getElementById('stillFieldInfo');
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
     let n = 0;
     for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++;
     return n;
-  });
+  };
+  const countInk = () => page.evaluate(inkExpression);
 
-  assert(await countInk() > 500, 'info canvas should be carrying callouts once the interface is out of the way');
+  // Callouts fade in on an envelope, so this is a race against an animation
+  // rather than a fixed delay. Polling for the ink both fails no later than the
+  // old sleep did and returns the moment the layer is actually carrying text.
+  await until(page, `(${inkExpression})() > 500`, 6000,
+    'info canvas should be carrying callouts once the interface is out of the way');
+
   await page.click('#uiChromeToggle');
   await page.click('#stillFieldNerdToggle');
   await page.waitForTimeout(400);
@@ -141,6 +225,14 @@ test('callout detail modes rotate on a dwell that the Lab controls', async page 
   // The schedule is quasi-periodic, so this checks that it advances and that
   // the countdown is bounded by the dwell the user asked for — not that a
   // particular mode is showing at a particular second.
+  //
+  // Measured against the field's own diagnostics clock, never against wall
+  // time. `infoClockS` accumulates `dt` capped at MAX_STEP_S, so on a loaded
+  // machine — a CI runner, or this suite's own worker pool — it deliberately
+  // advances *slower* than the clock on the wall. Asserting "the mode rotated
+  // within 5.2 real seconds" therefore tests the host's spare CPU as much as
+  // the rotation, and fails on a busy one for a reason that has nothing to do
+  // with the schedule.
   await page.evaluate(() => {
     const el = document.getElementById('fieldDwell');
     el.value = '4';
@@ -148,11 +240,19 @@ test('callout detail modes rotate on a dwell that the Lab controls', async page 
   });
   await page.waitForTimeout(200);
 
-  const first = await page.evaluate(() => window.complexNoiseStill.getFieldStats().labelMode);
-  const remaining = await page.evaluate(() => window.complexNoiseStill.getFieldStats().modeRemaining);
-  assert(remaining <= 4 * 1.3, `remaining ${remaining}s should be inside one dwell slice`);
+  const start = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+  const first = start.labelMode;
+  assert(start.modeRemaining <= 4 * 1.3, `remaining ${start.modeRemaining}s should be inside one dwell slice`);
 
-  await page.waitForTimeout(5200);
+  // The longest weighted slice is 4 × 1.28, so one full slice of the field's own
+  // clock is the bound the rotation has to land inside. The wall-clock budget is
+  // only a backstop against a loop that has stopped advancing at all.
+  const deadline = start.realClock + 4 * 1.28;
+  await until(page, `(() => {
+    const s = window.complexNoiseStill.getFieldStats();
+    return s.labelMode !== ${JSON.stringify(first)} || s.realClock > ${deadline};
+  })()`, 30000, 'the render loop stopped advancing its diagnostics clock');
+
   const second = await page.evaluate(() => window.complexNoiseStill.getFieldStats().labelMode);
   assert(first !== second, `mode should have rotated within a dwell, stayed on ${first}`);
 });
@@ -174,7 +274,8 @@ test('callouts on screen read different quantities from each other', async page 
   // regime whose code was never merged.
   await page.setViewportSize({ width: 1400, height: 950 });
   await page.click('#uiChromeMinimise');
-  await page.waitForTimeout(2500);
+  await until(page, 'window.complexNoiseStill.getFieldStats().labels >= 1', 8000,
+    'expected the callout layer to start placing blocks');
 
   let bestModes = 0;
   let bestLabels = 0;
@@ -212,10 +313,12 @@ test('a visible callout settles on one side of its node', async page => {
   // going forward; it is not evidence about the code it replaced.
   await page.setViewportSize({ width: 1400, height: 950 });
   await page.click('#uiChromeMinimise');
-  await page.waitForTimeout(3000);
+  await until(page, 'window.complexNoiseStill.getFieldStats().labels >= 1', 8000,
+    'expected callouts to be drawing');
 
   const before = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
-  assert(before.labels >= 1, `expected callouts to be drawing, saw ${before.labels}`);
+  // This one stays a real sleep: six seconds of elapsed motion *is* the
+  // measurement, not a wait for something to become true.
   await page.waitForTimeout(6000);
   const after = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
 
@@ -368,18 +471,32 @@ test('rapid colour changes coalesce and cannot replace a resumed source', async 
   assertEqual(await page.evaluate(() => window.noiseBufferCount), 1,
     'starting playback should build exactly one noise buffer');
 
-  await page.click('.type-btn[data-type="green"]');
-  await page.click('.type-btn[data-type="fan"]');
-  await page.click('.type-btn[data-type="rain"]');
+  // Driven from inside the page rather than over three `page.click` round
+  // trips. The window under test is the 160 ms colour dip, and a Playwright
+  // click costs a CDP round trip that is far from free on a loaded machine — so
+  // the old version was really asserting "the harness can land three clicks in
+  // 160 ms", which stops being true the moment anything else is running. The
+  // clicks are real `click()` calls on the real buttons; only the latency of
+  // asking for them from Node has been removed.
+  await page.evaluate(() => {
+    for (const type of ['green', 'fan', 'rain']) {
+      document.querySelector(`.type-btn[data-type="${type}"]`).click();
+    }
+  });
   await page.waitForTimeout(450);
   assertEqual(await page.evaluate(() => window.noiseBufferCount), 2,
     'rapid colour clicks should coalesce into one replacement buffer');
 
-  await page.click('.type-btn[data-type="green"]');
-  await page.waitForTimeout(40);
-  await page.click('#playBtn', { force: true });
-  await page.waitForTimeout(40);
-  await page.click('#playBtn', { force: true });
+  // Same reasoning: a pause and an immediate resume have to happen inside the
+  // pending switch's own 160 ms timeout for this to be testing anything.
+  await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    document.querySelector('.type-btn[data-type="green"]').click();
+    await wait(40);
+    document.getElementById('playBtn').click();
+    await wait(40);
+    document.getElementById('playBtn').click();
+  });
   await page.waitForTimeout(450);
 
   assertEqual(await page.evaluate(() => window.noiseBufferCount), 3,
@@ -525,6 +642,146 @@ test('modulated colours complete whole LFO cycles across the buffer', async page
   }
 });
 
+test('the wake lock is released when playback stops during the request', async page => {
+  // `navigator.wakeLock.request()` is asynchronous, and pressing play then pause
+  // inside that gap used to strand the lock: stop() released a handle that was
+  // still null, and the request then installed itself into the same variable
+  // with nothing left to ever let go of it. On a phone that is a screen lit all
+  // night over silent audio.
+  //
+  // The real API is stubbed rather than driven, because the outcome under test
+  // is what *this* code does with a slow grant — a genuine wake lock resolves
+  // too fast to reproduce the race, and is refused outright in headless.
+  await page.addInitScript(() => {
+    window.__wake = { requests: 0, released: 0, resolve: null };
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true,
+      value: {
+        request: () => new Promise(resolve => {
+          window.__wake.requests++;
+          window.__wake.resolve = () => resolve({
+            release: () => { window.__wake.released++; return Promise.resolve(); },
+            addEventListener: () => {},
+          });
+        }),
+      },
+    });
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.complexNoiseStill, null, { timeout: 15000 });
+
+  // Play, then pause before the browser grants the lock.
+  await page.click('#playBtn', { force: true });
+  await until(page, 'window.__wake.requests === 1', 3000, 'play should have requested a wake lock');
+  await page.click('#playBtn', { force: true });
+  assertEqual(await page.evaluate(() => window.complexNoiseStill.getIsPlaying()), false,
+    'playback should be stopped before the lock is granted');
+
+  // Now let the request resolve into a stopped player.
+  await page.evaluate(() => window.__wake.resolve());
+  await until(page, 'window.__wake.released === 1', 3000,
+    'a wake lock granted after playback stopped must be released, not stranded');
+});
+
+test('the sleep timer fires on its deadline, not on its setTimeout', async page => {
+  // A backgrounded tab has its timers throttled to once a minute and a
+  // suspended phone does not run them at all, so a one-hour sleep timer can come
+  // back long overdue and still playing. The deadline is wall-clock, and coming
+  // back to a visible page re-checks it.
+  //
+  // Time is moved rather than waited for: `Date.now` is offset from the page's
+  // own clock so the test can put the device to sleep for two hours in a
+  // millisecond.
+  await page.addInitScript(() => {
+    window.__skewMs = 0;
+    const realNow = Date.now;
+    Date.now = () => realNow() + window.__skewMs;
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.complexNoiseStill, null, { timeout: 15000 });
+
+  await page.evaluate(() => {
+    const el = document.getElementById('timer');
+    el.value = '0.5';
+    el.dispatchEvent(new Event('input'));
+  });
+  await page.click('#playBtn', { force: true });
+  await until(page, 'window.complexNoiseStill.getIsPlaying()', 3000, 'playback should have started');
+
+  const armed = await page.evaluate(() => window.complexNoiseStill.getTimerRemainingMs());
+  assert(armed > 29 * 60 * 1000 && armed <= 30 * 60 * 1000,
+    `a half-hour timer should be armed for ~30 minutes, got ${Math.round(armed / 1000)}s`);
+
+  // Twenty minutes of "suspend": due later, so nothing should happen yet.
+  await page.evaluate(() => {
+    window.__skewMs = 20 * 60 * 1000;
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  assertEqual(await page.evaluate(() => window.complexNoiseStill.getIsPlaying()), true,
+    'a timer that is not due yet must not stop playback when the page comes back');
+
+  // Now come back two hours later, long past the deadline. The setTimeout has
+  // certainly not fired — only the deadline check can catch this.
+  await page.evaluate(() => {
+    window.__skewMs = 2 * 60 * 60 * 1000;
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await until(page, '!window.complexNoiseStill.getIsPlaying()', 3000,
+    'a sleep timer that came due while the device slept must stop playback on return');
+  assert(/timer ended/i.test(await page.evaluate(() => window.complexNoiseStill.getAudioState().status)),
+    'the status should say the sleep timer ended');
+});
+
+test('dragging a slider does not write to localStorage once per pointer move', async page => {
+  // `localStorage.setItem` is synchronous and hits the disk. One per pointer
+  // move — which is what a slider's `input` event rate means — put a hundred
+  // blocking writes on the same thread as the render loop for one drag.
+  const writes = await page.evaluate(async () => {
+    const setItem = Storage.prototype.setItem;
+    let calls = 0;
+    Storage.prototype.setItem = function (...args) { calls++; return setItem.apply(this, args); };
+
+    const el = document.getElementById('volume');
+    for (let i = 0; i < 60; i++) {
+      el.value = String(0.2 + i * 0.005);
+      el.dispatchEvent(new Event('input'));
+    }
+    const during = calls;
+    // Read the value back off the control: a range input snaps whatever it is
+    // handed to its own `step`, so the last value the app actually saw is the
+    // element's, not the one the loop asked for.
+    const expected = el.value;
+    // The value has to be readable immediately even though the disk write is
+    // still queued — deferring the write must not defer the setting.
+    const live = (await import('/js/storage.js')).read('complexNoise_volume');
+    await new Promise(r => setTimeout(r, 400));
+    return { during, after: calls, live, expected, stored: localStorage.getItem('complexNoise_volume') };
+  });
+
+  assert(writes.during <= 2,
+    `60 slider events should not each hit the disk, saw ${writes.during} writes during the drag`);
+  assert(writes.after <= 4,
+    `the drag should settle into a handful of writes, saw ${writes.after}`);
+  assertEqual(writes.live, writes.expected, 'a throttled write must be readable immediately');
+  assertEqual(writes.stored, writes.expected,
+    'the final value must reach localStorage once the drag settles');
+});
+
+test('a discrete setting still persists immediately', async page => {
+  // The throttle is opt-in for continuous controls. Buttons and toggles keep the
+  // straight-through write, so nothing that used to be durable on click stopped
+  // being durable.
+  const writes = await page.evaluate(() => {
+    const setItem = Storage.prototype.setItem;
+    let calls = 0;
+    Storage.prototype.setItem = function (...args) { calls++; return setItem.apply(this, args); };
+    document.querySelector('.type-btn[data-type="white"]').click();
+    return { calls, stored: localStorage.getItem('complexNoise_type') };
+  });
+  assertEqual(writes.stored, 'white', 'a colour choice must reach localStorage on the click');
+  assert(writes.calls >= 1, 'a discrete setting should write straight through');
+});
+
 test('interactive controls are labelled and reach 44px touch targets', async page => {
   const audit = await page.evaluate(() => {
     const problems = [];
@@ -550,42 +807,111 @@ test('interactive controls are labelled and reach 44px touch targets', async pag
   assertEqual(small.length, 0, `touch targets under 44px: ${small.join(', ')}`);
 });
 
+// ----------------------------------------------------------
 // Runner
+// ----------------------------------------------------------
+
+const selected = tests.filter(t => !opts.filter || t.name.includes(opts.filter));
+
+if (opts.list) {
+  for (const t of tests) console.log(t.name);
+  process.exit(0);
+}
+
+if (!selected.length) {
+  console.log(`no test matches --filter=${JSON.stringify(opts.filter)}`);
+  process.exit(1);
+}
+
+/**
+ * The queue every worker pulls from. Repeats are expanded into it rather than
+ * looped around the pool, so `--repeat=20 --workers=4` really does keep four
+ * browsers busy instead of running twenty serial passes four times over.
+ */
+const queue = [];
+for (let pass = 0; pass < opts.repeat; pass++) {
+  for (let i = 0; i < selected.length; i++) {
+    queue.push({ index: i, pass, ...selected[i] });
+  }
+}
+
 const server = await startServer(ROOT);
 const browser = await chromium.launch({
-  headless: !HEADED,
+  headless: !opts.headed,
   executablePath: CHROMIUM_PATH,
   args: ['--autoplay-policy=no-user-gesture-required'],
 });
 
-let passed = 0;
-const failures = [];
+/** Results indexed by `selected` position, so output order never depends on timing. */
+const results = selected.map(t => ({ name: t.name, runs: [] }));
+let cursor = 0;
 
-for (const { name, fn } of tests) {
+/**
+ * Run one test in its own context.
+ *
+ * A fresh `BrowserContext` per test is what makes the pool safe: localStorage,
+ * permissions and the page itself are all per-context, so two tests toggling the
+ * same persisted setting cannot see each other. The shared pieces — the browser
+ * process and the static server — are stateless with respect to the app.
+ */
+async function runOne(entry) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   page.errors = [];
   page.on('console', m => { if (m.type() === 'error') page.errors.push(m.text()); });
   page.on('pageerror', e => page.errors.push(`pageerror: ${e.message}`));
 
+  const started = Date.now();
   try {
     await page.goto(`${server.origin}/index.html`, { waitUntil: 'load' });
-    await page.waitForFunction(() => window.complexNoiseStill, null, { timeout: 5000 });
-    await fn(page);
-    console.log(`  ✓ ${name}`);
-    passed++;
+    await page.waitForFunction(() => window.complexNoiseStill, null, { timeout: 15000 });
+    await entry.fn(page);
+    return { ok: true, ms: Date.now() - started };
   } catch (err) {
-    console.log(`  ✗ ${name}\n      ${err.message.split('\n').join('\n      ')}`);
-    failures.push(name);
+    return { ok: false, ms: Date.now() - started, error: err.message };
   } finally {
     await context.close();
   }
 }
 
+async function worker() {
+  while (cursor < queue.length) {
+    const entry = queue[cursor++];
+    const outcome = await runOne(entry);
+    results[entry.index].runs.push(outcome);
+    // Progress as it happens, so a hung suite shows which tests already landed.
+    process.stdout.write(outcome.ok ? '.' : 'F');
+  }
+}
+
+const wallStart = Date.now();
+await Promise.all(Array.from({ length: Math.min(WORKERS, queue.length) }, worker));
+process.stdout.write('\n\n');
+
 await browser.close();
 await server.close();
 
-console.log(`\n${passed}/${tests.length} passed`);
+let passed = 0;
+const failures = [];
+for (const result of results) {
+  const failed = result.runs.filter(r => !r.ok);
+  // Slowest run is the honest figure: it is the one setting the wall-clock floor.
+  const ms = Math.max(...result.runs.map(r => r.ms));
+  if (failed.length) {
+    failures.push(result.name);
+    const detail = failed[0].error.split('\n').join('\n      ');
+    const flaky = failed.length < result.runs.length ? ` (${failed.length}/${result.runs.length} runs)` : '';
+    console.log(`  ✗ ${result.name}${flaky}  ${ms}ms\n      ${detail}`);
+  } else {
+    passed++;
+    console.log(`  ✓ ${result.name}  ${ms}ms`);
+  }
+}
+
+const wall = ((Date.now() - wallStart) / 1000).toFixed(1);
+const repeated = opts.repeat > 1 ? ` × ${opts.repeat} passes` : '';
+console.log(`\n${passed}/${results.length} passed in ${wall}s`
+  + ` (${WORKERS} worker${WORKERS === 1 ? '' : 's'}${repeated})`);
 if (failures.length) {
   console.log(`failed: ${failures.join(', ')}`);
   process.exit(1);

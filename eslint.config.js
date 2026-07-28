@@ -11,6 +11,7 @@ const browser = {
   navigator: 'readonly',
   location: 'readonly',
   localStorage: 'readonly',
+  Storage: 'readonly',
   console: 'readonly',
   requestAnimationFrame: 'readonly',
   cancelAnimationFrame: 'readonly',

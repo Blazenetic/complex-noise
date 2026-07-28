@@ -6,7 +6,158 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
-## [Unreleased] — the calm pass, this time with the code
+## [Unreleased] — the night shift: batteries, deadlines and a suite that stopped waiting
+
+Nothing in this pass changes what the app looks like. It changes what happens to
+it at three in the morning, and what happens to CI at half past four.
+
+The theme running through it: **three separate things were trusting a clock they
+did not control.** The wake lock trusted that a promise resolves before the user
+changes their mind. The sleep timer trusted `setTimeout` to fire on a sleeping
+phone. And two tests trusted that the machine running them had nothing better to
+do. All three were fine until they weren't, and none of them would have shown up
+in a screenshot.
+
+### Fixed
+
+- **The wake lock could be stranded, and the screen stayed on all night.**
+  `navigator.wakeLock.request()` is asynchronous. Press play, then pause inside
+  that gap: `stop()` released a handle that was still `null`, the request then
+  resolved into that same variable, and nothing was ever going to let go of it
+  again. The result is a phone lit until the battery goes, over audio that
+  stopped hours ago — the one failure worse than the noise stopping. The request
+  now re-checks that playback is still wanted after the await, and a pending
+  guard stops two overlapping requests orphaning the first handle.
+- **The sleep timer could overshoot by hours.** It was a single `setTimeout`, and
+  `setTimeout` is not a promise about when anything happens: a backgrounded tab
+  has its timers throttled to once a minute, and a suspended phone does not run
+  them at all. A one-hour timer on a locked handset could come back long overdue
+  and still playing. The deadline is now absolute wall-clock time, the timeout is
+  demoted to a hint, and coming back to a visible page re-checks it and re-arms
+  for whatever is left.
+- **The timer persisted the wrong value.** `setTimerHours` wrote its raw
+  argument — a string, straight off a range input — while the engine ran on the
+  number it fell back to. Anything unparseable left the control and the sound
+  disagreeing on the next load.
+- **Dragging a slider wrote to disk sixty times a second.**
+  `localStorage.setItem` is synchronous *and* persistent: it blocks the main
+  thread while the browser serialises the origin's storage. Every `input` event
+  on the volume, EQ and Field Lab sliders fired one, on the same thread as the
+  render loop. New `writeThrottled()` collapses a drag into one write; `read()`
+  consults the pending value first, so the setting is live immediately and only
+  the disk finds out late. Discrete controls — colours, themes, toggles — keep
+  the straight-through write, because there is no burst there to collapse.
+
+### The suite
+
+- **Tests run in a worker pool. 55s → 15s.** The suite was spending 6 seconds of
+  CPU across 55 seconds of wall clock; the other 49 were spent watching a
+  callout decide which side of a node to sit on. `BrowserContext` was already the
+  isolation boundary, so running them one at a time was never buying safety —
+  only idleness. Four workers, one browser, one server.
+- **Two tests turned out to be measuring the machine.** Parallelism exposed both
+  within a minute of turning it on:
+  - The mode-rotation test asserted that a callout mode changes within 5.2
+    *wall-clock* seconds. But the render loop integrates `dt` capped at
+    `MAX_STEP_S`, so under load its diagnostics clock advances deliberately
+    slower than the wall. On a busy host the test failed for a reason that had
+    nothing to do with the schedule. It now asserts against the field's own
+    `realClock`, which is the clock the feature is actually built on.
+  - The colour-coalescing test asserted that three `page.click` calls land inside
+    a 160 ms window. Each click is a CDP round trip, so it was really asserting
+    "the harness is fast today". The clicks are still real clicks on real
+    buttons; they are just dispatched from inside the page, so the harness's own
+    latency is out of the measurement.
+- **New assertions**, each verified to fail against the code it guards: the wake
+  lock is released when it is granted into a stopped player; the sleep timer
+  fires on its deadline after a simulated two-hour suspend; sixty slider events
+  do not become sixty disk writes; a discrete setting still persists on the
+  click.
+- **`--filter`, `--workers`, `--repeat`, `--list`**, per-test timings, and
+  `until()` for polling a condition instead of sleeping through it.
+
+### CI
+
+- **Documentation-only changes skip the browser suite** — decided *inside* the
+  workflow, never with `paths-ignore`. A workflow filtered out by `paths-ignore`
+  does not run, and a job that does not run reports no status at all, so a
+  required check sits on "Expected" forever and the docs PR you were trying to
+  speed up can never merge. A `gate` job always runs and decides; a `CI` job
+  always runs and reports. Branch protection points at `CI`.
+- **`[skip ci]` now works on pull requests.** GitHub honours the commit markers
+  natively on `push` but not on `pull_request`, so the gate checks them itself.
+  A `skip-ci` label does the same job for a PR whose history you would rather not
+  rewrite.
+- **npm and Playwright browser caches, and concurrency cancellation.** The
+  browser cache is keyed on the *resolved* Playwright version rather than the
+  `^1.56.1` range, because a floating range would hand a new Playwright an old
+  browser build and fail with "Executable doesn't exist" — which reads like a
+  broken cache rather than a stale one.
+
+### Measured, and then not done
+
+`Math.random()` is called 576,000 times per noise buffer, on a path that blocks
+the main thread inside a 150 ms cross-fade. In isolation, an inline xorshift128
+fills the same array **4× faster**, which looked like an easy win.
+
+It is not. Measured inside the actual generator, pink went 11.78 ms → 9.43 ms —
+7.6%, because the filter arithmetic dominates and the CPU overlaps the two.
+Worse, the *readable* version of the change, a shared `nextWhite()` function, ran
+at 32.95 ms — **three times slower than what we already had** — because
+module-scope state lives in context slots rather than registers.
+
+So the change was reverted and the measurement kept. The isolated benchmark
+overstated the win by a factor of fifty, and the tidy version of the optimisation
+was a pessimisation. The header comment in `js/noise.js` already warned about
+this in a different form; it turns out to be true for a second reason too.
+
+### Lab Log
+
+**Melchett:** BBAAAHHH! Report! How much FASTER is the noise?
+
+**Arty:** Seven point six percent. And only if I write it out six times by hand.
+The neat version was three times *slower*.
+
+**Melchett:** THREE TIMES SLOWER?! You have invented a SLOWNESS ENGINE!
+
+**Darling:** He measured it, Melchett. Then he threw it away. That is the part
+you are supposed to be pleased about.
+
+**Blazenetic:** The benchmark said four times faster. The generator said seven
+percent. Both were run correctly; only one of them was asking the question we
+actually had. Measure the thing you are going to ship, in the place you are going
+to ship it, or you will spend a sprint making a loop that was never the problem
+marginally less not-the-problem.
+
+**Baldrick:** I have a cunning plan. We could make the tests faster by removing
+the waiting bits.
+
+**Darling:** That is — Baldrick, that is genuinely what happened.
+
+**Baldrick:** Is it?
+
+**Darling:** The waiting bits were nine tenths of it. Four browsers now wait at
+the same time. Fifty-five seconds down to fifteen. Don't look so pleased.
+
+**Blazenetic:** And two tests fell over the moment the machine got busy, which
+means they had been quietly measuring the *machine* rather than the app for as
+long as they had existed. They passed for the wrong reason. A green suite on an
+idle laptop is not evidence; it is a coincidence you have not investigated yet.
+
+**Melchett:** And the WAKE LOCK? Did the wake lock hold the line?
+
+**Arty:** The wake lock held the line for eight hours after the music stopped.
+That was the bug.
+
+**Melchett:** ...Ah.
+
+**Blazenetic:** Nothing here changes a single pixel. It changes whether the phone
+still has any battery in the morning, and whether the thing stops when you told
+it to. That is the whole product. The play button still works at three a.m.
+
+---
+
+## [Previous] — the calm pass, this time with the code
 
 PR #31 described the info-layer calm pass in full and then merged four files:
 the changelog, the readme, the history and one loosened test assertion.

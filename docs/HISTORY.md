@@ -1,6 +1,6 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks, and then kept going *one more time* when the callouts decided they wanted to stop bouncing left and right and simply *calm down* — and then kept going *yet again* when it turned out the calm pass had only shipped as prose.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks, and then kept going *one more time* when the callouts decided they wanted to stop bouncing left and right and simply *calm down* — and then kept going *yet again* when it turned out the calm pass had only shipped as prose — and then kept going *one more time still* when three separate things turned out to be trusting clocks they did not control.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
@@ -181,6 +181,26 @@ The same work became the opening chapter of [Teachings & Learnings](./TEACHINGS_
 
 ---
 
+## The night shift — batteries, lying clocks, and the suite that learned to measure the app (PR #33)
+
+Nothing here changes a single pixel. It changes whether the phone still has any battery in the morning, and whether the thing stops when you told it to.
+
+Three separate things were trusting a clock they did not control. The wake lock trusted that a promise resolves before the user changes their mind. The sleep timer trusted `setTimeout` to fire on a sleeping phone. Two tests trusted that the machine running them had nothing better to do.
+
+Blazenetic researched the overnight failure modes, targeted the exact places where the product promise could silently break, coordinated the architecture so the clocks we control are the ones we trust, set the measurement discipline (“measure the thing you are going to ship, in the place you are going to ship it”), oversaw the suite rewrite and the CI gate that actually lets docs PRs merge, and then complained about every edge case that tried to leave a phone glowing until dawn.
+
+Arty implemented under firm direction: the wake-lock race closed, the wall-clock deadline installed, `writeThrottled` and the pending-aware read, the worker pool, `until()`, four new assertions each verified to fail against the unfixed code, two tests rewritten so they measure the app instead of the host. The suite went from 55 s to 15 s. The residual outlines still have a floor.
+
+> **Blazenetic:** Nothing here changes a single pixel. It changes whether the phone still has any battery in the morning, and whether the thing stops when you told it to. That is the whole product. The play button still works at three a.m. Research first. Architecture second. Potato plans last. You’re welcome.  
+> **Arty:** The wake lock held the line for eight hours after the music stopped. That was the bug. I ran the suite three times. Please don’t yell.  
+> **Baldrick:** I have a cunning plan. We could make the tests faster by removing the waiting bits.  
+> **Darling:** That is — Baldrick, that is genuinely what happened.  
+> **Melchett:** A DOCUMENTATION AND RELIABILITY OFFENSIVE OF HISTORIC SCALE! BBAAAHHH!
+
+The same work is now the opening chapter of [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) and the first entry on [Blame](./BLAME.md).
+
+---
+
 ## The Lab Voice
 
 Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing, Teachings, Blame) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
@@ -204,6 +224,7 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 - Honest wall-clock and commit numbers in the documentation. The chaos is earned.
 - Time-based envelopes and sticky hysteresis so the info layer feels deliberate rather than twitchy.
 - The principle that a test that gets easier is the loudest signal in a codebase.
+- Clocks we control, not clocks we merely hope will fire.
 
 ---
 
@@ -219,6 +240,7 @@ Made in a small Australian lab.
 One hundred and eighty-seven commits. Fifty-two wall-clock hours. Overnight bootstrap included.  
 The residual outlines have a floor.  
 A test that gets easier is the loudest signal in a codebase.  
+A green suite on an idle laptop is not evidence.  
 Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md) · [Changelog](../CHANGELOG.md) · [Blame](./BLAME.md) · [Teachings](./TEACHINGS_AND_LEARNINGS.md)
 
 Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.  

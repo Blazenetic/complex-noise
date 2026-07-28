@@ -7,7 +7,7 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 > We disagreed.  
 >  
 > Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
-> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
+> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases — Rick energy, calibrated for residual outlines), Arty (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
@@ -92,8 +92,8 @@ On wide viewports the field itself carries a column of the renderer’s own sour
 
 Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
 
-> **Blazenetic:** I researched the φ offset so the modes would differ, coordinated the heat decay, and then complained about the undrawable slots that used to hold forever. You’re welcome.  
-> **Arty:** Distinct modes on screen. Independent toggles. Fold works. I checked three times.
+> **Blazenetic:** I researched the φ offset so the modes would differ, coordinated the heat decay, and then complained about the undrawable slots that used to hold forever. The multiverse of identical callouts is slightly smaller today. You’re welcome.  
+> **Arty:** Distinct modes on screen. Independent toggles. Fold works. I checked three times. Please don’t yell.
 
 ### Field Lab
 The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), and the three canvas overlays. All live. All persisted. Reset button included because sometimes you just want to go home again.
@@ -272,7 +272,7 @@ Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of inc
 See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  

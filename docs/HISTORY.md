@@ -59,8 +59,8 @@ Eight detail modes now, offset per node by lifetime ID through φ so consecutive
 
 Measured at 2.2× density and 60 fps: 0.60 ms per frame total. 14/14 tests, three runs for stability.
 
-> **Blazenetic:** I researched the φ distribution so the modes would actually differ, coordinated the deferred glow queue, oversaw the heat decay, and then complained about the slots that held forever under the listing. You’re welcome.  
-> **Arty:** Distinct modes, independent toggles, fold works. I checked three times.  
+> **Blazenetic:** I researched the φ distribution so the modes would actually differ, coordinated the deferred glow queue, oversaw the heat decay, and then complained about the slots that held forever under the listing. You’re welcome. The multiverse of edge cases is slightly smaller today.  
+> **Arty:** Distinct modes, independent toggles, fold works. I checked three times. Please don’t yell.  
 > **Baldrick:** What if the heat trail is a potato that slowly cools?  
 > **Darling:** No.  
 > **Melchett:** Eight modes! A crushing quantitative victory! BBAAAHHH!

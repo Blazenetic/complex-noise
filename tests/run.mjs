@@ -52,7 +52,11 @@ test('Field Lab defaults match constants.js', async page => {
   assertEqual(await page.inputValue('#fieldDepth'), '0.75', 'perspective should default to 0.75');
   assertEqual(await page.inputValue('#fieldDwell'), '14', 'callout dwell should default to 14 s');
   assertEqual(await page.getAttribute('.fps-seg[data-fps="30"]', 'aria-pressed'), 'true', '30 fps should be the default cap');
-  assertEqual(await page.getAttribute('#fieldCodeToggle', 'aria-checked'), 'true', 'source overlay should default to on');
+  // The three canvas overlays are separate settings, and all three default on,
+  // so a first-run session looks as it did when they were one switch.
+  assertEqual(await page.getAttribute('#fieldCodeToggle', 'aria-pressed'), 'true', 'source overlay should default to on');
+  assertEqual(await page.getAttribute('#fieldCalloutToggle', 'aria-pressed'), 'true', 'node callouts should default to on');
+  assertEqual(await page.getAttribute('#fieldEdgeToggle', 'aria-pressed'), 'true', 'edge dimensions should default to on');
 });
 
 test('the info layer has its own canvas, and clears when Stats is off', async page => {
@@ -151,6 +155,74 @@ test('callout detail modes rotate on a dwell that the Lab controls', async page 
   await page.waitForTimeout(5200);
   const second = await page.evaluate(() => window.complexNoiseStill.getFieldStats().labelMode);
   assert(first !== second, `mode should have rotated within a dwell, stayed on ${first}`);
+});
+
+test('callouts on screen read different quantities from each other', async page => {
+  // One global detail mode meant every callout on screen was a copy of its
+  // neighbour. Each node now offsets the rotation by its own lifetime ID, so
+  // what has to hold is that several distinct modes are placed at once.
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await page.click('#uiChromeMinimise');
+  await page.waitForTimeout(4000);
+
+  const s = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+  assert(s.labels >= 3, `expected several callouts on a wide viewport, got ${s.labels}`);
+  assert(s.modeCount >= 8, `expected at least eight detail modes, got ${s.modeCount}`);
+  assert(s.modesOnScreen >= 3,
+    `expected several distinct modes among ${s.labels} callouts, got ${s.modesOnScreen}`);
+});
+
+test('the three canvas overlays toggle independently and persist', async page => {
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await page.click('#uiChromeMinimise');
+  await page.waitForTimeout(2500);
+  await page.click('#uiChromeToggle');
+
+  await page.click('#fieldEdgeToggle');
+  await page.waitForTimeout(400);
+  assertEqual(await page.getAttribute('#fieldEdgeToggle', 'aria-pressed'), 'false', 'dimensions should read off');
+  assertEqual(await storage(page, 'complexNoise_stillFieldEdges'), 'false', 'dimensions should persist');
+  assertEqual(await page.getAttribute('#fieldCalloutToggle', 'aria-pressed'), 'true', 'callouts should be untouched');
+  let s = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+  assertEqual(s.edgeLabels, 0, 'turning dimensions off must stop drawing them');
+
+  await page.click('#fieldCalloutToggle');
+  await page.waitForTimeout(400);
+  s = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+  assertEqual(s.labels, 0, 'turning callouts off must stop drawing them');
+  assertEqual(await storage(page, 'complexNoise_stillFieldCallouts'), 'false', 'callouts should persist');
+
+  await page.click('#fieldLabReset');
+  await page.waitForTimeout(200);
+  assertEqual(await page.getAttribute('#fieldCalloutToggle', 'aria-pressed'), 'true', 'reset should restore callouts');
+  assertEqual(await page.getAttribute('#fieldEdgeToggle', 'aria-pressed'), 'true', 'reset should restore dimensions');
+});
+
+test('the source overlay folds from its own title bar', async page => {
+  // The overlay is canvas, so the fold is a hit test rather than a button. It
+  // must respond on the header and nowhere else.
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await page.click('#uiChromeMinimise');
+  await page.waitForTimeout(2500);
+
+  // First free corner with the minimised cluster holding the bottom right.
+  const left = 1400 - 356 - 20;
+  const headerY = 24 + 6;
+
+  await page.mouse.click(left + 120, headerY + 400);
+  await page.waitForTimeout(200);
+  assertEqual(await page.evaluate(() => window.complexNoiseStill.getFieldState().codeFolded), false,
+    'a press on the listing body must not fold it');
+
+  await page.mouse.click(left + 120, headerY);
+  await page.waitForTimeout(300);
+  assertEqual(await page.evaluate(() => window.complexNoiseStill.getFieldState().codeFolded), true,
+    'a press on the title bar should fold the listing');
+
+  await page.mouse.click(left + 120, headerY);
+  await page.waitForTimeout(300);
+  assertEqual(await page.evaluate(() => window.complexNoiseStill.getFieldState().codeFolded), false,
+    'a second press should unfold it');
 });
 
 test('theme toggles to bone and uses deep-bone #E0D6C8', async page => {

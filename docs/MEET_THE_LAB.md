@@ -10,7 +10,7 @@ This page is the visitor version. The full Lab Voice style guide lives in Google
 ## Who is actually here
 
 **Blazenetic** walks in, already mid-sentence about a perspective matrix.  
-Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Researches the hard maths, then complains about having to implement it. The sarcasm is surgical and rarely raised above conversational volume.
+Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Researches the hard maths, then complains about having to re-research it. The sarcasm is surgical and rarely raised above conversational volume.
 
 > “I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome.”
 

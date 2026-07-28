@@ -28,7 +28,7 @@ Key movements:
 - **Info Layer / Field Lab / Stats** — Engineering-drawing callouts, Live / Math / Code panels, source overlay, and live controls for density, reach, trail, perspective, dwell and frame rate. All battery-conscious and measurable.
 - **Immersion** — Dedicated “Minimise interface” path with a floating restore cluster. Escape always brings the controls back.
 - **Architecture** — Clean ES-module split. One-way state flow: modules own state and publish; `app.js` is the only thing that writes to the DOM. This is what keeps the play button honest when the sleep timer fires hours later.
-- **Tests & docs** — Playwright browser suite + CI, comprehensive AGENTS.md, and the beginning of the Lab Voice system.
+- **Tests & docs** — Playwright browser suite + CI, comprehensive AGENTS.md, and the beginning of the Lab Voice system itself.
 
 The public [0.1.0] release landed on 28 July 2026. Full details live in the [Changelog](../CHANGELOG.md) (including the Lab Log).
 

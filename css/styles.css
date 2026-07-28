@@ -970,13 +970,14 @@ main {
   line-height: 1.3;
 }
 
-/* Type selector */
+/* Type selector — two clean rows of three (Brown/Pink/White then Green/Fan/Rain) */
 .types {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   background: var(--surface);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: 999px;
+  border-radius: 16px;
   padding: 5px;
   gap: 4px;
   width: 100%;
@@ -985,10 +986,9 @@ main {
 }
 
 .type-btn {
-  flex: 1;
   padding: 14px 8px;
   border: none;
-  border-radius: 999px;
+  border-radius: 12px;
   background: transparent;
   color: var(--text-secondary);
   font-size: 0.95rem;

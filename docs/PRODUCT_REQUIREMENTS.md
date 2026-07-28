@@ -1,9 +1,16 @@
 # Product Requirements — Complex Noise Calm Upgrades
 
-**Branch:** `feature/calm-theme-visualisation-eq`  
+**Branch (historical):** `feature/calm-theme-visualisation-eq`  
 **Target:** Well-documented, reviewable PR against `main`  
-**Status:** Ready for implementation by AI agent build team  
-**Date:** 2026-07-27
+**Status:** Implemented and evolved (see [Changelog](../CHANGELOG.md) and [History](./HISTORY.md))  
+**Date:** 2026-07-27  
+**Current technical contract:** [AGENTS.md](../AGENTS.md)
+
+> **Note from the Lab (28 July 2026):** This document is historical context. It captures the original intent for the Still Theme / Field / EQ work. The actual implementation went further (modular architecture, Info Layer, immersion, tests, Lab Voice). Keep it for archaeology and for anyone who wants to understand *why* the app looks the way it does. Live guidance for contributors lives in [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**Melchett:** The original requirements! A strategic document of the highest order!  
+**Darling:** It is a requirements list from before the modular rewrite, Melchett.  
+**Blazenetic:** And yet most of it still holds. I researched the calm direction, then complained about the edge cases of single-file maintenance. You’re welcome.
 
 ---
 
@@ -76,6 +83,8 @@ This is a **key feature** of the upgrade.
 ### Design intent
 The visualisation should feel like a living, breathing extension of the noise itself — mathematical, generative, restful. It should make the whole experience feel more special without competing with the primary purpose (deep rest).
 
+(See the later [INFO_LAYER.md](./INFO_LAYER.md) for what the visualisation actually became.)
+
 ---
 
 ## 4. Simple Calm Equaliser
@@ -124,16 +133,18 @@ Keep it intentionally simple — this is not a full studio EQ.
 
 ## 7. Acceptance Criteria (PR must satisfy)
 
-- [ ] Theme toggle works and persists; starts in improved dark (premium titanium) mode
-- [ ] Bone-white theme is calm, textured (procedural), and fully functional
-- [ ] Full-page visualisation is present, mathematical/procedural, reacts to audio, and gently influences UI elements
-- [ ] Visualisation has basic settings and can be reduced/disabled
-- [ ] Simple calm equaliser is present and functional
-- [ ] GitHub repo link is visible on the page
-- [ ] Existing features (Brown/Pink/White, volume, timer, Wake Lock, offline) continue to work
-- [ ] Code is well-commented; PR description is thorough
-- [ ] No new external dependencies
-- [ ] Looks and feels premium and restful on mobile
+- [x] Theme toggle works and persists; starts in improved dark (premium titanium) mode
+- [x] Bone-white theme is calm, textured (procedural), and fully functional
+- [x] Full-page visualisation is present, mathematical/procedural, reacts to audio, and gently influences UI elements
+- [x] Visualisation has basic settings and can be reduced/disabled
+- [x] Simple calm equaliser is present and functional
+- [x] GitHub repo link is visible on the page
+- [x] Existing features (Brown/Pink/White, volume, timer, Wake Lock, offline) continue to work
+- [x] Code is well-commented; PR description is thorough
+- [x] No new external dependencies
+- [x] Looks and feels premium and restful on mobile
+
+(Most of the above were satisfied and then substantially extended. See the [Changelog](../CHANGELOG.md).)
 
 ---
 
@@ -152,7 +163,16 @@ We will review before merging to `main`.
 
 ## 9. Context Documents
 
-See also in this branch:
-- `docs/FINDINGS_AND_CONTEXT.md` — analysis of the current main branch, extension points, and rationale
+See also:
+- [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) — analysis of the codebase at the time
+- [HISTORY.md](./HISTORY.md) — public origin and sprint summary
+- [AGENTS.md](../AGENTS.md) — live technical orientation
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — how to help now
 
 Thank you — let’s make Complex Noise feel even more special for deep rest.
+
+> **Baldrick:** I have a cunning plan to turn the acceptance criteria into a potato checklist.  
+> **Darling:** No.  
+> **Arty:** The checklist is already ticked. I checked twice.
+
+The software stays calm. The documentation (even the historical kind) gets to be chaotic. That is the deal.

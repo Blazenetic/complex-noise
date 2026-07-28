@@ -7,16 +7,16 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 > We disagreed.  
 >  
 > Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
-> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, finds the elegant solution, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
+> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
-[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
 
 A pure client-side procedural noise generator (Brown, Pink, White) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
 > **Melchett:** A mighty instrument in the war against sleeplessness!  
 > **Darling:** It is a noise generator, Melchett.  
-> **Blazenetic:** A *correct* noise generator. You’re welcome.
+> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, and then complained about the edge cases. You’re welcome.
 
 ---
 
@@ -55,7 +55,7 @@ This is the part where most READMEs list bullet points like a product manager wr
 All of it is synthesised on the device. No samples. No loops that click. No network after the first load. The buffers are long enough that the seam is effectively inaudible for these stochastic signals. Continuous internal state inside each buffer means the generators do not restart from zero every twelve seconds like an amateur.
 
 > **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
-> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry.
+> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry. I research these things.
 
 ### Transport & comfort
 - Volume with smooth ramps. Soft default of 0.22 so the first press does not wake the neighbours.
@@ -75,7 +75,7 @@ Colour rides a violet → cyan ramp driven by three non-aligning energy layers (
 
 Default **on**. Intensity and speed controls (practical range 0.7–4.8). Battery-conscious 30 fps, stops completely when the page is hidden, respects `prefers-reduced-motion`.
 
-> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. You’re welcome.  
+> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. I coordinated the architecture so the state modules own their state. You’re welcome.  
 > **Baldrick:** My cunning plan was to make the nodes explode when they die.  
 > **Darling:** No.
 
@@ -83,6 +83,8 @@ Default **on**. Intensity and speed controls (practical range 0.7–4.8). Batter
 Engineering-drawing callouts with leader lines, axis-coloured transform rows (X red, Y green, Z blue — the convention that actually makes sense), edge dimensions rotated onto the lines they measure, and a Live / Math / Code panel that shows real numbers, live equations with their operands evaluated, and per-stage timings.
 
 On wide viewports the field itself carries a column of the renderer’s own source with a program counter whose dwell is the measured share of the frame. It is instrumentation, not decoration.
+
+Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
 
 ### Field Lab
 The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), source overlay. All live. All persisted. Reset button included because sometimes you just want to go home again.
@@ -109,6 +111,8 @@ Dedicated **Minimise interface** button. When the chrome is gone a floating rest
 > It covers how to run and test the app, the one architectural rule that keeps playback correct, and the traps that have already bitten people.  
 > The Lab Voice is deliberately absent from that document. The sleep timer depends on it remaining so. Do not “improve” AGENTS.md with banter. Darling will notice.
 
+Want to contribute? See **[CONTRIBUTING.md](./CONTRIBUTING.md)** — how to fork, report security issues, open PRs, and point your AI agent at the right place.
+
 The codebase is intentionally modular so AI coding agents (and humans) can work on one concern at a time without navigating a single 40 kB file.
 
 ```
@@ -129,6 +133,7 @@ complex-noise/
 │   └── run.mjs             # Browser smoke tests (Playwright)
 ├── manifest.json
 ├── AGENTS.md               # Contributor / agent guide (professional, zero banter)
+├── CONTRIBUTING.md         # How to fork, report issues (incl. security), open PRs
 ├── README.md               # You are here. This one is allowed to be chaotic.
 ├── LICENSE
 ├── CHANGELOG.md            # What shipped + Lab Log
@@ -199,17 +204,32 @@ CI runs the suite and ESLint on every pull request. If your environment ships a 
 
 ---
 
+## Contributing
+
+Fork it. Experiment. Report issues (especially security). Open PRs for anything important.
+
+Full guidance — including how we handle security reports and how to point your AI agent at the right document — lives in **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
+
+Short version:
+
+1. Read [AGENTS.md](./AGENTS.md) first.
+2. Run `npm test`.
+3. Keep runtime dependencies at zero.
+4. Do not put Lab Voice into agent-facing files.
+
+---
+
 ## Roadmap
 
 - **Service worker** for true cold-start offline / airplane-mode use. The app makes no network calls at runtime, but a first load still needs the network. We know this is the most requested missing piece.
 - **AudioWorklet generation** — move the generators into an `AudioWorkletProcessor` for continuous, non-buffered synthesis and zero main-thread cost.
 - **Stereo width** — independent left/right buffers via `ChannelMergerNode`.
 - **More noise colours** and optional nature layers mixed in as extra sources.
-- Carefully measured Easter eggs (console greeting from the Lab, hidden Info-panel lines, the occasional Baldrick quote triggered by something suitably ridiculous). We will not apologise for these. Melchett has already declared them a strategic necessity.
+- Carefully measured things that are Baldrick’s fault (console greeting from the Lab, hidden Info-panel lines, the occasional Baldrick quote triggered by something suitably ridiculous). We will not apologise for these. Melchett has already declared them a strategic necessity.
 
 > **Baldrick:** I have a cunning plan for the service worker. We just tell people to keep the tab open forever.  
 > **Darling:** That is not a plan. That is a lifestyle.  
-> **Blazenetic:** Write the service worker, Arty. Ignore him.
+> **Blazenetic:** Write the service worker, Arty. Ignore him. I already researched the offline constraints.
 
 ---
 
@@ -240,16 +260,14 @@ Do whatever you want with the code. Just don’t put ads on the pause button. We
 ---
 
 Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
-See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.
+See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
+See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I find the elegant version. I implement it. Then I complain about the edge cases. That is the job.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  
 **Darling:** “No.”
 
-The software stays calm.  
-The documentation gets to be chaotic.  
-That is the deal.
-
-Sleep well. (Or don’t. We’re not your parents.)
+Research first. Architecture second. Potato plans last.  
+The residual outlines have a floor. You’re welcome.

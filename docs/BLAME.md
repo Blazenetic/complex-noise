@@ -8,7 +8,44 @@ This is not a performance review. It is a public record of shenanigans, firm dir
 
 ---
 
-## Opening entry — the calm pass, this time with the code (PR #32, 28 July 2026)
+## Opening entry — the night shift: batteries, deadlines and a suite that stopped waiting (PR #33, 28 July 2026)
+
+Nothing here changes a single pixel. It changes whether the phone still has any battery in the morning, and whether the thing stops when you told it to. That is the whole product.
+
+Three separate things were trusting a clock they did not control. The wake lock trusted that a promise resolves before the user changes their mind. The sleep timer trusted `setTimeout` to fire on a sleeping phone. Two tests trusted that the machine running them had nothing better to do. All three were fine until they weren’t.
+
+### Who gets the credit (and the gentle roasting)
+
+**Blazenetic**  
+Researched the overnight failure modes, targeted the exact places where the product promise could silently break, coordinated the architecture so the clocks we control are the ones we trust, set the measurement discipline ("measure the thing you are going to ship, in the place you are going to ship it"), oversaw the suite rewrite and the CI gate that actually lets docs PRs merge, and then complained about every edge case that tried to leave a phone glowing until dawn. Firm direction throughout. You’re welcome.
+
+**Arty**  
+Did the careful implementation under firm direction. Wake-lock race closed. Wall-clock deadline installed. `writeThrottled` and the pending-aware read. Worker pool, `until()`, four new assertions each verified to fail against the unfixed code, two tests de-flaked so they measure the app instead of the host. Ran the suite three times. Looked up like someone was about to yell. Survived. Please don’t yell.
+
+**Baldrick**  
+Proposed making the tests faster by removing the waiting bits. (That is genuinely what happened, which is recorded with some discomfort.) Also residual potato plans involving the sleep timer. Officially his fault. The casting system remains his earlier cunning plan.
+
+**Melchett**  
+Declared a documentation and reliability offensive of historic scale the moment the first timing number appeared. Volume eleven as usual. Briefly mistook the stranded wake lock for a victory. Corrected.
+
+**Darling**  
+Sat everyone down. Rejected the potato timer plans. Reminded Melchett that a gate job that always runs is not the end of history. Confirmed the residual outlines already had a floor. Kept the wall intact.
+
+### Official summary of blame for this entry
+
+| Person     | Blame / credit                                                                 | Severity      |
+|------------|---------------------------------------------------------------------------------|---------------|
+| Blazenetic | Research, targeting overnight modes, coordination, measurement discipline       | Productive    |
+| Arty       | Careful implementation, suite rewrite, new assertions, survival                 | High (positive) |
+| Baldrick   | Accidental correctness on the waiting-bits plan; residual potato timer ideas    | Comic         |
+| Melchett   | Volume-eleven declaration; brief confusion over the stranded lock               | Process noise |
+| Darling    | Restoring order, potato rejection, wall integrity                               | Essential     |
+
+Everyone pitched in. The software stayed calm. The documentation got to be chaotic. That is the deal.
+
+---
+
+## Previous opening entry — the calm pass, this time with the code (PR #32, 28 July 2026)
 
 PR #31 described the calm info-layer pass in full and then merged four files: the changelog, the readme, the history and one loosened test assertion. `js/still-field.js` was never touched. Every envelope, the sixth edge slot, the stacked secondary values and the sticky callout side existed only as prose. A test was weakened to make the suite agree with an implementation that did not exist.
 
@@ -65,7 +102,7 @@ The technical rules still live in [AGENTS.md](../AGENTS.md). This page is narrat
 
 **Melchett:** BEHOLD THE BLAME PAGE! A STRATEGIC MASTERPIECE OF ACCOUNTABILITY! BBAAAHHH!  
 **Darling:** It is a markdown file with a table, Melchett.  
-**Blazenetic:** With correct attribution and a clear record of who audited a closed green PR and then made the code match the prose. You’re welcome.  
+**Blazenetic:** With correct attribution and a clear record of who researched the overnight failure modes, coordinated the clocks we actually control, and then complained about the edge cases. You’re welcome.  
 **Arty:** I checked the links. Please don’t yell.  
 **Baldrick:** I have a cunning plan for the next entry involving a potato tribunal—  
 **Darling:** No.

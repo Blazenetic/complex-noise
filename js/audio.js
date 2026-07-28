@@ -33,7 +33,7 @@ import {
   EQ_MIN_DB,
   EQ_MAX_DB,
 } from './constants.js';
-import { write, readNumber, readEnum, clamp } from './storage.js';
+import { write, writeThrottled, readNumber, readEnum, clamp } from './storage.js';
 import { generateNoiseBuffer } from './noise.js';
 
 // --- Module-private audio nodes ---
@@ -377,7 +377,7 @@ export function setType(type) {
  */
 export function setVolume(v) {
   currentVolume = clamp(v, 0, 1);
-  write(STORAGE_KEYS.volume, currentVolume);
+  writeThrottled(STORAGE_KEYS.volume, currentVolume);
   if (isPlaying && gainNode) {
     const now = audioCtx.currentTime;
     gainNode.gain.cancelScheduledValues(now);
@@ -423,45 +423,128 @@ export function setStillEqHigh(v) {
  */
 export function setTimerHours(hours) {
   timerHours = Math.max(0, parseFloat(hours) || 0);
-  write(STORAGE_KEYS.timer, hours);
+  // Persist the *parsed* value, not the argument. The slider hands over a
+  // string, and anything unparseable used to be stored verbatim while the
+  // engine ran on the 0 it fell back to — so the control and the sound
+  // disagreed on the next load.
+  writeThrottled(STORAGE_KEYS.timer, timerHours);
   if (isPlaying) scheduleTimer();
   else emit();
 }
+
+/**
+ * Wall-clock instant the current timer is due, or 0 when no timer is armed.
+ *
+ * The timer is the one promise this app makes that a user is asleep for, and
+ * `setTimeout` is not a promise about when anything happens. A backgrounded tab
+ * has its timers throttled to once a minute, and a suspended phone does not run
+ * them at all — a one-hour timer on a locked handset can come back minutes or
+ * hours late, still playing. Wall-clock time is what "stop in an hour" means, so
+ * that is what the deadline is stored in, and `setTimeout` is demoted to a hint
+ * that gets re-checked and re-armed whenever the page comes back.
+ */
+let timerEndsAt = 0;
 
 function scheduleTimer() {
   clearTimer();
   if (timerHours <= 0) return;
 
-  const ms = timerHours * 3600 * 1000;
-  timerId = setTimeout(() => {
-    timerId = null;
-    stop(true, 'Sleep timer ended');
-  }, ms);
-
+  timerEndsAt = Date.now() + timerHours * 3600 * 1000;
+  armTimer(timerHours * 3600 * 1000);
   setStatus(`Playing · timer ${timerHours}h`);
 }
 
+function armTimer(ms) {
+  if (timerId) clearTimeout(timerId);
+  timerId = setTimeout(() => {
+    timerId = null;
+    // Trust the deadline over the timer that woke us. A throttled timeout can
+    // fire early as well as late, and re-arming for the remainder is both the
+    // correction and the retry.
+    if (Date.now() >= timerEndsAt) stop(true, 'Sleep timer ended');
+    else armTimer(timerEndsAt - Date.now());
+  }, Math.max(0, ms));
+}
+
+/**
+ * Re-check the deadline against the wall clock. Called when the page becomes
+ * visible again, which is the moment a suspended device gets to notice that the
+ * hour the user asked for elapsed while it was asleep.
+ */
+function checkTimerDeadline() {
+  if (!isPlaying || timerEndsAt === 0) return;
+  const remaining = timerEndsAt - Date.now();
+  if (remaining <= 0) stop(true, 'Sleep timer ended');
+  else armTimer(remaining);
+}
+
 function clearTimer() {
+  timerEndsAt = 0;
   if (timerId) {
     clearTimeout(timerId);
     timerId = null;
   }
 }
 
+/**
+ * Milliseconds until the sleep timer fires, or 0 when none is armed. Exposed for
+ * the smoke tests, which cannot wait an hour to find out whether the deadline
+ * survived a simulated suspend.
+ * @returns {number}
+ */
+export function getTimerRemainingMs() {
+  return timerEndsAt === 0 ? 0 : Math.max(0, timerEndsAt - Date.now());
+}
+
 // ----------------------------------------------------------
 // Wake Lock — keeps the screen alive during a session where supported
 // ----------------------------------------------------------
 
+/**
+ * Acquire the screen wake lock, if playback is still wanted by the time the
+ * browser grants it.
+ *
+ * `navigator.wakeLock.request()` is asynchronous, and the gap matters: pressing
+ * play and then pause inside it used to leave the lock held forever. `stop()`
+ * ran `releaseWakeLock()` while `wakeLock` was still null, the request then
+ * resolved into that null and installed itself, and nothing ever released it —
+ * so the phone's screen stayed lit all night over silent audio. That is the
+ * worst possible failure for this app: the one thing worse than the noise
+ * stopping is the battery going with it.
+ *
+ * Hence the re-check after the await, and the `pending` guard so two overlapping
+ * requests cannot orphan the first lock by overwriting the handle.
+ */
+let wakeLockPending = false;
+
 async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return;
+  if (wakeLock || wakeLockPending) return;
+
+  wakeLockPending = true;
+  let lock = null;
   try {
-    wakeLock = await navigator.wakeLock.request('screen');
-    // The browser drops the lock when the page is hidden; forget our handle so
-    // the visibilitychange listener below re-acquires a fresh one.
-    wakeLock.addEventListener?.('release', () => { wakeLock = null; });
+    lock = await navigator.wakeLock.request('screen');
   } catch (err) {
     // Not supported, or denied because the document was not visible.
+    return;
+  } finally {
+    wakeLockPending = false;
   }
+
+  // Playback may have stopped while the request was in flight.
+  if (!isPlaying) {
+    Promise.resolve(lock.release()).catch(() => {});
+    return;
+  }
+
+  wakeLock = lock;
+  // The browser drops the lock when the page is hidden; forget our handle so
+  // the visibilitychange listener below re-acquires a fresh one. Compared by
+  // identity so a stale lock's late release event cannot clear a newer one.
+  lock.addEventListener?.('release', () => {
+    if (wakeLock === lock) wakeLock = null;
+  });
 }
 
 function releaseWakeLock() {
@@ -472,9 +555,11 @@ function releaseWakeLock() {
   Promise.resolve(lock.release()).catch(() => {});
 }
 
-// Re-acquire the wake lock when the tab becomes visible again while playing.
+// Re-acquire the wake lock when the tab becomes visible again while playing,
+// and take the opportunity to check whether the sleep timer came due while the
+// device was asleep.
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && isPlaying && !wakeLock) {
-    requestWakeLock();
-  }
+  if (document.visibilityState !== 'visible') return;
+  if (isPlaying && !wakeLock) requestWakeLock();
+  checkTimerDeadline();
 });

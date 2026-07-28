@@ -1113,6 +1113,9 @@ function boot() {
     getIsPlaying: audio.getIsPlaying,
     getCurrentType: audio.getCurrentType,
     getAudioContext: audio.getAudioContext,
+    // The sleep timer's deadline, so a test can check that it survived a
+    // simulated suspend without waiting an hour to find out.
+    getTimerRemainingMs: audio.getTimerRemainingMs,
   };
 }
 

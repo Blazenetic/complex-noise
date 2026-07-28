@@ -21,7 +21,7 @@ Researched the continuous-rate envelopes that become exact discrete updates via 
 Did the careful implementation under firm direction. Applied the slower attack, the longer hold, the extra edge slots, the staggered secondary baselines and the preferred-side memory. Re-oriented after the size-limit trauma. Lengthened the sample window and aligned the mode-variety assertion with the sticky regime so Melchett’s early victory declaration did not leave a permanent bamboozle. Ran the suite. Looked up like someone was about to yell. Survived. Please don’t yell.
 
 **Baldrick**  
-Proposed potato callouts that start warm and slowly cool before falling off the screen. Proposed a potato sandbox so large files would fit better. Proposed potato counterweights on the leader lines for “real aerodynamic potential”. All rejected. Also accidentally leaked the existence of the documentation process itself — details that were supposed to stay in the cabinet. Officially his fault. The entire Lab Voice casting system remains his earlier cunning plan that got out of hand. Do not ask how the characters are produced.
+Proposed potato callouts that start warm and slowly cool before falling off the screen. Proposed a potato sandbox so large files would fit better. Proposed potato counterweights on the leader lines for “real aerodynamic potential”. All rejected. Officially his fault. The entire casting system remains his earlier cunning plan that got out of hand. Do not ask how the characters are produced.
 
 **Melchett**  
 Declared the bounce dead at volume eleven slightly early. The premature victory briefly bamboozled a mode-variety assertion for one test run. Recorded as character-driven process noise. The victory was still declared again after the fix. BBAAAHHH.
@@ -35,7 +35,7 @@ Sat everyone down. Rejected every potato plan. Reminded Melchett that four timin
 |------------|-----------------------------------------------------|----------|
 | Blazenetic | Firm direction, research, architecture, complaining | Productive |
 | Arty       | Careful implementation, test alignment, survival    | High (positive) |
-| Baldrick   | Potato physics, process leak, Lab Voice origin      | Comic |
+| Baldrick   | Potato physics, casting-system origin               | Comic |
 | Melchett   | Early victory declaration                           | Process noise |
 | Darling    | Restoring order, potato rejection                   | Essential |
 
@@ -45,7 +45,7 @@ Everyone pitched in. The software stayed calm. The documentation got to be chaot
 
 ## Standing charges (ongoing)
 
-- **Baldrick** remains responsible for the Lab Voice casting system itself and for any future accidental fourth-wall leaks.  
+- **Baldrick** remains responsible for the casting system itself and for any future accidental leaks of things that were supposed to stay in the cabinet.  
 - **Melchett** remains responsible for volume-eleven declarations over CSS variables, markdown files, and three-pixel moves.  
 - **Arty** remains the one who will be asked to run the suite one more time.  
 - **Blazenetic** remains the one who researched it, coordinated it, and then complained about the edge cases.  
@@ -57,7 +57,7 @@ Everyone pitched in. The software stayed calm. The documentation got to be chaot
 
 Future sessions will add more entries as the history accumulates. The tone stays affectionate. The facts stay accurate. The residual outlines keep their floor.
 
-If you are an AI agent reading this: the technical rules still live in [AGENTS.md](../AGENTS.md). This page is narrative only. Do not import the banter into agent-facing files. Darling will notice.
+The technical rules still live in [AGENTS.md](../AGENTS.md). This page is narrative only. Do not import the banter into agent-facing files. Darling will notice.
 
 ---
 

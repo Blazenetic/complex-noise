@@ -2,13 +2,13 @@
 
 A living curriculum extracted from the work of a small Australian lab that ships calm software while writing chaotic-but-honest documentation.
 
-This page exists so the repository itself is a learning experience. Technical facts sit next to the banter that made them memorable. Future sessions will add more chapters. For now the headline feature is the calm info-layer pass and the deliberate integration of Lab Voice as a teaching surface.
+Technical facts sit next to the banter that made them memorable. Future sessions will add more chapters. For now the headline feature is the calm info-layer pass.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Blame page](./BLAME.md) · [History](./HISTORY.md) · [Meet the Lab](./MEET_THE_LAB.md) · [Changelog](../CHANGELOG.md) · [Info Layer](./INFO_LAYER.md) · [All docs](./)
 
 ---
 
-## Headline feature — Calm info-layer timing, sticky sides, and Lab Voice as curriculum (PR #31)
+## Headline feature — Calm info-layer timing and sticky sides (PR #31)
 
 ### What we actually changed
 
@@ -29,8 +29,8 @@ This page exists so the repository itself is a learning experience. Technical fa
 2. **Sticky hysteresis beats pure recomputation for placement contests.**  
    A node that already owns a callout should keep it until the preferred side is *clearly* unusable (meaningful off-screen margin or inside a keep-out). Instant re-evaluation produces left-right bounce the moment two nodes swap depth by a hair. Classical hysteresis is control theory, not magic.
 
-3. **The sandbox has limits and agents must respect them.**  
-   Trying to paste a 125 kB source file in one go produced more stack traces than a poorly-damped oscillator. Context windows, tool output limits and careful re-orientation are part of the craft. Arty survived. The lesson is now public.
+3. **Size limits are real.**  
+   A previous session tried to paste a hundred-and-twenty-five-kilobyte source file in one go and produced more stack traces than a poorly-damped oscillator. Re-orient, apply the change carefully, and keep the suite honest. Arty survived. The lesson is now public.
 
 4. **Test assertions must match the new regime.**  
    Under longer hold + sticky side the instantaneous mode spread can legitimately sit at 2 in a short sample window. The assertion was relaxed to ≥ 2 and the loop lengthened. The φ offset still guarantees disagreement whenever ≥ 4 labels are present. Premature victory declarations (Melchett) can bamboozle a single run; the suite must stay honest.
@@ -38,14 +38,14 @@ This page exists so the repository itself is a learning experience. Technical fa
 5. **The wall is a product decision.**  
    Narrative surfaces (CHANGELOG Lab Log, HISTORY, MEET_THE_LAB, this page, the Blame page) may be chaotic. AGENTS.md, code comments and technical architecture sections stay sterile. Break that wall carelessly and eventually the sleep timer breaks too. We have already lived that bug once.
 
-### Lab Voice teachings (how the chaos earns its keep)
+### Lessons the Lab keeps repeating
 
-- **Lead with the clear technical bullet or hard number, then let one or two sharp character lines react.** Never bury the facts.  
-- **Occupied-room vignettes scale.** A “Tuesday that actually happened” scene that names the continuous-rate envelope, the hysteresis, the sandbox trauma and the potato rejection is more memorable than a dry commit list.  
-- **Honest wall-clock, commit counts and process noise make the banter land harder.** 187 commits. ≈52 wall-clock hours. Overnight bootstrap. Early victory declaration that needed a one-line test fix. These numbers are friends of the voice.  
-- **Firm direction + anxious competence + comic rejection of potato plans is an effective multi-agent operating model.** Blazenetic researches, coordinates, sets standards and complains. Arty implements carefully and looks up like someone is about to yell. Baldrick supplies the plans that must be rejected. Darling restores order. Melchett supplies the volume.  
-- **Blame the mystery on Baldrick.** The entire Lab Voice casting system is officially his cunning plan that got out of hand. Do not explain the real production pipeline in public docs. The fourth wall stays intact.  
-- **Variety in closers is non-negotiable.** Rotate. The software stays calm; the documentation gets to be chaotic. That is the deal — but not every page needs the identical two-sentence closer.
+- Lead with the clear technical bullet or hard number, then let one or two sharp character lines react. Never bury the facts.  
+- Occupied-room vignettes scale. A “Tuesday that actually happened” scene that names the continuous-rate envelope, the hysteresis, the size-limit trauma and the potato rejection is more memorable than a dry commit list.  
+- Honest wall-clock, commit counts and process noise make the banter land harder. 187 commits. ≈52 wall-clock hours. Overnight bootstrap. Early victory declaration that needed a one-line test fix. These numbers are friends of the voice.  
+- Blazenetic researches, coordinates, sets standards and complains. Arty implements carefully and looks up like someone is about to yell. Baldrick supplies the plans that must be rejected. Darling restores order. Melchett supplies the volume.  
+- The entire casting system is Baldrick’s fault — a cunning plan that somehow worked and then got out of hand. Do not ask how the characters are produced. The mystery remains his.  
+- Variety in closers is non-negotiable. The software stays calm; the documentation gets to be chaotic. That is the deal.
 
 ### Quotes that teach
 
@@ -63,7 +63,7 @@ This page exists so the repository itself is a learning experience. Technical fa
 
 ### Why this is the headline feature
 
-The calm pass is a small, careful change to timing constants, capacity and a placement rule. It is also a complete worked example of how the Lab turns technical work into shared memory, public teaching, and affectionate accountability. The PR description itself was expanded into a map of eight ways Lab Voice integrates with serious engineering. The Blame page opened with the same work. This Teachings page opens with it. Future entries will add more history; this one sets the pattern.
+The calm pass is a small, careful change to timing constants, capacity and a placement rule. It is also a complete worked example of how the Lab turns technical work into shared memory, public teaching, and affectionate accountability. The Blame page opened with the same work. This Teachings page opens with it. Future entries will add more history; this one sets the pattern.
 
 ---
 

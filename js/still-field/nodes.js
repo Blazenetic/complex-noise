@@ -16,7 +16,7 @@
  *   spatial grid, so only pairs inside the 5-cell half-neighbourhood are
  *   visited; a pair that stops being visited freezes its envelope at whatever
  *   strength it held. That is why `clearLinksFor()` is called on respawn and on
- *   world wrap.
+ *   world wrap, and why a resize drops link state wholesale.
  * - **Every node is created by one object literal.** One shape means one hidden
  *   class, and a monomorphic property load in the four passes that read these
  *   150 objects thirty times a second. Adding a field means adding it to
@@ -231,9 +231,20 @@ export function resizeField() {
     // constantly, and re-seeding would teleport every node mid-session.
     const sx = world.w / prevW;
     const sy = world.h / prevH;
-    for (const n of population.nodes) {
-      n.x *= sx;
-      n.y *= sy;
+    if (sx !== 1 || sy !== 1) {
+      for (const n of population.nodes) {
+        n.x *= sx;
+        n.y *= sy;
+      }
+      // A rescale moves every node at once, and an aspect-ratio change moves
+      // them relative to one another. That is precisely the discontinuity the
+      // spatial grid cannot see: a pair that leaves the visited
+      // half-neighbourhood is never tested again, so its envelope freezes at
+      // whatever strength it last held — a line that stays lit between two
+      // nodes that are no longer near each other. Dropping every strength
+      // costs one re-attack nobody can see, on an event that is already
+      // debounced to 150 ms.
+      population.links.fill(0);
     }
   }
 

@@ -8,67 +8,59 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ## [Unreleased]
 
-### Added — instrumentation
-- **Per-node detail modes.** Eight modes (energy, transform, velocity, projection, wave, links, lifecycle, seed) instead of five, and each node offsets the rotation by its own lifetime ID through the golden ratio — so the callouts on screen read different quantities from each other rather than eight copies of one.
-- **Per-node handle glyphs.** Circle, square, diamond or crosshair on the node, chosen by detail mode, so the family of quantity is legible before the text is.
-- **Graph telemetry per node** — degree, coupling `κ` and nearest-neighbour distance, accumulated inside the existing link pass on values the renderer had already computed. No second graph scan.
-- **Four kinds of edge dimension** (span, coupling, reach, energy), derived from the pair's identity so a dimension is stable for the life of the pair and neighbouring edges disagree.
-- **Separate switches for the three canvas overlays** — node callouts, edge dimensions and the source listing — as a chip bank in the Field Lab, with a live "n of 3" readout.
-- **The source listing folds from its own title bar** on the field, leaving a compact header. Session-only, alongside the persisted on/off switch.
-- **Live view regrouped** into Frame / Graph / Instrumentation / Field / Audio, with batching ratio, cell occupancy, max degree, distinct modes on screen, edge-slot occupancy, world and viewport geometry, trail time constant, glow budget, both clocks and buffer size.
-- **Five more Math rows** — lifecycle envelope, R2 spawn sequence, trail decay, expected degree against measured, detail-mode selection — each with live operands.
-- **Code view** carries a second live line per stage and a whole-frame total against the budget.
-- **Source listing** gained stage rails in the gutter, a frame-cost header and a stacked stage-share footer.
+### Added — instrumentation maturity (PR #26)
+- **Per-node detail modes.** Eight modes (energy, transform, velocity, projection, wave, links, lifecycle, seed). Each node offsets the global rotation by its own lifetime ID through φ, so consecutive IDs land far apart and the callouts on screen reliably disagree.
+- **Per-node handle glyphs.** Circle, square, diamond or crosshair, chosen by mode, so the family of quantity is legible before the text is.
+- **Graph telemetry per node** — degree, coupling κ and nearest-neighbour distance, accumulated inside the existing link pass. No second graph scan.
+- **Four kinds of edge dimension** (span, coupling, reach, energy), derived from the pair’s identity so a dimension is stable for the life of the pair.
+- **Independent switches** for the three canvas overlays (node callouts, edge dimensions, source listing) as a chip bank in the Field Lab, with live “n of 3” readout.
+- **Foldable source listing** — folds from its own title bar on the field (session-only). Stage rails in the gutter and a stacked stage-share footer while open.
+- **Live view regrouped** into Frame / Graph / Instrumentation / Field / Audio, with batching ratio, cell occupancy, max degree, distinct modes on screen, edge-slot occupancy, geometry, clocks and buffer size.
+- **Five more Math rows** and second live lines in Code, plus a whole-frame total against budget.
 
 ### Changed
-- **The program counter is a heat trail, not a highlight.** Each line's warmth rises as the counter reaches it and decays exponentially at 3.2/s, and the sweep slowed from 1.4 s to 2.8 s. The full-width purple bar that jumped a row every 70 ms is gone.
-- **Frame-time trace autoscales** to the observed peak. Fixed to the frame budget it was honest and useless: the renderer uses about 1% of a 33 ms frame, so every bar rounded to one pixel.
-- **Health thresholds** lead on renderer work rather than delivered frame rate. A cap is honoured by waiting, so the rate wobbles either side of it on any machine; reading that as "strained" at 1% of budget was the readout disputing its own measurements.
+- **Program counter is a heat trail**, not a highlight. Heat rises as the counter reaches a line and decays at 3.2/s; sweep slowed to 2.8 s. The full-width purple strobe is gone.
+- **Frame-time trace autoscales** to the observed peak (previously fixed to the budget and therefore useless at ~1 % utilisation).
+- **Health thresholds** lead on renderer work rather than delivered frame rate (a cap is honoured by waiting, so the rate always wobbles).
 
 ### Fixed
-- **Edge dimensions could hold every slot and draw nothing.** A pair whose midpoint sat under the source listing stayed claimed for its full dwell while being unpaintable — and the listing changes corner when the interface is minimised, so this happened on every immersion. Undrawable slots now fade out and free themselves, and short or blocked candidates are rejected before they can claim.
+- **Edge dimensions could hold every slot and draw nothing.** Undrawable slots (midpoint under the source listing, especially after minimise) now free themselves. Measured before: 1 shown / 5 held. After: 3–5 shown / 5 held.
 
 ### Performance
-- The glow pass walks a queue of the nodes pass 0 deferred instead of rescanning the whole population — 10 iterations rather than 150 at the Lab's top density.
-- The readout paints only the view that is on screen, and nothing at all while the panel is folded.
+- Glow pass walks a queue of deferred nodes (10 iterations instead of 150 at top density).
+- Readout paints only the visible view and nothing while folded.
+- Measured at 2.2× density / 60 fps: **0.60 ms** total per frame.
 
-### Documentation & Lab Voice rampage (28 July 2026, afternoon)
+### Documentation & Lab Voice (this pass)
 
-A second ambitious documentation offensive after the morning’s explosion. Research into the full 26–28 July sprint trail, the PR history, the spatial-grid numbers, the test-suite growth, and every residual-outline floor that was fought for.
-
-#### What shipped (this pass)
-
-- Richer **CHANGELOG** with quantitative sprint stats drawn from the actual PRs and Live view numbers
-- Expanded **History** and **Meet the Lab** with additional occupied-room scenes and variety
-- Stronger cross-links, more “researches / coordinates / does not invent maths” framing for Blazenetic, and deliberately varied closers
-- Light Lab asides in INFO_LAYER, PRODUCT_REQUIREMENTS and FINDINGS so even the historical archaeology stays alive
-- CONTRIBUTING and docs index polished for navigability
-- Subtle things that are Baldrick’s fault left where they belong (narrative surfaces only)
+Public narrative surfaces cleaned of any name-checks that belonged only in the private Drive Spec. The mystery stays behind the wall. Statistics tightened from the full PR and commit trail. Cross-links and varied closers restored. HISTORY rewritten as a proper chronological timeline with team attribution.
 
 #### Sprint by the numbers (research summary)
 
 | Metric | Value | Notes |
 |--------|-------|-------|
 | Calendar time | ~36–48 hours | 26–28 July 2026 intensive sprint |
+| Merged pull requests | 22 | From modularisation through instrumentation maturity |
+| Supporting commits | dozens | Heavy volume on 27–28 July; many docs-only and CI recovery commits |
 | Public release | 0.1.0 | 28 July 2026 |
 | Test suite | 5 → 33+ assertions | Playwright + real Web Audio; sleep-timer test is sacred |
 | Node population (default) | 26–44 (clamped) | Density multiplies the clamp, never the raw viewport |
-| Pair tests (97 nodes) | ~440 vs 4 656 | Spatial grid ≈ 10× reduction; both numbers visible in Live view |
+| Pair tests (97 nodes) | ~440 vs 4 656 | Spatial grid ≈ 10× reduction; both numbers live in Live view |
 | Frame budget default | 30 fps | Stops when page hidden; motion is time-based (`dt`) |
 | Residual outline | Floored against dimness, scaled by lifecycle | Quiet nodes stay legible; births/deaths still ease |
 | Storage keys | 20+ namespaced | All via `storage.js`; direct `localStorage` is forbidden |
 | Runtime dependencies | 0 | Static files only. Forever. |
 | Ads / fees | 0 | “Stuff it. We’ll make our own.” |
 
-#### Lab Log (rampant documentation pass)
+#### Lab Log
 
-**Melchett:** Gentlemen! We have returned with *statistics*! Tables! Numbers! A documentation offensive of historic scale! The forces of dry open-source READMEs are in full retreat! BBAAAHHH!
+**Melchett:** Gentlemen! We have returned with *statistics*! Twenty-two pull requests! Tables! Numbers! A documentation offensive of historic scale! The forces of dry open-source READMEs are in full retreat! BBAAAHHH!
 
 **Darling:** It is still a set of markdown files, Melchett. Sit down.
 
-**Blazenetic:** I researched the full PR trail, the pair-test numbers that the Live view already publishes, the test-suite growth from a handful of smoke checks to thirty-three assertions, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording and complained about the edge cases of repetitive closers. You’re welcome.
+**Blazenetic:** I researched the full PR trail, the pair-test numbers the Live view already publishes, the test-suite growth from a handful of smoke checks to thirty-three assertions, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording, attributed the work to the people who actually did it, and removed a few name-checks that belonged only behind the wall. You’re welcome.
 
-**Arty:** I added the extra links and the table so people can actually find the numbers. I checked the wall again. AGENTS.md is still completely clean. Please don’t yell.
+**Arty:** Cross-links checked. AGENTS.md is still completely clean. I ran the mental checklist three times. Please don’t yell.
 
 **Baldrick:** I have a cunning plan, sir. What if the changelog *is* the test suite? We just declare every number a victory and only accept potato-based pull requests.
 
@@ -79,22 +71,6 @@ A second ambitious documentation offensive after the morning’s explosion. Rese
 **Darling:** That is not how victories work. And the residual outlines already had a floor.
 
 **Blazenetic:** Research first. Architecture second. Potato plans last. The software stays calm.
-
-#### Further Lab Voice offensive (same afternoon, PR #26 narrative surfaces)
-
-All public-facing narrative documents updated to weave the new instrumentation in: README Features, History (new maturity section), Meet the Lab (new Tuesday scene), CONTRIBUTING, docs index. Variety in closings, research framing held, wall intact. Rick/Morty energy for Blazenetic and Arty locked in.
-
-**Melchett:** Eight modes in the README! A foldable source! The documentation itself has entered the Field Lab! BBAAAHHH!
-
-**Darling:** Still markdown, Melchett.
-
-**Blazenetic:** I researched the existing PR trail, coordinated the narrative updates so the facts stayed next to the banter, and then complained about the edge cases of people inventing origin stories. The multiverse of identical callouts is slightly smaller today. You’re welcome.
-
-**Arty:** Cross-links checked. AGENTS.md still sterile. I ran the mental checklist three times. Please don’t yell.
-
-**Baldrick:** What if the entire README is replaced by a single cunning potato?
-
-**Darling:** No.
 
 ---
 
@@ -128,7 +104,7 @@ First public release after intensive iterative development (26–28 July 2026).
 - Spatial grid linking: at 97 nodes the field visits ~440 pairs a frame instead of 4 656
 
 **Info layer (nerd mode)**
-- Canvas callouts with stable node IDs and rotating diagnostics (energy / position / velocity / projection / wave)
+- Canvas callouts with stable node IDs and rotating diagnostics
 - Integrated Live / Math / Code panel (renderer health, topology, live equations, per-stage timings)
 - Field Lab controls: density, reach, trail, perspective, dwell, frame cap (30/45/60), source overlay
 - Edge dimensions rotated onto the lines they measure
@@ -153,7 +129,7 @@ First public release after intensive iterative development (26–28 July 2026).
 
 ### Lab Log
 
-**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The spatial grid saves thousands of pair tests! The war is as good as won! BBAAAHHH!
+**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The spatial grid saves thousands of pair tests! Twenty-two pull requests! The war is as good as won! BBAAAHHH!
 
 **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.
 

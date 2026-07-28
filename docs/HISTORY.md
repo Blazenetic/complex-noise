@@ -1,6 +1,6 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours, complete with the numbers that the Live view will happily confirm — and then kept going when the instrumentation itself decided it wanted personality.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours — and then kept going when the instrumentation itself decided it wanted personality.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
@@ -25,23 +25,52 @@ Live from the first day: https://blazenetic.github.io/complex-noise/
 
 ---
 
-## The Sprint — 26–28 July 2026
+## The Sprint Timeline — 26–28 July 2026
 
-What followed was intensive, iterative development (human + AI agents) that turned the MVP into the polished, modular, agent-friendly project you see today.
+What followed was intensive, iterative development. In roughly **36–48 hours** the lab shipped **22 merged pull requests** and a large volume of supporting commits. The test suite grew from a handful of smoke checks to 33+ assertions. A spatial grid later cut pair tests from ~4 656 to ~440 at 97 nodes. Zero runtime dependencies were introduced at any point.
 
-Key movements and the numbers that came with them:
+### Phase 1 — Foundations (early 27 July)
 
-- **Still Theme & Glass** — Premium brushed-titanium dark (default) plus a bone-white calm theme with procedural SVG texture. Glass surfaces (standard and ultra-transparent) so the living field shows through. Theme and glass treated as independent axes.
-- **Still Field** — Evolved from soft particles into a full-page nodes-and-edges visualisation with real perspective depth, node lifecycles (70–150 s), retracting links, residual outlines so quiet nodes stay legible, and three non-aligning energy layers driven by breath, an irrational plane wave, and the audio analyser. Violet stays calm under brown noise; white pushes cyan. Default on, 30 fps, stops when the page is hidden. Spatial grid linking later reduced pair tests from ~4 656 to ~440 at 97 nodes (≈10×). Both numbers are published in the Live view so the claim is checkable.
-- **Still EQ** — Simple, calm 3-band equaliser (low / mid / high) sitting cleanly in the audio graph.
-- **Info Layer / Field Lab / Stats** — Engineering-drawing callouts, Live / Math / Code panels, source overlay, and live controls for density (0.5–2.2× on the *clamped* 26–44 window), reach, trail (rate-per-second), perspective, dwell and frame rate. All battery-conscious and measurable. Full contract in [INFO_LAYER.md](./INFO_LAYER.md).
-- **Immersion** — Dedicated “Minimise interface” path with a floating restore cluster. Escape always brings the controls back.
-- **Architecture** — Clean ES-module split. One-way state flow: modules own state and publish; `app.js` is the only thing that writes to the DOM. This is what keeps the play button honest when the sleep timer fires hours later. See [AGENTS.md](../AGENTS.md).
-- **Tests & docs** — Playwright browser suite + CI grew from a handful of smoke checks to 33+ assertions. Comprehensive AGENTS.md, and the beginning of the Lab Voice system itself.
+**PRs 1–6 (and related):** Still Theme, Still Field visualisation, Still EQ, modular ES-module split, glass surfaces, nodes-and-edges graph, default-on field with speed and intensity controls.
 
-The public [0.1.0] release landed on 28 July 2026. Full details live in the [Changelog](../CHANGELOG.md) (including the Lab Log and the later documentation rampage).
+- **Blazenetic** researched the perspective and lifecycle maths, coordinated the modular architecture (state modules own state; `app.js` is the sole DOM writer), and complained about the residual-outline floor.
+- **Arty** implemented the careful wiring, moved the analyser before the gain node so the visualisation tracks the actual noise, and ran the suite more times than is healthy.
+- **Darling** restored order when the accessibility labels threatened to go missing.
+- **Baldrick** proposed that the nodes should explode on death. The plan was rejected.
+- **Melchett** declared victory over the first CSS variable.
 
-> **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! Ten times fewer pair tests! The war is as good as won! BBAAAHHH!  
+### Phase 2 — Polish & immersion (mid 27 July)
+
+**PRs 8–12:** Ultra glass, calmer defaults, immersion hide/show, sleep-timer slider, dedicated Minimise interface button, Blazenetic branding, deep-bone theme, foldable nerd HUD.
+
+- **Arty** fixed the fade race and the labels that had been drawing under the cards on phones.
+- **Blazenetic** coordinated the independent theme/glass axes and the soft volume default (0.22).
+- **Darling** insisted on 44 px touch targets and then handled the labels herself.
+- **Melchett** declared another victory when the glass became *ultra*.
+- **Baldrick** suggested replacing the equaliser with a single potato. Rejected again.
+
+### Phase 3 — Instrumentation maturity (late 27 – early 28 July)
+
+**PRs 13–19:** Still Field visual upgrade packages, info-layer visibility fixes, spatial grid, Field Lab, Live/Math/Code panels, residual shell that actually respects the lifecycle envelope, deep-bone + foldable stats UX.
+
+- **Blazenetic** researched the spatial-grid approach (the ~10× pair-test reduction), oversaw the typed-array implementation, and then spent an hour complaining about the residual outline floor and the glow-pass trap.
+- **Arty** made the info layer actually visible (energy gate, keep-outs, legible alpha), added the real stats readout, and checked the pair counts in Live view so the claim was checkable.
+- **Darling** kept the wall intact and the potato plans out of the render loop.
+- **Melchett** declared the spatial grid a crushing quantitative victory.
+
+### Phase 4 — Lab Voice & documentation offensive (28 July)
+
+**PRs 18, 21–26 (and the present docs pass):** Lab Voice system itself, first Changelog, Meet the Lab, History, CONTRIBUTING, rampant stats pass, instrumentation narrative surfaces, mystery locked behind the Drive wall.
+
+- **Blazenetic** researched the full PR trail, coordinated the clearer wording, removed name-checks that belonged only behind the wall, and complained about the edge cases of repetitive closers.
+- **Arty** added the cross-links, the pair-test numbers, and the “please don’t yell” energy that keeps the documentation honest.
+- **Baldrick** continued to supply cunning plans (mostly potato-based). All were rejected. This is recorded as “things that are Baldrick’s fault.”
+- **Melchett** declared every markdown file a strategic masterpiece.
+- **Darling** sat everyone down and reminded them it was still markdown.
+
+The public [0.1.0] release landed on 28 July 2026. Full details live in the [Changelog](../CHANGELOG.md).
+
+> **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! Ten times fewer pair tests! Twenty-two pull requests in less than two days! The war is as good as won! BBAAAHHH!  
 > **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.  
 > **Blazenetic:** I researched the perspective and lifecycle maths, coordinated the modular architecture, researched the spatial-grid approach, and then complained about the edge cases. You’re welcome.  
 > **Baldrick:** My cunning plan was to make the nodes explode when they die.  
@@ -57,7 +86,7 @@ Then the Lab did what the Lab does: research, coordinate, implement the elegant 
 
 Eight detail modes now, offset per node by lifetime ID through φ so consecutive IDs land far apart. Handle glyphs follow the family of quantity. Degree, coupling and nearest-neighbour distance accumulated inside the existing link pass — no second graph scan. Four stable edge-dimension kinds. The counter became a heat trail that cools at 3.2/s. The source listing folds from its own title bar. Three independent overlay chips with a live “n of 3”. More telemetry, five new Math rows, second live lines in Code, a frame total. Undrawable slots now free themselves. Health leads on work, not on the wobble of a capped frame rate.
 
-Measured at 2.2× density and 60 fps: 0.60 ms per frame total. 14/14 tests, three runs for stability.
+Measured at 2.2× density and 60 fps: **0.60 ms** per frame total. Tests green, three runs for stability.
 
 > **Blazenetic:** I researched the φ distribution so the modes would actually differ, coordinated the deferred glow queue, oversaw the heat decay, and then complained about the slots that held forever under the listing. You’re welcome. The multiverse of edge cases is slightly smaller today.  
 > **Arty:** Distinct modes, independent toggles, fold works. I checked three times. Please don’t yell.  

@@ -9,9 +9,11 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 ## [Unreleased]
 
 ### Documentation
-- Dramatic Lab-voice overhaul of the README (stronger framing, origin line, closing banter)
-- Meet the Lab rewritten to feel like the room is occupied rather than a cast list
-- Light polish on docs/README.md and History origin framing
+- Dramatic Lab-voice overhaul of the README (stronger framing, research-not-invention maths wording, broader tools note, more varied banter and closings)
+- Meet the Lab rewritten as a realistic occupied-room scene rather than a descriptive cast list
+- History deepened with more chaos while preserving every factual detail; variety in endings
+- docs/README light polish to match
+- Updated Blazenetic description across narrative docs; removed repeated identical closers
 
 ### Planned / deferred
 - Service worker for true cold-start offline / airplane-mode PWA
@@ -22,17 +24,17 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ### Lab Log (docs pass)
 
-**Melchett:** Another crushing victory for the forces of documentation! The README is now *dramatic*! The enemy will never recover!
+**Melchett:** Another crushing victory for the forces of documentation! The README is now *dramatic*! Meet the Lab feels like a real room! The enemy will never recover!
 
-**Darling:** It is a README, Melchett.
+**Darling:** It is still a README and a couple of markdown files, Melchett.
 
-**Blazenetic:** I made myself look good and the technical sections still scannable. You’re welcome.
+**Blazenetic:** I made myself look good, fixed the “invents the maths” line to the accurate research-and-deep-dive version, and the technical sections are still scannable. You’re welcome.
 
-**Arty:** I checked that AGENTS.md is still completely clean. The wall is intact. I think we’re safe?
+**Arty:** I checked that AGENTS.md is still completely clean. The wall is mostly intact. I think we’re safe?
 
-**Baldrick:** My cunning plan was to put the entire Lab Voice guide into AGENTS.md so the agents would be more fun.
+**Baldrick:** My cunning plan was to put the entire Lab Voice guide into AGENTS.md so the agents would be more fun. Also the potato equaliser.
 
-**Darling:** No. Absolutely not. Sit down.
+**Darling:** No. Absolutely not. Sit down. Both of you.
 
 ---
 
@@ -113,4 +115,4 @@ First public release after intensive iterative development (26–28 July 2026).
 ---
 
 Made in a small Australian lab.  
-Sleep well. (Or don’t. We’re not your parents.)
+The software stays calm. The documentation gets to be chaotic. That is the deal.

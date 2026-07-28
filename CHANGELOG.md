@@ -16,6 +16,8 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 - History, docs/README, PRODUCT_REQUIREMENTS and FINDINGS framed more clearly as historical / living narrative
 - INFO_LAYER given navigation links and a light Lab aside while keeping the technical contract intact
 - README navigation and Contributing section strengthened
+- Further pass: more character variations, stronger “researches / coordinates / does not invent maths” framing for Blazenetic, varied document closers, subtle Easter eggs
+- Lab Voice Spec updated to v2.2 in Google Drive (expanded closings list, Easter-egg guidance, research emphasis)
 
 ### Planned / deferred
 - Service worker for true cold-start offline / airplane-mode PWA
@@ -24,23 +26,23 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 - Additional noise colours / nature layers
 - App Easter eggs (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
 
-### Lab Log (docs explosion)
+### Lab Log (docs explosion + variations pass)
 
-**Melchett:** Gentlemen! Today we have detonated a *documentation bomb* of historic proportions! CONTRIBUTING.md! Links everywhere! The enemy of boring READMEs will never recover! BBAAAHHH!
+**Melchett:** Gentlemen! Today we have detonated a *documentation bomb* of historic proportions! CONTRIBUTING.md! Links everywhere! Varied closers! The enemy of boring READMEs will never recover! BBAAAHHH!
 
-**Darling:** It is a set of markdown files with cross-references, Melchett.
+**Darling:** It is a set of markdown files with cross-references and a longer list of sign-offs, Melchett.
 
-**Blazenetic:** I researched how calm open-source projects handle security reports and contribution guidance, then wrote the short version and complained about the edge cases of people putting banter into AGENTS.md. You’re welcome.
+**Blazenetic:** I researched contribution and security patterns, coordinated the short correct versions, strengthened the “I research the maths, I do not invent it” framing, and then complained about the edge cases of repetitive closers. You’re welcome.
 
-**Arty:** I checked the wall three times. AGENTS.md is still completely clean. CONTRIBUTING.md points agents at it. I think we’re safe?
+**Arty:** I checked the wall three times. AGENTS.md is still completely clean. The new Spec is in Drive. I think we’re safe?
 
 **Baldrick:** I have a cunning plan, sir. What if the CONTRIBUTING.md *is* the security policy? We just tell everyone that every PR is a security issue and only accept potato-based patches.
 
 **Darling:** No. Absolutely not. Sit down. Put the potato down. Arty, keep the links working. Blazenetic, stop encouraging him.
 
-**Melchett:** Another crushing victory for the forces of restful documentation!
+**Melchett:** The potato is rejected! Another victory!
 
-**Darling:** That is still just a markdown file.
+**Darling:** That is still not how victories work.
 
 ---
 
@@ -100,7 +102,7 @@ First public release after intensive iterative development (26–28 July 2026).
 
 **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.
 
-**Blazenetic:** I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
+**Blazenetic:** I spent four hours researching the perspective and lifecycle maths so people can fall asleep harder. I coordinated the modular architecture. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
 
 **Arty:** Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. I fixed the fade race, guarded every localStorage throw, and ran the full suite twice. The labels no longer draw under the cards on phones. Please don’t yell.
 
@@ -121,4 +123,4 @@ First public release after intensive iterative development (26–28 July 2026).
 ---
 
 Made in a small Australian lab.  
-Sleep well. (Or don’t. We’re not your parents.)
+Research first. Architecture second. Potato plans last.

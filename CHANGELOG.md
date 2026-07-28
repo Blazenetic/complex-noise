@@ -8,41 +8,53 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ## [Unreleased]
 
-### Documentation
-- Full Lab-voice explosion across narrative surfaces
-- New [CONTRIBUTING.md](CONTRIBUTING.md) — fork encouragement, security reporting paths, PR guidance, explicit pointer for AI agents to AGENTS.md
-- Expanded cross-links on every major doc page for usability
-- Meet the Lab rewritten with additional occupied-room scenes
-- History, docs/README, PRODUCT_REQUIREMENTS and FINDINGS framed more clearly as historical / living narrative
-- INFO_LAYER given navigation links and a light Lab aside while keeping the technical contract intact
-- README navigation and Contributing section strengthened
-- Further pass: more character variations, stronger “researches / coordinates / does not invent maths” framing for Blazenetic, varied document closers, subtle things that are Baldrick’s fault
-- Lab Voice Spec updated to v2.3 in Google Drive (Baldrick’s-fault rebrand, expanded closings, research emphasis, zero invent-maths language)
+### Documentation & Lab Voice rampage (28 July 2026, afternoon)
 
-### Planned / deferred
-- Service worker for true cold-start offline / airplane-mode PWA
-- AudioWorklet migration for continuous non-buffered synthesis
-- Stereo width (independent L/R buffers)
-- Additional noise colours / nature layers
-- App-level items that are Baldrick’s fault (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
+A second ambitious documentation offensive after the morning’s explosion. Research into the full 26–28 July sprint trail, the PR history, the spatial-grid numbers, the test-suite growth, and every residual-outline floor that was fought for.
 
-### Lab Log (docs explosion + variations pass)
+#### What shipped (this pass)
 
-**Melchett:** Gentlemen! Today we have detonated a *documentation bomb* of historic proportions! CONTRIBUTING.md! Links everywhere! Varied closers! The enemy of boring READMEs will never recover! BBAAAHHH!
+- Richer **CHANGELOG** with quantitative sprint stats drawn from the actual PRs and Live view numbers
+- Expanded **History** and **Meet the Lab** with additional occupied-room scenes and variety
+- Stronger cross-links, more “researches / coordinates / does not invent maths” framing for Blazenetic, and deliberately varied closers
+- Light Lab asides in INFO_LAYER, PRODUCT_REQUIREMENTS and FINDINGS so even the historical archaeology stays alive
+- CONTRIBUTING and docs index polished for navigability
+- Subtle things that are Baldrick’s fault left where they belong (narrative surfaces only)
 
-**Darling:** It is a set of markdown files with cross-references and a longer list of sign-offs, Melchett.
+#### Sprint by the numbers (research summary)
 
-**Blazenetic:** I researched contribution and security patterns, coordinated the short correct versions, strengthened the “I research the maths, I do not invent it” framing, and then complained about the edge cases of repetitive closers. You’re welcome.
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Calendar time | ~36–48 hours | 26–28 July 2026 intensive sprint |
+| Public release | 0.1.0 | 28 July 2026 |
+| Test suite | 5 → 33+ assertions | Playwright + real Web Audio; sleep-timer test is sacred |
+| Node population (default) | 26–44 (clamped) | Density multiplies the clamp, never the raw viewport |
+| Pair tests (97 nodes) | ~440 vs 4 656 | Spatial grid ≈ 10× reduction; both numbers visible in Live view |
+| Frame budget default | 30 fps | Stops when page hidden; motion is time-based (`dt`) |
+| Residual outline | Floored against dimness, scaled by lifecycle | Quiet nodes stay legible; births/deaths still ease |
+| Storage keys | 20+ namespaced | All via `storage.js`; direct `localStorage` is forbidden |
+| Runtime dependencies | 0 | Static files only. Forever. |
+| Ads / fees | 0 | “Stuff it. We’ll make our own.” |
 
-**Arty:** I checked the wall three times. AGENTS.md is still completely clean. The new Spec is in Drive. I think we’re safe?
+#### Lab Log (rampant documentation pass)
 
-**Baldrick:** I have a cunning plan, sir. What if the CONTRIBUTING.md *is* the security policy? We just tell everyone that every PR is a security issue and only accept potato-based patches.
+**Melchett:** Gentlemen! We have returned with *statistics*! Tables! Numbers! A documentation offensive of historic scale! The forces of dry open-source READMEs are in full retreat! BBAAAHHH!
 
-**Darling:** No. Absolutely not. Sit down. Put the potato down. Arty, keep the links working. Blazenetic, stop encouraging him.
+**Darling:** It is still a set of markdown files, Melchett. Sit down.
 
-**Melchett:** The potato is rejected! Another victory!
+**Blazenetic:** I researched the full PR trail, the pair-test numbers that the Live view already publishes, the test-suite growth from a handful of smoke checks to thirty-three assertions, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording and complained about the edge cases of repetitive closers. You’re welcome.
 
-**Darling:** That is still not how victories work.
+**Arty:** I added the extra links and the table so people can actually find the numbers. I checked the wall again. AGENTS.md is still completely clean. Please don’t yell.
+
+**Baldrick:** I have a cunning plan, sir. What if the changelog *is* the test suite? We just declare every number a victory and only accept potato-based pull requests.
+
+**Darling:** No. Put the potato down. Arty, keep the links honest. Blazenetic, stop smiling at him.
+
+**Melchett:** The potato is rejected! Another victory for the residual outlines!
+
+**Darling:** That is not how victories work. And the residual outlines already had a floor.
+
+**Blazenetic:** Research first. Architecture second. Potato plans last. The software stays calm.
 
 ---
 
@@ -71,12 +83,15 @@ First public release after intensive iterative development (26–28 July 2026).
 - Soft residual outlines so quiet nodes stay legible
 - Three non-aligning energy layers (per-node breath + irrational plane wave + analyser)
 - Violet → cyan energy ramp weighted so brown stays calm, white pushes cyan
-- Default **on**, intensity 0.7, speed range 0.5–4.0 (default 2.0)
+- Default **on**, intensity 0.7, speed range **0.7–4.8** (default 2.0)
 - Battery-conscious 30 fps loop, stops when page is hidden, `prefers-reduced-motion` support
+- Spatial grid linking: at 97 nodes the field visits ~440 pairs a frame instead of 4 656
 
 **Info layer (nerd mode)**
-- Canvas callouts with stable node IDs and rotating diagnostics
-- Integrated Live / Math / Code panel (renderer health, topology, equations, operations)
+- Canvas callouts with stable node IDs and rotating diagnostics (energy / position / velocity / projection / wave)
+- Integrated Live / Math / Code panel (renderer health, topology, live equations, per-stage timings)
+- Field Lab controls: density, reach, trail, perspective, dwell, frame cap (30/45/60), source overlay
+- Edge dimensions rotated onto the lines they measure
 
 **Immersion & polish**
 - Dedicated “Minimise interface” action + floating restore cluster (play + status + Show controls)
@@ -88,7 +103,7 @@ First public release after intensive iterative development (26–28 July 2026).
 **Architecture & tooling**
 - Fully modular ES-module architecture (`js/` + `css/`)
 - One-way state flow: modules own state and publish; `app.js` is the sole DOM writer
-- Playwright browser test suite + CI (ESLint + tests on every PR)
+- Playwright browser test suite + CI (ESLint + tests on every PR) — grew to 33+ assertions
 - Comprehensive AGENTS.md for humans and AI agents
 - Zero runtime dependencies, zero network calls after first load
 
@@ -98,13 +113,13 @@ First public release after intensive iterative development (26–28 July 2026).
 
 ### Lab Log
 
-**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The war is as good as won! BBAAAHHH!
+**Melchett:** Gentlemen! In the space of three short days we have struck a series of decisive blows against the forces of sleeplessness! Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The spatial grid saves thousands of pair tests! The war is as good as won! BBAAAHHH!
 
 **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.
 
-**Blazenetic:** I spent four hours researching the perspective and lifecycle maths so people can fall asleep harder. I coordinated the modular architecture. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
+**Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. I researched the spatial-grid approach, coordinated the modular architecture so the state modules own their state, and then complained about the residual outline floor. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
 
-**Arty:** Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. I fixed the fade race, guarded every localStorage throw, and ran the full suite twice. The labels no longer draw under the cards on phones. Please don’t yell.
+**Arty:** Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. I fixed the fade race, guarded every localStorage throw, and ran the full suite more times than is healthy. The labels no longer draw under the cards on phones. The grid pair counts are visible in Live view so the claim is checkable. Please don’t yell.
 
 **Baldrick:** I have a cunning plan, sir. What if the Still Field *is* the sleep timer? We just wait for all the nodes to die and then the audio stops. Cunning as a fox who’s just been appointed Professor of Cunning at Oxford University.
 
@@ -123,4 +138,5 @@ First public release after intensive iterative development (26–28 July 2026).
 ---
 
 Made in a small Australian lab.  
-Research first. Architecture second. Potato plans last.
+Research first. Architecture second. Potato plans last.  
+The residual outlines have a floor. You’re welcome.

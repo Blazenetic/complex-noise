@@ -1,8 +1,8 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36 hours.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours, complete with the numbers that the Live view will happily confirm.
 
-**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./)
+**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
 ---
 
@@ -29,21 +29,21 @@ Live from the first day: https://blazenetic.github.io/complex-noise/
 
 What followed was intensive, iterative development (human + AI agents) that turned the MVP into the polished, modular, agent-friendly project you see today.
 
-Key movements:
+Key movements and the numbers that came with them:
 
 - **Still Theme & Glass** — Premium brushed-titanium dark (default) plus a bone-white calm theme with procedural SVG texture. Glass surfaces (standard and ultra-transparent) so the living field shows through. Theme and glass treated as independent axes.
-- **Still Field** — Evolved from soft particles into a full-page nodes-and-edges visualisation with real perspective depth, node lifecycles (70–150 s), retracting links, residual outlines so quiet nodes stay legible, and three non-aligning energy layers driven by breath, an irrational plane wave, and the audio analyser. Violet stays calm under brown noise; white pushes cyan. Default on, 30 fps, stops when the page is hidden.
+- **Still Field** — Evolved from soft particles into a full-page nodes-and-edges visualisation with real perspective depth, node lifecycles (70–150 s), retracting links, residual outlines so quiet nodes stay legible, and three non-aligning energy layers driven by breath, an irrational plane wave, and the audio analyser. Violet stays calm under brown noise; white pushes cyan. Default on, 30 fps, stops when the page is hidden. Spatial grid linking later reduced pair tests from ~4 656 to ~440 at 97 nodes (≈10×). Both numbers are published in the Live view so the claim is checkable.
 - **Still EQ** — Simple, calm 3-band equaliser (low / mid / high) sitting cleanly in the audio graph.
-- **Info Layer / Field Lab / Stats** — Engineering-drawing callouts, Live / Math / Code panels, source overlay, and live controls for density, reach, trail, perspective, dwell and frame rate. All battery-conscious and measurable. Full contract in [INFO_LAYER.md](./INFO_LAYER.md).
+- **Info Layer / Field Lab / Stats** — Engineering-drawing callouts, Live / Math / Code panels, source overlay, and live controls for density (0.5–2.2× on the *clamped* 26–44 window), reach, trail (rate-per-second), perspective, dwell and frame rate. All battery-conscious and measurable. Full contract in [INFO_LAYER.md](./INFO_LAYER.md).
 - **Immersion** — Dedicated “Minimise interface” path with a floating restore cluster. Escape always brings the controls back.
 - **Architecture** — Clean ES-module split. One-way state flow: modules own state and publish; `app.js` is the only thing that writes to the DOM. This is what keeps the play button honest when the sleep timer fires hours later. See [AGENTS.md](../AGENTS.md).
-- **Tests & docs** — Playwright browser suite + CI, comprehensive AGENTS.md, and the beginning of the Lab Voice system itself.
+- **Tests & docs** — Playwright browser suite + CI grew from a handful of smoke checks to 33+ assertions. Comprehensive AGENTS.md, and the beginning of the Lab Voice system itself.
 
-The public [0.1.0] release landed on 28 July 2026. Full details live in the [Changelog](../CHANGELOG.md) (including the Lab Log).
+The public [0.1.0] release landed on 28 July 2026. Full details live in the [Changelog](../CHANGELOG.md) (including the Lab Log and the later documentation rampage).
 
-> **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The war is as good as won! BBAAAHHH!  
+> **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! Ten times fewer pair tests! The war is as good as won! BBAAAHHH!  
 > **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.  
-> **Blazenetic:** I researched the perspective and lifecycle maths, coordinated the modular architecture, and then complained about the edge cases. You’re welcome.  
+> **Blazenetic:** I researched the perspective and lifecycle maths, coordinated the modular architecture, researched the spatial-grid approach, and then complained about the edge cases. You’re welcome.  
 > **Baldrick:** My cunning plan was to make the nodes explode when they die.  
 > **Darling:** No.
 
@@ -64,12 +64,13 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 - Procedural audio with continuous internal state.
 - The one architectural rule that prevents the classic “button stuck on pause over silence” bug.
 - No ads. No annual fee. Ever.
+- The residual outlines have a floor.
 
 ---
 
 ## What comes next (Roadmap flavour)
 
-Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully keeping Baldric away from the important bits. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
+Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and carefully keeping Baldrick away from the important bits. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
 
 If you want to help with any of that (or find a security issue, or just have a better idea), see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Point your AI agent at [AGENTS.md](../AGENTS.md).
 
@@ -77,6 +78,7 @@ If you want to help with any of that (or find a security issue, or just have a b
 
 Made in a small Australian lab.  
 The residual outlines have a floor.  
-Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md)
+Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md) · [Changelog](../CHANGELOG.md)
 
-Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.
+Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.  
+Another Tuesday in the Lab. The software is calm. The docs are not.

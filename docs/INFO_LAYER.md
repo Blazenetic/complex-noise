@@ -2,9 +2,9 @@
 
 ![The info layer in the dark theme](screenshots/info-layer-dark.png)
 
-**Navigation:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Meet the Lab](./MEET_THE_LAB.md) · [AGENTS.md](../AGENTS.md) · [Contributing](../CONTRIBUTING.md) · [All docs](./)
+**Navigation:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Meet the Lab](./MEET_THE_LAB.md) · [AGENTS.md](../AGENTS.md) · [Contributing](../CONTRIBUTING.md) · [All docs](./) · [Changelog](../CHANGELOG.md)
 
-> **Lab aside:** This document is the technical contract for the instrumentation layer. It is allowed a small amount of personality at the edges, but the rules, numbers and constraints stay precise. Baldrick is not permitted to rewrite the pair-scan budget.
+> **Lab aside:** This document is the technical contract for the instrumentation layer. It is allowed a small amount of personality at the edges, but the rules, numbers and constraints stay precise. Baldrick is not permitted to rewrite the pair-scan budget. The spatial grid already publishes its own pair-test counts in the Live view so anyone can verify the ~10× reduction.
 
 The Stats control (card button + mobile launcher) governs one integrated
 instrumentation layer: engineering-drawing callouts on the canvas, a source
@@ -71,7 +71,7 @@ instead of `xyz 124, -33, 0.42`, which asks the reader to count commas.
 |---|---|---|
 | `energy` | `E`, `φ` | energy |
 | `position` | `X`, `Y`, `Z` in axis colours | — |
-| `velocity` | `\|v\|`, `θ` | — |
+| `velocity` | `|v|`, `θ` | — |
 | `projection` | `scale`, `depth`, `life` | lifecycle |
 | `wave` | `ψ`, `k·p` | local wave |
 
@@ -127,13 +127,13 @@ legible is a property of the reader, not of the simulation's speed setting.
 ## The source overlay
 
 On viewports at least 1000 px wide, the field carries a column of this
-renderer's own source with a program counter sweeping it. Each line is a real
+renderer’s own source with a program counter sweeping it. Each line is a real
 statement from `js/still-field.js`, printed with the value it is currently
 producing — `dt`, the node count, the grid cell count, the live `d`, `t` and `s`
 of the link envelope, the edge and callout counts.
 
-The counter is not decorative timing. Each stage's share of the sweep is its
-**measured** share of the frame's work, sampled with `performance.now()` around
+The counter is not decorative timing. Each stage’s share of the sweep is its
+**measured** share of the frame’s work, sampled with `performance.now()` around
 `update()`, `drawLinks()`, `drawNodes()` and `drawInfoLayer()`. The marker
 lingers where the time actually goes; raise the node density and watch the link
 pass take over the listing.
@@ -168,7 +168,7 @@ toggle too — it is part of the info layer.
 
 Below the table is a rolling **frame-time trace**: 68 samples at four a second,
 so about seventeen seconds of history, with a rule at half the frame budget.
-It is sampled on the readout's own tick, never from the render loop.
+It is sampled on the readout’s own tick, never from the render loop.
 
 Health is **nominal**, **loaded** or **strained**, derived from measured frame
 rate and renderer work *relative to the chosen cap* — selecting 60 fps does not
@@ -221,7 +221,7 @@ signal that paces the on-canvas program counter.
 |---|---|---|---|
 | Node density | 0.5–2.2× | 1.0× | Multiplies the viewport-derived population (26–44) |
 | Link reach | 0.6–1.6× | 1.0× | Multiplies the link radius |
-| Trail persistence | 0.04–0.5 s | 0.12 s | Time constant of the trail's alpha decay |
+| Trail persistence | 0.04–0.5 s | 0.12 s | Time constant of the trail’s alpha decay |
 | Perspective | 0.3–1.6 | 0.75 | Depth strength; also re-derives the world plane |
 | Callout dwell | 4–26 s | 14 s | Mean seconds per detail mode |
 | Frame rate | 30 / 45 / 60 | 30 | Render cap |
@@ -282,6 +282,10 @@ edge count in the Code view so the ratio is visible.
 
 ---
 
-See also the live technical orientation in [AGENTS.md](../AGENTS.md) and the contribution guidelines in [CONTRIBUTING.md](../CONTRIBUTING.md).
+See also the live technical orientation in [AGENTS.md](../AGENTS.md), the contribution guidelines in [CONTRIBUTING.md](../CONTRIBUTING.md), and the quantitative Lab Log in [CHANGELOG.md](../CHANGELOG.md).
+
+> **Blazenetic:** I researched the spatial-grid literature, coordinated the typed-array implementation, and then complained about the residual outline floor. The Live view publishes the pair counts so you can check the claim yourself. You’re welcome.  
+> **Baldrick:** My cunning plan was to make the pair-test ratio a potato.  
+> **Darling:** No.
 
 The software stays calm. The documentation is allowed a little chaos at the edges. That is still the deal.

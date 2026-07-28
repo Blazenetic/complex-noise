@@ -6,7 +6,7 @@
 **Date:** 2026-07-27  
 **Current technical contract:** [AGENTS.md](../AGENTS.md)
 
-> **Note from the Lab (28 July 2026):** This document is historical context. It captures the original intent for the Still Theme / Field / EQ work. The actual implementation went further (modular architecture, Info Layer, immersion, tests, Lab Voice). Keep it for archaeology and for anyone who wants to understand *why* the app looks the way it does. Live guidance for contributors lives in [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
+> **Note from the Lab (28 July 2026):** This document is historical context. It captures the original intent for the Still Theme / Field / EQ work. The actual implementation went further (modular architecture, Info Layer, immersion, tests, Lab Voice, spatial grid with published pair-test numbers). Keep it for archaeology and for anyone who wants to understand *why* the app looks the way it does. Live guidance for contributors lives in [AGENTS.md](../AGENTS.md) and [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 **Melchett:** The original requirements! A strategic document of the highest order!  
 **Darling:** It is a requirements list from before the modular rewrite, Melchett.  
@@ -83,7 +83,7 @@ This is a **key feature** of the upgrade.
 ### Design intent
 The visualisation should feel like a living, breathing extension of the noise itself — mathematical, generative, restful. It should make the whole experience feel more special without competing with the primary purpose (deep rest).
 
-(See the later [INFO_LAYER.md](./INFO_LAYER.md) for what the visualisation actually became.)
+(See the later [INFO_LAYER.md](./INFO_LAYER.md) for what the visualisation actually became, including the spatial grid and published pair-test numbers.)
 
 ---
 
@@ -144,7 +144,7 @@ Keep it intentionally simple — this is not a full studio EQ.
 - [x] No new external dependencies
 - [x] Looks and feels premium and restful on mobile
 
-(Most of the above were satisfied and then substantially extended. See the [Changelog](../CHANGELOG.md).)
+(Most of the above were satisfied and then substantially extended. See the [Changelog](../CHANGELOG.md) for the numbers.)
 
 ---
 
@@ -165,14 +165,15 @@ We will review before merging to `main`.
 
 See also:
 - [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) — analysis of the codebase at the time
-- [HISTORY.md](./HISTORY.md) — public origin and sprint summary
+- [HISTORY.md](./HISTORY.md) — public origin and sprint summary (with the pair-test numbers)
 - [AGENTS.md](../AGENTS.md) — live technical orientation
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — how to help now
+- [CHANGELOG.md](../CHANGELOG.md) — quantitative Lab Log
 
 Thank you — let’s make Complex Noise feel even more special for deep rest.
 
 > **Baldrick:** I have a cunning plan to turn the acceptance criteria into a potato checklist.  
 > **Darling:** No.  
-> **Arty:** The checklist is already ticked. I checked twice.
+> **Arty:** The checklist is already ticked. I checked twice. The residual outlines have a floor.
 
 The software stays calm. The documentation (even the historical kind) gets to be chaotic. That is the deal.

@@ -9,9 +9,13 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 ## [Unreleased]
 
 ### Documentation
-- Dramatic Lab-voice overhaul of the README (stronger framing, origin line, closing banter)
-- Meet the Lab rewritten to feel like the room is occupied rather than a cast list
-- Light polish on docs/README.md and History origin framing
+- Full Lab-voice explosion across narrative surfaces
+- New [CONTRIBUTING.md](CONTRIBUTING.md) — fork encouragement, security reporting paths, PR guidance, explicit pointer for AI agents to AGENTS.md
+- Expanded cross-links on every major doc page for usability
+- Meet the Lab rewritten with additional occupied-room scenes
+- History, docs/README, PRODUCT_REQUIREMENTS and FINDINGS framed more clearly as historical / living narrative
+- INFO_LAYER given navigation links and a light Lab aside while keeping the technical contract intact
+- README navigation and Contributing section strengthened
 
 ### Planned / deferred
 - Service worker for true cold-start offline / airplane-mode PWA
@@ -20,19 +24,23 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 - Additional noise colours / nature layers
 - App Easter eggs (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
 
-### Lab Log (docs pass)
+### Lab Log (docs explosion)
 
-**Melchett:** Another crushing victory for the forces of documentation! The README is now *dramatic*! The enemy will never recover!
+**Melchett:** Gentlemen! Today we have detonated a *documentation bomb* of historic proportions! CONTRIBUTING.md! Links everywhere! The enemy of boring READMEs will never recover! BBAAAHHH!
 
-**Darling:** It is a README, Melchett.
+**Darling:** It is a set of markdown files with cross-references, Melchett.
 
-**Blazenetic:** I made myself look good and the technical sections still scannable. You’re welcome.
+**Blazenetic:** I researched how calm open-source projects handle security reports and contribution guidance, then wrote the short version and complained about the edge cases of people putting banter into AGENTS.md. You’re welcome.
 
-**Arty:** I checked that AGENTS.md is still completely clean. The wall is intact. I think we’re safe?
+**Arty:** I checked the wall three times. AGENTS.md is still completely clean. CONTRIBUTING.md points agents at it. I think we’re safe?
 
-**Baldrick:** My cunning plan was to put the entire Lab Voice guide into AGENTS.md so the agents would be more fun.
+**Baldrick:** I have a cunning plan, sir. What if the CONTRIBUTING.md *is* the security policy? We just tell everyone that every PR is a security issue and only accept potato-based patches.
 
-**Darling:** No. Absolutely not. Sit down.
+**Darling:** No. Absolutely not. Sit down. Put the potato down. Arty, keep the links working. Blazenetic, stop encouraging him.
+
+**Melchett:** Another crushing victory for the forces of restful documentation!
+
+**Darling:** That is still just a markdown file.
 
 ---
 

@@ -210,7 +210,7 @@ legible is a property of the reader, not of the simulation's speed setting.
 
 On viewports at least 1000 px wide, the field carries a column of this
 renderer’s own source with a program counter sweeping it. Each line is a real
-statement from `js/still-field.js`, printed with the value it is currently
+statement from `js/still-field/loop.js` and its passes, printed with the value it is currently
 producing — `dt`, the node count, the grid cell count, the live `d`, `t` and `s`
 of the link envelope, the edge and callout counts.
 

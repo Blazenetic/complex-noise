@@ -5,9 +5,9 @@ This folder holds product requirements, implementation context, visitor-facing L
 The Lab ships serious sleep tools.  
 The documentation is allowed to have a little more personality. Sometimes a *lot* more.
 
-> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics!  
+> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics and eight detail modes!  
 > **Darling:** It is a table of links, Melchett.  
-> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers, and a clear reminder that I research the maths rather than invent it. You’re welcome.
+> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers and the later instrumentation maturity, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
 
 ---
 
@@ -15,9 +15,9 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 | File | Purpose |
 |------|---------|
-| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint, now with quantitative notes |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room |
-| [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts, equations, accessibility and performance contract |
+| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint, now with quantitative notes and the instrumentation growth |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room (including the eight-mode Tuesday and explicit Rick/Morty energy) |
+| [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |
@@ -37,9 +37,9 @@ The original Still Theme, Still Field and Still EQ features have been fully merg
 
 - Modular ES-module architecture (`js/` + `css/`) with one-way state flow (state modules publish via `subscribe()`, `app.js` is the sole DOM writer).
 - `js/storage.js` for safe typed persistence (handles Private Browsing throws and a stored volume of `0`).
-- Playwright browser smoke suite + CI (ESLint + tests on every PR) — now 33+ assertions.
+- Playwright browser smoke suite + CI (ESLint + tests on every PR) — now 33+ assertions, including mode variety, independent overlays and the source fold.
 - Still Field rewritten with real perspective depth, node lifecycle, energy ramp (violet → cyan), spatial grid (≈10× fewer pair tests at higher densities), and battery-conscious default 30 fps loop. Default **on**.
-- Integrated Stats / info layer with engineering-drawing callouts, edge dimensions, Live / Math / Code views, Field Lab controls, and source overlay.
+- Integrated Stats / info layer with engineering-drawing callouts (eight modes offset by φ), four edge-dimension kinds, Live / Math / Code views, Field Lab controls, heat-trail source overlay that folds, and three independent overlay chips.
 - Glass transparency as an independent axis (`standard` / `ultra`).
 - Immersion path: dedicated Minimise interface button + floating restore cluster (play + status + Show controls). Escape restores.
 - Continuous sleep-timer slider (0–10 h), Still Equaliser open by default, theme as a two-sided Dark | Bone pill, Blazenetic branding throughout.
@@ -57,7 +57,7 @@ A fuller work report covering the intensive 26–28 July development lives in th
 3. Keep the wall: narrative surfaces may be chaotic; agent surfaces stay sterile.
 4. If you find a security issue, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-> **Arty:** I added extra links and the pair-test numbers so nobody gets lost.  
+> **Arty:** I added extra links and the pair-test numbers so nobody gets lost. The mode variety is visible in Live. I checked.  
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 

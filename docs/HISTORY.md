@@ -1,6 +1,6 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours, complete with the numbers that the Live view will happily confirm.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours, complete with the numbers that the Live view will happily confirm — and then kept going when the instrumentation itself decided it wanted personality.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
@@ -49,6 +49,24 @@ The public [0.1.0] release landed on 28 July 2026. Full details live in the [Cha
 
 ---
 
+## Instrumentation grows up (later on the 28th)
+
+The callouts used to all say the same thing. The program counter was a full-width purple strobe. Edge dimensions could claim every slot and draw nothing while the listing sat on top of them in immersion.
+
+Then the Lab did what the Lab does: research, coordinate, implement the elegant version, complain about the edge cases, and ship.
+
+Eight detail modes now, offset per node by lifetime ID through φ so consecutive IDs land far apart. Handle glyphs follow the family of quantity. Degree, coupling and nearest-neighbour distance accumulated inside the existing link pass — no second graph scan. Four stable edge-dimension kinds. The counter became a heat trail that cools at 3.2/s. The source listing folds from its own title bar. Three independent overlay chips with a live “n of 3”. More telemetry, five new Math rows, second live lines in Code, a frame total. Undrawable slots now free themselves. Health leads on work, not on the wobble of a capped frame rate.
+
+Measured at 2.2× density and 60 fps: 0.60 ms per frame total. 14/14 tests, three runs for stability.
+
+> **Blazenetic:** I researched the φ distribution so the modes would actually differ, coordinated the deferred glow queue, oversaw the heat decay, and then complained about the slots that held forever under the listing. You’re welcome. The multiverse of edge cases is slightly smaller today.  
+> **Arty:** Distinct modes, independent toggles, fold works. I checked three times. Please don’t yell.  
+> **Baldrick:** What if the heat trail is a potato that slowly cools?  
+> **Darling:** No.  
+> **Melchett:** Eight modes! A crushing quantitative victory! BBAAAHHH!
+
+---
+
 ## The Lab Voice
 
 Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
@@ -65,6 +83,7 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 - The one architectural rule that prevents the classic “button stuck on pause over silence” bug.
 - No ads. No annual fee. Ever.
 - The residual outlines have a floor.
+- Per-node variety in the callouts, because eight identical readouts is just noise.
 
 ---
 

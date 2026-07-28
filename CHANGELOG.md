@@ -8,6 +8,30 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ## [Unreleased]
 
+### Added — instrumentation
+- **Per-node detail modes.** Eight modes (energy, transform, velocity, projection, wave, links, lifecycle, seed) instead of five, and each node offsets the rotation by its own lifetime ID through the golden ratio — so the callouts on screen read different quantities from each other rather than eight copies of one.
+- **Per-node handle glyphs.** Circle, square, diamond or crosshair on the node, chosen by detail mode, so the family of quantity is legible before the text is.
+- **Graph telemetry per node** — degree, coupling `κ` and nearest-neighbour distance, accumulated inside the existing link pass on values the renderer had already computed. No second graph scan.
+- **Four kinds of edge dimension** (span, coupling, reach, energy), derived from the pair's identity so a dimension is stable for the life of the pair and neighbouring edges disagree.
+- **Separate switches for the three canvas overlays** — node callouts, edge dimensions and the source listing — as a chip bank in the Field Lab, with a live "n of 3" readout.
+- **The source listing folds from its own title bar** on the field, leaving a compact header. Session-only, alongside the persisted on/off switch.
+- **Live view regrouped** into Frame / Graph / Instrumentation / Field / Audio, with batching ratio, cell occupancy, max degree, distinct modes on screen, edge-slot occupancy, world and viewport geometry, trail time constant, glow budget, both clocks and buffer size.
+- **Five more Math rows** — lifecycle envelope, R2 spawn sequence, trail decay, expected degree against measured, detail-mode selection — each with live operands.
+- **Code view** carries a second live line per stage and a whole-frame total against the budget.
+- **Source listing** gained stage rails in the gutter, a frame-cost header and a stacked stage-share footer.
+
+### Changed
+- **The program counter is a heat trail, not a highlight.** Each line's warmth rises as the counter reaches it and decays exponentially at 3.2/s, and the sweep slowed from 1.4 s to 2.8 s. The full-width purple bar that jumped a row every 70 ms is gone.
+- **Frame-time trace autoscales** to the observed peak. Fixed to the frame budget it was honest and useless: the renderer uses about 1% of a 33 ms frame, so every bar rounded to one pixel.
+- **Health thresholds** lead on renderer work rather than delivered frame rate. A cap is honoured by waiting, so the rate wobbles either side of it on any machine; reading that as "strained" at 1% of budget was the readout disputing its own measurements.
+
+### Fixed
+- **Edge dimensions could hold every slot and draw nothing.** A pair whose midpoint sat under the source listing stayed claimed for its full dwell while being unpaintable — and the listing changes corner when the interface is minimised, so this happened on every immersion. Undrawable slots now fade out and free themselves, and short or blocked candidates are rejected before they can claim.
+
+### Performance
+- The glow pass walks a queue of the nodes pass 0 deferred instead of rescanning the whole population — 10 iterations rather than 150 at the Lab's top density.
+- The readout paints only the view that is on screen, and nothing at all while the panel is folded.
+
 ### Documentation & Lab Voice rampage (28 July 2026, afternoon)
 
 A second ambitious documentation offensive after the morning’s explosion. Research into the full 26–28 July sprint trail, the PR history, the spatial-grid numbers, the test-suite growth, and every residual-outline floor that was fought for.
@@ -55,6 +79,22 @@ A second ambitious documentation offensive after the morning’s explosion. Rese
 **Darling:** That is not how victories work. And the residual outlines already had a floor.
 
 **Blazenetic:** Research first. Architecture second. Potato plans last. The software stays calm.
+
+#### Further Lab Voice offensive (same afternoon, PR #26 narrative surfaces)
+
+All public-facing narrative documents updated to weave the new instrumentation in: README Features, History (new maturity section), Meet the Lab (new Tuesday scene), CONTRIBUTING, docs index. Variety in closings, research framing held, wall intact. Rick/Morty energy for Blazenetic and Arty locked in.
+
+**Melchett:** Eight modes in the README! A foldable source! The documentation itself has entered the Field Lab! BBAAAHHH!
+
+**Darling:** Still markdown, Melchett.
+
+**Blazenetic:** I researched the existing PR trail, coordinated the narrative updates so the facts stayed next to the banter, and then complained about the edge cases of people inventing origin stories. The multiverse of identical callouts is slightly smaller today. You’re welcome.
+
+**Arty:** Cross-links checked. AGENTS.md still sterile. I ran the mental checklist three times. Please don’t yell.
+
+**Baldrick:** What if the entire README is replaced by a single cunning potato?
+
+**Darling:** No.
 
 ---
 

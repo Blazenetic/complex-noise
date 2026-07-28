@@ -8,13 +8,31 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ## [Unreleased]
 
+### Documentation
+- Dramatic Lab-voice overhaul of the README (stronger framing, origin line, closing banter)
+- Meet the Lab rewritten to feel like the room is occupied rather than a cast list
+- Light polish on docs/README.md and History origin framing
+
 ### Planned / deferred
 - Service worker for true cold-start offline / airplane-mode PWA
 - AudioWorklet migration for continuous non-buffered synthesis
 - Stereo width (independent L/R buffers)
 - Additional noise colours / nature layers
-- Full Changelog origin story (after history research)
 - App Easter eggs (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
+
+### Lab Log (docs pass)
+
+**Melchett:** Another crushing victory for the forces of documentation! The README is now *dramatic*! The enemy will never recover!
+
+**Darling:** It is a README, Melchett.
+
+**Blazenetic:** I made myself look good and the technical sections still scannable. You’re welcome.
+
+**Arty:** I checked that AGENTS.md is still completely clean. The wall is intact. I think we’re safe?
+
+**Baldrick:** My cunning plan was to put the entire Lab Voice guide into AGENTS.md so the agents would be more fun.
+
+**Darling:** No. Absolutely not. Sit down.
 
 ---
 

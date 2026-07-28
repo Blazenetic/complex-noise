@@ -86,7 +86,7 @@ instead of `xyz 124, -33, 0.42`, which asks the reader to count commas.
 |---|---|---|---|
 | `energy` | `E`, `b`, `w`, `a` — the sum and its three layers | energy | circle |
 | `transform` | `X`, `Y`, `Z` in axis colours | nearness | square |
-| `velocity` | `|v|`, `θ`, `ω` | — | crosshair |
+| `velocity` | `\|v\|`, `θ`, `ω` | — | crosshair |
 | `projection` | `scale`, `depth`, `near`, `px` | nearness | square |
 | `wave` | `ψ`, `k·p`, `sin ψ` | local wave | diamond |
 | `links` | `deg`, `κ`, `near`, `r` | degree / 8 | crosshair |

@@ -49,18 +49,6 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
-## The Wall (still standing)
-
-There is an absolute separation, and we mean it.
-
-- **README framing, CHANGELOG Lab Log, this page, History** → full Discord energy allowed. Banter, dialogue, Melchett victories, Baldrick plans, the lot.  
-- **AGENTS.md, CLAUDE.md, architecture notes, code comments that agents will read** → completely professional. Zero role-play. The sleep timer depends on it.
-
-Break the wall and the sleep timer will eventually break too.  
-We have tested this hypothesis more carefully than we care to admit.
-
----
-
 ## Why any of this exists
 
 We ship serious, zero-dependency, mobile-first sleep tools.  

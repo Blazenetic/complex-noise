@@ -5,9 +5,9 @@ This folder holds product requirements, implementation context, visitor-facing L
 The Lab ships serious sleep tools.  
 The documentation is allowed to have a little more personality. Sometimes a *lot* more.
 
-> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics and eight detail modes!  
+> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics, eight detail modes and six colours!  
 > **Darling:** It is a table of links, Melchett.  
-> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers and the later instrumentation maturity, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
+> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers, the later instrumentation maturity and the six-colour hardening, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
 
 ---
 
@@ -15,8 +15,8 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 | File | Purpose |
 |------|---------|
-| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint, now with quantitative notes and the instrumentation growth |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room (including the eight-mode Tuesday) |
+| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint, now with quantitative notes, instrumentation growth and the six-colour chaos Tuesday |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room (including the eight-mode Tuesday and the six-colour chaos Tuesday) |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
@@ -37,14 +37,15 @@ The original Still Theme, Still Field and Still EQ features have been fully merg
 
 - Modular ES-module architecture (`js/` + `css/`) with one-way state flow (state modules publish via `subscribe()`, `app.js` is the sole DOM writer).
 - `js/storage.js` for safe typed persistence (handles Private Browsing throws and a stored volume of `0`).
-- Playwright browser smoke suite + CI (ESLint + tests on every PR) — now 33+ assertions, including mode variety, independent overlays and the source fold.
+- Playwright browser smoke suite + CI (ESLint + tests on every PR) — now 19+ assertions on the six-colour branch (and 33+ on the prior instrumentation maturity), including mode variety, independent overlays, the source fold, level matching, headroom, whole-cycle LFOs and rapid-switch races that count real buffers.
 - Still Field rewritten with real perspective depth, node lifecycle, energy ramp (violet → cyan), spatial grid (≈10× fewer pair tests at higher densities), and battery-conscious default 30 fps loop. Default **on**.
 - Integrated Stats / info layer with engineering-drawing callouts (eight modes offset by φ), four edge-dimension kinds, Live / Math / Code views, Field Lab controls, heat-trail source overlay that folds, and three independent overlay chips.
 - Glass transparency as an independent axis (`standard` / `ultra`).
 - Immersion path: dedicated Minimise interface button + floating restore cluster (play + status + Show controls). Escape restores.
 - Continuous sleep-timer slider (0–10 h), Still Equaliser open by default, theme as a two-sided Dark | Bone pill, Blazenetic branding throughout.
+- **Six first-class procedural colours** (Brown, Pink, White, Green, Fan, Rain) with seam passes, A-weighted loudness matching, headroom, whole-cycle LFOs where used, and cancellable coalesced colour-switch work.
 
-Additional noise colours remain out of scope for now. Accessibility is partially addressed — controls are labelled and all touch targets clear 44 px — but a full audit (screen-reader walkthrough, contrast check beyond the current reduced-motion support) has not been done.
+Accessibility is partially addressed — controls are labelled and all touch targets clear 44 px — but a full audit (screen-reader walkthrough, contrast check beyond the current reduced-motion support) has not been done.
 
 A fuller work report covering the intensive 26–28 July development lives in the project Google Drive. The public changelog is derived from it and lives at the repo root. A concise public history overview (including the real origin story and the numbers) is available in [HISTORY.md](./HISTORY.md).
 
@@ -57,7 +58,7 @@ A fuller work report covering the intensive 26–28 July development lives in th
 3. Keep the wall: narrative surfaces may be chaotic; agent surfaces stay sterile.
 4. If you find a security issue, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-> **Arty:** I added extra links and the pair-test numbers so nobody gets lost. The mode variety is visible in Live. I checked.  
+> **Arty:** I added extra links and the pair-test numbers so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. I checked.  
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 

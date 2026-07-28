@@ -266,6 +266,189 @@ test('Stats card button toggles and persists', async page => {
   assertEqual(await page.getAttribute('#stillFieldNerdToggle', 'aria-pressed'), 'true', 'Stats should be back on');
 });
 
+test('all six noise colours are wired, exclusive and persisted', async page => {
+  const types = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.type-btn'), b => b.dataset.type));
+  const expected = await page.evaluate(async () =>
+    (await import('/js/constants.js')).NOISE_TYPES);
+  assertEqual(types.join(','), expected.join(','),
+    'the type buttons and NOISE_TYPES must agree, in order — app.js binds from data-type');
+
+  for (const type of ['green', 'fan', 'rain']) {
+    await page.click(`.type-btn[data-type="${type}"]`);
+    await page.waitForTimeout(120);
+    assertEqual(await page.getAttribute(`.type-btn[data-type="${type}"]`, 'aria-pressed'), 'true',
+      `${type} should read pressed after selecting it`);
+    const pressed = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.type-btn'))
+        .filter(b => b.getAttribute('aria-pressed') === 'true').length);
+    assertEqual(pressed, 1, `exactly one colour may read pressed, ${type} left ${pressed}`);
+    assertEqual(await storage(page, 'complexNoise_type'), type, `${type} should persist`);
+  }
+
+  await page.reload({ waitUntil: 'load' });
+  assertEqual(await page.getAttribute('.type-btn[data-type="rain"]', 'aria-pressed'), 'true',
+    'the persisted colour should be restored on load');
+});
+
+test('every colour survives a real cross-fade through the audio graph', async page => {
+  // setType() builds a fresh 12 s buffer inside a 150 ms dip, so this is where a
+  // generator that throws, or fills the buffer with NaN, actually surfaces.
+  // The play button animates forever and never satisfies Playwright's
+  // actionability check, hence force.
+  await page.click('#playBtn', { force: true });
+  await page.waitForTimeout(300);
+
+  const order = await page.evaluate(async () =>
+    (await import('/js/constants.js')).NOISE_TYPES);
+  for (const type of order) {
+    await page.click(`.type-btn[data-type="${type}"]`);
+    await page.waitForTimeout(320);
+  }
+
+  assertEqual(page.errors.length, 0, `switching colours reported errors: ${page.errors.join(' | ')}`);
+  const state = await page.evaluate(async () => (await import('/js/audio.js')).getState());
+  assertEqual(state.isPlaying, true, 'playback should have survived six colour changes');
+  assertEqual(state.type, order[order.length - 1], 'the last colour clicked should be current');
+  assert(/rain/i.test(state.status), `status should name the current colour, got "${state.status}"`);
+});
+
+test('every colour is level-matched, has headroom, and loops without a seam', async page => {
+  // Three separate regressions live here, all of them things you only notice
+  // hours in, which is exactly when this app is being used:
+  //
+  //  - Loudness. Matching on raw RMS put the first cut of green +4.3 dB and rain
+  //    +2.5 dB above the rest, so changing colour at 3 a.m. made the room louder.
+  //    The measure is A-weighted, because where the energy sits matters as much
+  //    as how much of it there is.
+  //  - Headroom. A noise this long peaks near 5.15x its RMS. green, fan and rain
+  //    all peaked over 1.0 on the first cut.
+  //  - The loop seam. A filter started from zero state steps at every wrap;
+  //    brown's step was 1.7x larger than anything else in its own signal, every
+  //    twelve seconds. The generators run a second pass over the head of the
+  //    sequence to carry the state round, and the test for it is that the wrap
+  //    looks like ordinary noise rather than like an edit.
+  const report = await page.evaluate(async () => {
+    const { GENERATORS, generateNoiseBuffer } = await import('/js/noise.js');
+
+    // A-weighting as a cascade of one-pole sections, accumulated in scalars so
+    // no intermediate arrays are needed. Only ratios between colours are used,
+    // so the 1 kHz normalisation cancels and is left out.
+    const aWeightedRms = (x, count, sr) => {
+      const hp = f => 1 / (1 + Math.tan(Math.PI * f / sr));
+      const lp = f => { const w = Math.tan(Math.PI * f / sr); return w / (1 + w); };
+      const h = [hp(20.598997), hp(20.598997), hp(107.65265), hp(737.86223)];
+      const l = [lp(12194.217), lp(12194.217)];
+      const xp = [0, 0, 0, 0], yp = [0, 0, 0, 0], ls = [0, 0];
+      let sum = 0;
+      for (let i = 0; i < count; i++) {
+        let v = x[i];
+        for (let k = 0; k < 4; k++) {
+          const out = h[k] * (v - xp[k] + yp[k]);
+          xp[k] = v; yp[k] = out; v = out;
+        }
+        for (let k = 0; k < 2; k++) { ls[k] += l[k] * (v - ls[k]); v = ls[k]; }
+        // Skip the filter's own settling time.
+        if (i > sr / 10) sum += v * v;
+      }
+      return Math.sqrt(sum / (count - sr / 10));
+    };
+
+    const out = {};
+    const ctx = new OfflineAudioContext(1, 128, 48000);
+    for (const name of Object.keys(GENERATORS)) {
+      const d = generateNoiseBuffer(ctx, name).getChannelData(0);
+      const n = d.length;
+
+      let peak = 0, sum = 0, finite = true;
+      for (let i = 0; i < n; i++) {
+        const v = d[i];
+        if (!Number.isFinite(v)) { finite = false; break; }
+        const a = v < 0 ? -v : v;
+        if (a > peak) peak = a;
+        sum += v * v;
+      }
+
+      // The wrap step, judged against how far this signal moves between
+      // adjacent samples anyway — an absolute threshold would be meaningless
+      // across colours as different as brown and white.
+      const sample = new Float32Array(40000);
+      for (let i = 0; i < sample.length; i++) {
+        const diff = d[i + 200000] - d[i + 199999];
+        sample[i] = diff < 0 ? -diff : diff;
+      }
+      sample.sort();
+
+      out[name] = {
+        finite,
+        rms: Math.sqrt(sum / n),
+        peak,
+        aRms: aWeightedRms(d, 48000 * 4, 48000),
+        wrapStep: Math.abs(d[0] - d[n - 1]),
+        ownP999: sample[Math.floor(sample.length * 0.999)],
+      };
+    }
+    return out;
+  });
+
+  const centre = (report.brown.aRms + report.pink.aRms) / 2;
+  for (const [name, m] of Object.entries(report)) {
+    assert(m.finite, `${name} produced a non-finite sample — that is silence or a scream, never both`);
+    assert(m.rms > 0.05, `${name} is effectively silent (rms ${m.rms.toFixed(4)})`);
+
+    const level = 20 * Math.log10(m.aRms / centre);
+    assert(Math.abs(level) <= 2,
+      `${name} sits ${level.toFixed(2)} dB from the brown/pink centre, outside the ±2 dB window`);
+
+    // Headroom is judged on RMS, not on the measured peak. The peak of a noise
+    // sequence is a statistical maximum that moves several percent between
+    // buffers, so asserting on it directly is either flaky or too loose to catch
+    // anything. RMS over 576k samples is stable to a fraction of a percent, and
+    // a Gaussian sequence this long peaks near 5.15x it. White is the exception:
+    // it is uniform and hard-bounded, so its own peak is the honest figure.
+    const expectedPeak = name === 'white' ? m.peak : m.rms * 5.15;
+    assert(expectedPeak <= 1.15,
+      `${name} has too little headroom: rms ${m.rms.toFixed(4)} implies a peak near `
+      + `${expectedPeak.toFixed(3)} (measured ${m.peak.toFixed(3)} this run) — lower its gain`);
+
+    // The wrap step is itself one random draw, so it is given a little room
+    // above the 99.9th percentile. Brown's seam before the fix was 1.7x that
+    // percentile, so the margin costs nothing in detection.
+    assert(m.wrapStep <= m.ownP999 * 1.25,
+      `${name} has an audible loop seam: the wrap steps ${m.wrapStep.toFixed(4)}, `
+      + `beyond the ${m.ownP999.toFixed(4)} it moves between adjacent samples anywhere else`);
+  }
+});
+
+test('modulated colours complete whole LFO cycles across the buffer', async page => {
+  // An LFO whose period does not divide the buffer snaps back to its starting
+  // phase at every wrap, which is a step in level every twelve seconds, all
+  // night. It is asserted here rather than on the samples because the step is
+  // around 0.6 dB and both the intended modulation and the noise's own
+  // short-window level move further than that.
+  const checks = await page.evaluate(async () => {
+    const { lfoStep } = await import('/js/noise.js');
+    const { BUFFER_DURATION } = await import('/js/constants.js');
+    const out = [];
+    for (const sr of [44100, 48000]) {
+      const length = Math.floor(sr * BUFFER_DURATION);
+      for (const target of [13.5, 6, 0.5, 400]) {
+        const cycles = lfoStep(target, length, sr) * length / (2 * Math.PI);
+        out.push({ sr, target, cycles });
+      }
+    }
+    return out;
+  });
+
+  for (const { sr, target, cycles } of checks) {
+    assert(Math.abs(cycles - Math.round(cycles)) < 1e-9,
+      `a ${target}s LFO at ${sr}Hz spans ${cycles} cycles per buffer — must be a whole number`);
+    assert(Math.round(cycles) >= 1,
+      `a ${target}s LFO at ${sr}Hz rounded down to ${cycles} cycles; it must never reach zero, `
+      + 'which would freeze the modulation at full level');
+  }
+});
+
 test('interactive controls are labelled and reach 44px touch targets', async page => {
   const audit = await page.evaluate(() => {
     const problems = [];

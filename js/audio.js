@@ -315,7 +315,9 @@ export function stop(fade = true, endStatus = 'Paused') {
 
 /**
  * Change noise type. If currently playing, cross-fades to the new buffer.
- * @param {'brown'|'pink'|'white'} type
+ * Unknown names are ignored rather than throwing, so a stale button or a stale
+ * persisted value cannot stop playback.
+ * @param {string} type one of NOISE_TYPES
  */
 export function setType(type) {
   if (type === currentType) return;

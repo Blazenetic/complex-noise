@@ -72,7 +72,7 @@ import {
   STILL_DWELL_MIN, STILL_DWELL_MAX,
   STILL_FPS_OPTIONS,
 } from './constants.js';
-import { write, readNumber, readBool, clamp } from './storage.js';
+import { write, writeThrottled, readNumber, readBool, clamp } from './storage.js';
 import { getAnalyser, getIsPlaying } from './audio.js';
 
 // ----------------------------------------------------------
@@ -3118,7 +3118,7 @@ export function setStillFieldEnabled(on) {
  */
 export function setStillFieldIntensity(v) {
   stillFieldIntensity = clamp(v, 0, 1);
-  write(STORAGE_KEYS.stillFieldIntensity, stillFieldIntensity);
+  writeThrottled(STORAGE_KEYS.stillFieldIntensity, stillFieldIntensity);
   measureWorld(); // intensity widens the link radius
   if (stillFieldIntensity > 0.01 && stillFieldEnabled) startStillFieldLoop();
   emit();
@@ -3130,7 +3130,7 @@ export function setStillFieldIntensity(v) {
  */
 export function setStillFieldSpeed(v) {
   stillFieldSpeed = clamp(v, STILL_SPEED_MIN, STILL_SPEED_MAX);
-  write(STORAGE_KEYS.stillFieldSpeed, stillFieldSpeed);
+  writeThrottled(STORAGE_KEYS.stillFieldSpeed, stillFieldSpeed);
   emit();
 }
 
@@ -3159,7 +3159,7 @@ export function setStillFieldNerd(on) {
  */
 export function setStillFieldDensity(v) {
   stillFieldDensity = clamp(v, STILL_DENSITY_MIN, STILL_DENSITY_MAX);
-  write(STORAGE_KEYS.stillFieldDensity, stillFieldDensity);
+  writeThrottled(STORAGE_KEYS.stillFieldDensity, stillFieldDensity);
   applyNodeCount();
   emit();
 }
@@ -3170,7 +3170,7 @@ export function setStillFieldDensity(v) {
  */
 export function setStillFieldReach(v) {
   stillFieldReach = clamp(v, STILL_REACH_MIN, STILL_REACH_MAX);
-  write(STORAGE_KEYS.stillFieldReach, stillFieldReach);
+  writeThrottled(STORAGE_KEYS.stillFieldReach, stillFieldReach);
   measureWorld();
   emit();
 }
@@ -3181,7 +3181,7 @@ export function setStillFieldReach(v) {
  */
 export function setStillFieldTrail(v) {
   stillFieldTrail = clamp(v, STILL_TRAIL_MIN, STILL_TRAIL_MAX);
-  write(STORAGE_KEYS.stillFieldTrail, stillFieldTrail);
+  writeThrottled(STORAGE_KEYS.stillFieldTrail, stillFieldTrail);
   emit();
 }
 
@@ -3194,7 +3194,7 @@ export function setStillFieldTrail(v) {
 export function setStillFieldDepth(v) {
   depth = clamp(v, STILL_DEPTH_MIN, STILL_DEPTH_MAX);
   minScale = 1 / (1 + depth);
-  write(STORAGE_KEYS.stillFieldDepth, depth);
+  writeThrottled(STORAGE_KEYS.stillFieldDepth, depth);
   measureWorld();
   applyNodeCount();
   emit();
@@ -3207,7 +3207,7 @@ export function setStillFieldDepth(v) {
  */
 export function setStillFieldDwell(v) {
   stillFieldDwell = clamp(v, STILL_DWELL_MIN, STILL_DWELL_MAX);
-  write(STORAGE_KEYS.stillFieldDwell, stillFieldDwell);
+  writeThrottled(STORAGE_KEYS.stillFieldDwell, stillFieldDwell);
   emit();
 }
 

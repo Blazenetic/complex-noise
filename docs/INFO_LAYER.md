@@ -110,15 +110,26 @@ of its neighbour — a lot of pixels spent saying one thing. The Live view repor
 how many distinct modes are actually placed, which is the honest measure of
 whether the variety is working; `tests/run.mjs` asserts it.
 
-The blocks are placed up and to the right of their node, mirroring left when the
-right edge is close, and are rejected outright if they would land on another
-block, on an edge dimension, on the source listing, or inside an interface
-keep-out. Caps are 8 callouts on a wide viewport, 6 on a medium one and 4 on a
-phone.
+A block is placed above its node and to one side, and is rejected outright if it
+would land on another block or on an edge dimension. Caps are 8 callouts on a
+wide viewport, 6 on a medium one and 4 on a phone.
+
+**Which side is remembered, not recomputed.** A node keeps a preferred side;
+placement tries that side first and mirrors only when it is genuinely unusable —
+past the screen margin, inside an interface keep-out, or over the source
+listing. Deriving the side from the node's position every frame, as the first
+version did, leaves a threshold in the middle of the screen: a node drifting
+around it flings a 132px plate back and forth across its own leader line several
+times a second, which is not what you want on a screen you are falling asleep
+to. Collisions with other blocks deliberately do *not* mirror it — those are
+transient, and mirroring on them recreates the same oscillation. The side is
+committed only once a placement has actually drawn, and the Live view counts how
+often a *visible* block changed sides so the property is measurable rather than
+asserted.
 
 ## Edge dimensions
 
-Up to five established edges carry a dimension, drawn the way a length is
+Up to six established edges carry a dimension, drawn the way a length is
 annotated on a technical drawing: the text **rides the line it measures**,
 rotated to the edge's angle and flipped so it is never upside-down, with witness
 ticks bounding the annotated span. Reading a length off a diagram works because
@@ -130,12 +141,20 @@ out of `frac(idA + idB · φ)`, so it is stable for as long as the pair exists �
 dimension never mutates into a different quantity while you are reading it — and
 neighbouring edges reliably disagree.
 
-| Kind | Above the line | Below the line |
-|---|---|---|
-| `span` | true 3-D distance `d u` | screen angle `θ`, depth separation `Δz` |
-| `coupling` | envelope strength `κ` | link target `t`, `Δz` |
-| `reach` | `d/r`, the fraction of the link radius used | radius `r`, `θ` |
-| `energy` | mean endpoint energy `E`, in accent ink | `ΔE`, summed endpoint `deg` |
+| Kind | Above the line | First row below | Second row below |
+|---|---|---|---|
+| `span` | true 3-D distance `d u` | screen angle `θ` | depth separation `Δz` |
+| `coupling` | envelope strength `κ` | link target `t` | `Δz` |
+| `reach` | `d/r`, the fraction of the link radius used | radius `r` | `θ` |
+| `energy` | mean endpoint energy `E`, in accent ink | `ΔE` | summed endpoint `deg` |
+
+The two secondary values get their own baselines. They used to share one line,
+nudged left and right of centre, and at the widths these tables produce —
+`θ -180°` against `r 1000 u` — that put two runs of mono glyphs into the same ten
+pixels and the pair read as a smudge. Stacking them is also how a real dimension
+puts a tolerance under a nominal. `EDGE_LABEL_HALF_H`, which the keep-out and
+slot-proximity tests use, is derived from that layout rather than chosen, so the
+box the tests reason about is the box the text actually occupies.
 
 Every string comes out of a table indexed by the quantised measurement, so a
 dimension that changes every frame still allocates nothing.
@@ -148,7 +167,7 @@ two comparisons on numbers the renderer had already computed.
 
 **A slot has to be able to draw.** A pair whose midpoint sits under the source
 listing used to keep its slot for a full dwell while being unpaintable, and the
-listing changes corner when the interface is minimised — so five slots held and
+listing changes corner when the interface is minimised — so every slot held and
 one dimension on screen was the *normal* state in immersion mode. Undrawable is
 now treated as dead: the slot fades out and frees itself, and candidates that
 are too short, off screen, or over the listing are rejected before they can
@@ -168,15 +187,21 @@ node lifetimes, and the schedule falls out of the same mathematics as the field.
 
 **Hysteresis and a guaranteed hold.** A node acquires a callout above energy
 `0.42` and keeps it until energy falls below `0.32`, and once acquired the
-callout is guaranteed `0.55 · D` seconds regardless. A node hovering on the
+callout is guaranteed `0.72 · D` seconds regardless. A node hovering on the
 threshold cannot flicker.
 
-**Opacity envelopes.** Selection drives a per-node alpha toward 1 at 2.6/s and
-toward 0 at 0.85/s. Losing the placement contest fades a callout out over more
-than a second instead of cutting it. Edge dimensions have the same treatment,
-plus slot-level persistence: a slot follows one *pair* — identified by both
-endpoints' lifetime IDs, because array indices are recycled — until the pair
-breaks or its own dwell expires.
+**Opacity envelopes.** Selection drives a per-node alpha toward 1 at 1.9/s and
+toward 0 at 0.52/s. Losing the placement contest fades a callout out over
+roughly two seconds instead of cutting it. Both are slower than a UI transition
+would be, deliberately: at the earlier rates a four-row block started leaving
+while the eye was still parsing the number in it. Edge dimensions carry matching
+envelopes (1.9 / 0.62) plus slot-level persistence: a slot follows one *pair* —
+identified by both endpoints' lifetime IDs, because array indices are recycled —
+until the pair breaks or its own dwell expires.
+
+They are rates, not per-frame factors. Every one is applied as
+`1 - Math.exp(-rate · dt)`, the exact discretisation of the continuous decay, so
+the envelope is identical at 30, 45 and 60 fps.
 
 Envelopes run on the real clock, not the drift clock. How long a readout stays
 legible is a property of the reader, not of the simulation's speed setting.

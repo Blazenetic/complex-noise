@@ -118,11 +118,14 @@ once; `tests/run.mjs` now guards against it.
     viewport width, reduced by screen bounds, interface keep-outs, the source
     overlay's corner and block collisions. Dynamic strings refresh once a
     second, not at frame rate.
-  - Up to five edge dimensions, rotated onto the lines they measure, gathered
+  - Up to six edge dimensions, rotated onto the lines they measure, gathered
     inside the existing link pass. Each carries one of four **kinds** (span,
     coupling, reach, energy) chosen from the *pair's* identity, so it is stable
     for the life of the pair. Do not add a second graph scan or per-frame
-    sorting.
+    sorting. The caption's lead value sits above the line and its two secondary
+    values sit on their own baselines below it; `EDGE_LABEL_HALF_H` is
+    *derived* from that layout rather than picked, so changing the stack means
+    changing the constants it is derived from, not the half-height directly.
   - Per-node `degree`, `coupling` and `nearest` for the `links` mode, zeroed at
     the top of `update()` and accumulated inside `drawLinks()` on values the
     renderer had already computed. This is the only acceptable way to add graph
@@ -297,12 +300,21 @@ noise rather than the listening volume.
   paths back into template-string, object, or array creation at 30 fps — that
   includes innocent-looking array literals inside a draw helper.
 - **An overlay slot that cannot draw must not keep its slot.** Edge dimensions
-  have five slots. A pair whose midpoint lands under the source listing is
+  have six slots. A pair whose midpoint lands under the source listing is
   unpaintable, and the listing changes corner when the interface is minimised —
   so pairs that were fine a second ago become permanently undrawable while still
   linked. `drawEdgeAnnotations()` folds "blocked" into the liveness test for
-  exactly this reason: five slots held with one dimension on screen was the
+  exactly this reason: every slot held with one dimension on screen was the
   normal state in immersion mode before it did.
+- **Callout side is hysteretic, and the hysteresis is the point.** A node
+  remembers its block's side in `preferSide`; placement retries that side first
+  and mirrors only when it is off the margin, under a keep-out, or over the
+  source listing. Deriving the side from the node's position each frame — the
+  obvious-looking simplification — puts a threshold back in, and a node drifting
+  around it throws a 132px plate across its own leader line several times a
+  second. Block-on-block collisions deliberately do *not* flip the side; they
+  are transient, and flipping on them reintroduces the same bounce. The side is
+  committed only after a placement actually draws.
 - **The on-canvas fold is a hit test, not a control.** `#stillFieldInfo` is
   `pointer-events: none` behind a `z-index: 1` body, so presses arrive on the
   body; `app.js` forwards only those whose target *is* the body to

@@ -27,7 +27,7 @@ Live from the first day: https://blazenetic.github.io/complex-noise/
 
 ## The Sprint — 26–28 July 2026
 
-What followed was intensive, iterative development (human + AI agents) that turned the MVP into the polished, modular, agent-friendly project you see today.
+What followed was intensive, iterative development (human + AI agents) that turned the MVP into the polished, modular, agent-friendly project you see today. Twenty-six pull requests. A test suite that grew from a handful of smoke checks to thirty-three-plus assertions. A spatial grid that cut pair tests from ~4 656 to ~440 at 97 nodes.
 
 Key movements and the numbers that came with them:
 
@@ -57,7 +57,7 @@ Then the Lab did what the Lab does: research, coordinate, implement the elegant 
 
 Eight detail modes now, offset per node by lifetime ID through φ so consecutive IDs land far apart. Handle glyphs follow the family of quantity. Degree, coupling and nearest-neighbour distance accumulated inside the existing link pass — no second graph scan. Four stable edge-dimension kinds. The counter became a heat trail that cools at 3.2/s. The source listing folds from its own title bar. Three independent overlay chips with a live “n of 3”. More telemetry, five new Math rows, second live lines in Code, a frame total. Undrawable slots now free themselves. Health leads on work, not on the wobble of a capped frame rate.
 
-Measured at 2.2× density and 60 fps: 0.60 ms per frame total. 14/14 tests, three runs for stability.
+Measured at 2.2× density and 60 fps: 0.60 ms per frame total. Tests green, three runs for stability.
 
 > **Blazenetic:** I researched the φ distribution so the modes would actually differ, coordinated the deferred glow queue, oversaw the heat decay, and then complained about the slots that held forever under the listing. You’re welcome. The multiverse of edge cases is slightly smaller today.  
 > **Arty:** Distinct modes, independent toggles, fold works. I checked three times. Please don’t yell.  

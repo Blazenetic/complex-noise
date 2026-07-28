@@ -7,12 +7,18 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 > We disagreed.  
 >  
 > Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
-> Built in a small Australian lab by Blazenetic (the one who invents the hard maths and then complains about it), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
+> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, finds the elegant solution, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
 
 A pure client-side procedural noise generator (Brown, Pink, White) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
+
+> **Melchett:** A mighty instrument in the war against sleeplessness!  
+> **Darling:** It is a noise generator, Melchett.  
+> **Blazenetic:** A *correct* noise generator. You’re welcome.
+
+---
 
 ## Quick Start
 
@@ -33,37 +39,75 @@ npm start                  # http://localhost:8123
 python3 -m http.server 8123
 ```
 
-(If you do open the file directly, the page tells you so rather than sitting there silently. We are not monsters.)
+(If you do open the file directly, the page tells you so rather than sitting there silently. We are not monsters. Baldrick suggested we just `alert()` the user every five seconds until they serve it properly. That plan was rejected.)
+
+---
 
 ## Features
 
-- **Brown** (default, deep & calming for sleep), **Pink**, **White**
-- Procedural generation → infinite, pattern-free, seamless 10+ hour playback
-- Volume control with smooth ramps (soft default 0.22 on first start)
-- Continuous sleep timer (0–10 h slider, 0.5 h steps) with gentle fade-out
-- Settings remembered in localStorage
-- **Still Theme**: Premium brushed-titanium dark (default) + toggleable bone-white calm theme with procedural SVG texture
-- **Still Field**: Full-page nodes-and-edges visualisation with gentle perspective depth (default **on**). Nodes drift through a shallow 3D volume, coming slowly toward you and receding; they are born and fade away, and the lines attached to a fading node retract into their partners rather than blinking off. Nodes keep a soft residual outline so a quiet node stays legible instead of sinking into the background. Colour rides from cool violet toward electric cyan as energy rises, driven by the audio analyser. On/off toggle plus intensity and speed sliders (practical range **0.7 – 4.8**)
-- **Stats** (the info layer, default on) — engineering-drawing callouts with leader lines and axis-coloured transform rows, edge dimensions rotated onto the lines they measure, a live source listing of the renderer with a profile-driven program counter, and one integrated Live / Math / Code panel exposing renderer health, graph topology, analyser levels, and equations with their operands evaluated live
-- **Background texture** — controllable procedural overlay (default on)
-- **Still Equaliser**: Simple 3-band (low / mid / high) equaliser with calm sliders (open by default)
-- **Field Lab**: The renderer's own parameters — node density, link reach, trail persistence, perspective, callout dwell, frame cap (30/45/60) and the source overlay — all live, all persisted, with a reset
-- **Glass UI**: Translucent control surfaces with backdrop blur so the Still Field shows through, plus an **ultra-transparent** mode for when you want the field foregrounded
-- Dedicated **Minimise interface** action for immersion, with a floating restore cluster (play + status + Show controls)
-- Seamless mobile scrolling (no visible scrollbars)
-- Refined vibrant purple play button (gradient + soft glow) that remains the clear focal point
-- Clean inline SVG icons for play/pause (no external assets)
-- Large touch targets, mobile-first, improved focus rings and ARIA for accessibility
-- Wake Lock support (keeps screen from sleeping while playing, where supported)
-- Zero dependencies and zero network calls once loaded — all audio is synthesised on device
-- MIT License · Made in Australia with the help of AI agents
+This is the part where most READMEs list bullet points like a product manager wrote them. We are not most READMEs.
 
-> **Note on offline use:** nothing is fetched at runtime, so a loaded tab keeps working without a connection. True cold-start offline (airplane mode, app reopened from the Home Screen) needs a service worker, which is not shipped yet — see [Roadmap](#roadmap).
+### The noise itself
+- **Brown** (default) — deep, heavy, the colour you want when the brain needs to stop arguing with itself. Classic leaky-integrator Brownian motion.
+- **Pink** — the middle ground. Present but polite.
+- **White** — bright, full-spectrum, useful when you want the field to light up cyan and remind you that the universe is mostly static.
+
+All of it is synthesised on the device. No samples. No loops that click. No network after the first load. The buffers are long enough that the seam is effectively inaudible for these stochastic signals. Continuous internal state inside each buffer means the generators do not restart from zero every twelve seconds like an amateur.
+
+> **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
+> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry.
+
+### Transport & comfort
+- Volume with smooth ramps. Soft default of 0.22 so the first press does not wake the neighbours.
+- Continuous sleep-timer slider (0–10 h, 0.5 h steps) with a gentle fade-out. Not a select box. A real slider. Because someone once said “select boxes are fine for sleep timers” and we refused to live in that world.
+- Settings remembered in localStorage (with full Private Browsing throw guards, because Safari likes to punish the optimistic).
+- Wake Lock support so the screen does not fall asleep while the noise is working.
+
+### Still Theme
+Premium brushed-titanium dark (the default, because night is dark) plus a bone-white calm theme with a procedural SVG texture that actually moves a little. Theme is persisted. `theme-color` and `color-scheme` update live. It is not a toggle that forgets you exist.
+
+### Still Field
+The full-page nodes-and-edges visualisation that refuses to be a screensaver.
+
+Nodes drift through a shallow 3D volume with real perspective (pinhole camera, not a 3D engine). They breathe toward you and recede. They are born, they live 70–150 seconds, they fade. When a node dies its links retract into the surviving partners instead of vanishing like a bad animation. Quiet nodes keep a soft residual outline so they stay legible instead of dissolving into the background gradient.
+
+Colour rides a violet → cyan ramp driven by three non-aligning energy layers (per-node breath + irrational plane wave + analyser). Brown keeps the field calm and violet. White pushes it toward electric cyan. The field is alive even when the audio is paused — silence still has breath and wave.
+
+Default **on**. Intensity and speed controls (practical range 0.7–4.8). Battery-conscious 30 fps, stops completely when the page is hidden, respects `prefers-reduced-motion`.
+
+> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. You’re welcome.  
+> **Baldrick:** My cunning plan was to make the nodes explode when they die.  
+> **Darling:** No.
+
+### Stats / Info Layer
+Engineering-drawing callouts with leader lines, axis-coloured transform rows (X red, Y green, Z blue — the convention that actually makes sense), edge dimensions rotated onto the lines they measure, and a Live / Math / Code panel that shows real numbers, live equations with their operands evaluated, and per-stage timings.
+
+On wide viewports the field itself carries a column of the renderer’s own source with a program counter whose dwell is the measured share of the frame. It is instrumentation, not decoration.
+
+### Field Lab
+The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), source overlay. All live. All persisted. Reset button included because sometimes you just want to go home again.
+
+### Glass UI & Immersion
+Translucent surfaces with backdrop blur so the living field shows through. An **ultra-transparent** mode that drops the panels almost to nothing when you want the field to be the entire world.
+
+Dedicated **Minimise interface** button. When the chrome is gone a floating restore cluster appears (play + status + Show controls). Escape always brings everything back. The preference is persisted because some of us like to fall asleep looking at nodes, not menus.
+
+### The rest of the polish
+- Seamless mobile scrolling (scrollbars are hidden because they are ugly at 2 a.m.).
+- Large touch targets. Real focus rings. ARIA labels. Accessibility is not a later problem.
+- Clean inline SVG play/pause icons. Zero external assets.
+- Refined vibrant purple play button that remains the clear focal point no matter what theme or glass mode you choose.
+- Zero runtime dependencies. Zero network calls once loaded. MIT license. Made in Australia with the help of AI agents who were occasionally threatened with Baldrick’s potato plan.
+
+> **Note on offline use:** nothing is fetched at runtime, so a loaded tab keeps working without a connection. True cold-start offline (airplane mode, app reopened from the Home Screen) needs a service worker. It is on the roadmap. We know. Arty has already written the issue title three times.
+
+---
 
 ## Architecture (for developers & AI agents)
 
-> Working on this codebase? Start with **[AGENTS.md](./AGENTS.md)** — it covers how to run and test the app, the one architectural rule that keeps playback correct, and the traps that have already caused bugs here.  
-> (The Lab Voice is deliberately absent from that document. The sleep timer depends on it remaining so.)
+> Working on this codebase? Start with **[AGENTS.md](./AGENTS.md)**.  
+> It covers how to run and test the app, the one architectural rule that keeps playback correct, and the traps that have already bitten people.  
+> The Lab Voice is deliberately absent from that document. The sleep timer depends on it remaining so. Do not “improve” AGENTS.md with banter. Darling will notice.
 
 The codebase is intentionally modular so AI coding agents (and humans) can work on one concern at a time without navigating a single 40 kB file.
 
@@ -85,69 +129,55 @@ complex-noise/
 │   └── run.mjs             # Browser smoke tests (Playwright)
 ├── manifest.json
 ├── AGENTS.md               # Contributor / agent guide (professional, zero banter)
-├── README.md
+├── README.md               # You are here. This one is allowed to be chaotic.
 ├── LICENSE
 ├── CHANGELOG.md            # What shipped + Lab Log
 └── docs/                   # Historical requirements, visitor notes, Meet the Lab, History
 ```
 
-**State flows one way.** `audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` own state and publish it through `subscribe(fn)`; `app.js` is the only module that writes to the app's DOM, and it does so exclusively in those subscription callbacks. Event handlers just call into the state modules.
+**State flows one way.** `audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` own state and publish it through `subscribe(fn)`. `app.js` is the only module that writes to the app’s DOM, and it does so exclusively in those subscription callbacks. Event handlers just call into the state modules.
 
-This matters because playback state changes without a click behind it — the sleep timer stops the audio hours later. Updating the play button inside its own click handler is precisely how it ends up stuck showing "pause" over silence. See [AGENTS.md](./AGENTS.md#the-one-architectural-rule).
+This is not style preference. Playback stops on its own when the sleep timer fires hours later. Updating the play button inside its own click handler is precisely how it ends up frozen on “pause” over silent audio at 3 a.m. That bug has already happened. The test suite now guards against it. Learn from our pain.
 
 **Audio graph**  
 `AudioContext` → `AudioBufferSourceNode` (looping ~12 s procedural buffer) → Still EQ (3× BiquadFilterNode) → `AnalyserNode` → `GainNode` → destination
 
+The analyser sits *before* the gain node on purpose. The visualisation tracks the noise, not the listening volume. Someone once put it after the gain and the field went dead whenever the volume was low. We do not speak of that afternoon.
+
 **Noise generation**  
-All noise is synthesised in `js/noise.js` → `generateNoiseBuffer(audioCtx, type, durationSec)`.  
-- White: pure uniform random  
-- Brown (Brownian / red): leaky integrator of white noise (classic noisehack formula)  
+All noise is synthesised in `js/noise.js` → `generateNoiseBuffer(audioCtx, type, durationSec)`.
+- White: pure uniform random
+- Brown (Brownian / red): leaky integrator of white noise (classic noisehack formula)
 - Pink: multi-pole IIR filter approximation (Paul Kellet refined method)
 
-Buffers are long enough that the loop point is effectively inaudible for these stochastic signals. State (last sample / filter coefficients) is continuous *within* each buffer.
+Buffers are long enough that the loop point is effectively inaudible. State (last sample / filter coefficients) is continuous *within* each buffer.
 
 **Still Field visualisation**  
-Two full-viewport Canvas 2D layers behind the UI (`js/still-field.js`): the field, and an info layer above it. 26–44 nodes depending on viewport, up to 2.2× that from the Field Lab. No WebGL, no library — the depth is real perspective maths, not a 3D engine.
+Two full-viewport Canvas 2D layers behind the UI. No WebGL. No library. The depth is real perspective maths researched and applied carefully — not a 3D engine cosplaying as calm.
 
-- **Depth.** Each node carries a `z` and projects through a pinhole camera, `scale = 1 / (1 + z · 0.75)`, about the screen centre. That gives genuine parallax: near nodes are larger, brighter and sweep across faster than distant ones. `z` follows a bounded sinusoid, so nodes breathe toward and away from the viewer without any chance of drifting out of the volume overnight. The world plane is sized `1 / minScale` larger than the viewport so far nodes still reach the screen edges instead of leaving a bare border.
-- **Linking.** Connections are made on 3D distance, so two nodes that merely overlap on screen at different depths stay unconnected. The link radius is derived from mean node spacing rather than fixed in pixels, which holds the graph at roughly three connections per node on a phone and a desktop alike. Candidate pairs come from a uniform spatial grid rebuilt each frame with a counting sort into pre-sized typed arrays — cells are one link radius across, and each node tests only its own cell and the four neighbours that have not already tested it. That is what makes a raisable node population affordable: at 97 nodes the field visits about 440 pairs a frame instead of 4 656, and both numbers are on screen in the Live view so the claim is checkable.
-- **Lifecycle.** Nodes live 70–150 s, easing in and out. Replacements are placed on the R2 low-discrepancy sequence (Roberts, 2018) instead of at random, so coverage stays even without any repulsion pass. When a node fades, its links retract along themselves into the surviving node. A node also keeps a soft residual stroke-circle outline, floored against *dimness* so a low-energy node stays legible — but scaled by the lifecycle envelope, so births and deaths still ease rather than pop.
-- **Energy.** Three layers that never line up: a per-node breath, a plane wave crossing the field at an irrational angle, and the analyser's mid/high bands. Energy drives size, line weight, colour along the violet → cyan ramp, and glow. Silence leaves the first two, so the field still lives while paused. Because the ramp is weighted toward the audio's mid and high content, brown noise keeps the field violet and calm while white noise pushes it to cyan.
-- **New links pulse.** The brightness transient on a fresh connection is just the error signal of the link's envelope — the gap between where a link wants to be and where it is, which peaks the instant two nodes come into range.
-- **Crisp instrumentation.** All text lives on a second canvas that is cleared outright every frame. It has to: the field subtracts alpha each frame to leave a trail, and a moving label drawn onto it leaves half a second of decaying copies of itself — the soft halo that used to make the callouts look blurred. Nothing on the info layer sets `shadowBlur`, and glyph origins are snapped to whole device pixels. Legibility over a busy field comes from a plate behind the text, not a glow.
-- **Stats** (the info layer, default on) — three parts under one toggle:
-  - *Callouts* — an open square handle on the node, a two-run leader line, and a plated block of key/value rows. Position mode reads like a 3D application's transform panel: X red, Y green, Z blue, values right-aligned in a monospaced column with units. Detail rotates through energy, position, velocity, projection and wave on a golden-ratio-weighted dwell, acquires and releases on different energy gates, and fades through opacity envelopes — so a readout stays long enough to read and never flickers.
-  - *Edge dimensions* — up to five, with the number rotated onto the line it measures and witness ticks bounding the span, exactly as a length is annotated on a technical drawing. Sampled inside the existing pair scan.
-  - *The information panel and the source overlay* — the top-left surface has **Live**, **Math** and **Code** views: pair tests against brute force, grid occupancy, node turnover, a rolling frame-time trace, equations with their operands evaluated live, and per-stage `performance.now()` timings. On wide viewports the field itself carries a column of the renderer's own source with a program counter whose dwell on each stage *is* that stage's measured share of the frame. Tabs are keyboard navigable; changing values are deliberately not a live region, refresh four times a second, and stop entirely while the page is hidden.
-- **Battery.** Defaults to 30 fps with motion integrated from real elapsed time (so it drifts identically at 30, 60 or 120 Hz — the Field Lab's cap changes smoothness, not speed), stops the loop entirely when the page is hidden, allocates nothing per frame, and rations `shadowBlur` to the few highest-energy nodes. `prefers-reduced-motion` slows it and drops the glow.
-- Colours come from `--still-field-*` custom properties, read once per theme change — restyling the field is a CSS edit.
+- **Depth.** Each node carries a `z` and projects through a pinhole camera, `scale = 1 / (1 + z · 0.75)`. Genuine parallax. Bounded sinusoid so nodes breathe without escaping overnight.
+- **Linking.** 3D distance, not screen distance. Spatial grid with counting sort into pre-sized typed arrays. At 97 nodes the field visits ~440 pairs a frame instead of 4 656. Both numbers are visible in the Live view so the claim is checkable.
+- **Lifecycle.** 70–150 s lives. R2 low-discrepancy spawn (Roberts, 2018). Retracting links. Residual outlines floored against dimness but scaled by the lifecycle envelope so births and deaths still ease.
+- **Energy.** Three layers that never line up. Violet stays calm under brown; white pushes cyan.
+- **Battery.** 30 fps default, motion integrated from real elapsed time, loop stops when the page is hidden, zero per-frame allocation, `shadowBlur` rationed. `prefers-reduced-motion` slows it and drops the glow.
 
-See [Info Layer](./docs/INFO_LAYER.md) for metric definitions, displayed equations and the instrumentation performance contract.
+See [Info Layer](./docs/INFO_LAYER.md) for the full instrumentation contract.
 
 **Glass surfaces**  
-Control panels, type selector, theme toggle and EQ use translucent `rgba` backgrounds + `backdrop-filter: blur(...)`. Transparency is a second axis alongside the theme, set by `data-glass` on `<html>`: `standard` (default) or `ultra`, which drops surface opacity far enough for the field to read through the panels. Both combine freely with either theme; text, the play button and the active noise type keep their contrast in all four combinations.
+Transparency is a second axis alongside the theme (`data-glass="standard|ultra"`). Both combine freely with either theme. Text, the play button and the active noise type keep their contrast in all four combinations. Ultra is not a gimmick; it is for people who want the field to be the only thing left.
 
-**Key extension points for AI agents**
-- `js/noise.js` → add a generator to `GENERATORS` + a `data-type` button; `app.js` wires it automatically
-- `css/styles.css` → CSS custom properties in `:root` / `[data-still-theme]` — rebrand colours and Still Field palette instantly
-- `js/audio.js` — insert additional `BiquadFilterNode`s or effects in `ensureAudio()`
-- `js/still-field.js` — swap the rendering model entirely while keeping the same enable / intensity / analyser hooks
+**Key extension points**
+- `js/noise.js` → add a generator + a `data-type` button; `app.js` wires it automatically
+- `css/styles.css` → CSS custom properties — rebrand colours and the Still Field palette in one place
+- `js/audio.js` — insert additional nodes in `ensureAudio()`
+- `js/still-field.js` — swap the rendering model while keeping the same enable / intensity / analyser hooks
 
-See [AGENTS.md](./AGENTS.md#common-tasks) for step-by-step recipes.
+See [AGENTS.md](./AGENTS.md#common-tasks) for the recipes. Do the recipes. Do not freestyle a second pair-scan in the render loop. Battery life is a feature.
 
 **State (localStorage keys)**  
-`complexNoise_type`, `complexNoise_volume`, `complexNoise_timer`,  
-`complexNoise_stillTheme`, `complexNoise_stillEqLow/Mid/High`,  
-`complexNoise_stillFieldEnabled` (default true), `complexNoise_stillFieldIntensity`,  
-`complexNoise_stillFieldSpeed` (0.7–4.8, default 2.0),  
-`complexNoise_stillFieldNerd` (default true), `complexNoise_stillFieldTexture` (default true),  
-`complexNoise_stillFieldDensity` (0.5–2.2, default 1.0), `complexNoise_stillFieldReach` (0.6–1.6, default 1.0),  
-`complexNoise_stillFieldTrail` (2–26 /s, default 8.2), `complexNoise_stillFieldDepth` (0.3–1.6, default 0.75),  
-`complexNoise_stillFieldDwell` (4–26 s, default 14), `complexNoise_stillFieldFps` (30/45/60, default 30),  
-`complexNoise_stillFieldCode` (default true),  
-`complexNoise_stillGlassTransparent`, `complexNoise_uiChromeHidden`
+All keys are centralised in `js/constants.js` → `STORAGE_KEYS` and accessed only through `js/storage.js`. Never call `localStorage` directly. It throws in Safari Private Browsing. `parseFloat(x) || fallback` silently discards a stored volume of `0`. We have the scars.
 
-All keys are centralised in `js/constants.js` → `STORAGE_KEYS`, and read/written through `js/storage.js`, which degrades gracefully when storage is unavailable (Safari Private Browsing throws on access rather than returning null).
+---
 
 ## Tests
 
@@ -157,30 +187,47 @@ npm test        # headless browser suite, ~30s
 npm test -- --headed
 ```
 
-`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server, so nothing needs to be running first. It covers playback and the fade-out/restart race, the sleep timer, persistence (including corrupt, zero and out-of-range values), theming and glass mode, the canvas visualisation (that it paints, stays transparent, and stops while the page is hidden), Info layer callout formats, graph metrics and keyboard tab navigation, the spectral tilt of each noise colour, and basic accessibility (labels and 44px touch targets).
+`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer, persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, and basic accessibility (labels + 44 px targets).
 
-If your environment ships a pre-provisioned Chromium rather than letting Playwright download one, point the suite at it with `PLAYWRIGHT_CHROMIUM_PATH=/path/to/chromium npm test`.
+Several tests exist because a plausible-looking refactor broke playback in a way that only shows up minutes later. The sleep-timer test in particular is the result of lived experience.
 
-CI runs the suite and ESLint on every pull request.
+> **Arty:** I ran the full suite twice before this commit.  
+> **Blazenetic:** Good.  
+> **Arty:** …I ran it a third time. Just in case.
+
+CI runs the suite and ESLint on every pull request. If your environment ships a pre-provisioned Chromium, point the suite at it with `PLAYWRIGHT_CHROMIUM_PATH=...`.
+
+---
 
 ## Roadmap
 
-- **Service worker** for true cold-start offline / airplane-mode use. The app makes no network calls at runtime, but a first load still needs the network.
+- **Service worker** for true cold-start offline / airplane-mode use. The app makes no network calls at runtime, but a first load still needs the network. We know this is the most requested missing piece.
 - **AudioWorklet generation** — move the generators into an `AudioWorkletProcessor` for continuous, non-buffered synthesis and zero main-thread cost.
 - **Stereo width** — independent left/right buffers via `ChannelMergerNode`.
 - **More noise colours** and optional nature layers mixed in as extra sources.
-- Carefully measured Easter eggs (console greeting, hidden Info-panel lines, the occasional Baldrick quote). We will not apologise for these.
+- Carefully measured Easter eggs (console greeting from the Lab, hidden Info-panel lines, the occasional Baldrick quote triggered by something suitably ridiculous). We will not apologise for these. Melchett has already declared them a strategic necessity.
+
+> **Baldrick:** I have a cunning plan for the service worker. We just tell people to keep the tab open forever.  
+> **Darling:** That is not a plan. That is a lifestyle.  
+> **Blazenetic:** Write the service worker, Arty. Ignore him.
+
+---
 
 ## Browser support
 
-Modern evergreen browsers (Chrome, Edge, Firefox, Safari) including Chrome for Android.  
-ES modules (`type="module"`) are used; all current mobile browsers support them.  
-AudioContext requires a user gesture to start/resume — handled by the play button.  
-`backdrop-filter` is widely supported on current mobile browsers; the UI remains fully usable without it.
+Modern evergreen browsers (Chrome, Edge, Firefox, Safari) including Chrome for Android. ES modules are used; all current mobile browsers support them. AudioContext requires a user gesture — handled by the play button. `backdrop-filter` is widely supported; the UI remains fully usable without it.
+
+If you are still on Internet Explorer we have nothing for you except quiet pity.
+
+---
 
 ## Branding
 
-Titanium dark surfaces + vibrant purple accents (Still Theme). Subtle silver-titanium Still Field. Glass panels that reveal the living field. Professional, calm, premium feel by Blazenetic.
+Titanium dark surfaces + vibrant purple accents (Still Theme). Subtle silver-titanium Still Field. Glass panels that reveal the living field. Professional, calm, premium feel.
+
+The product looks like it was designed by someone who cares about residual outlines having a floor. Because it was.
+
+---
 
 ## License
 
@@ -188,12 +235,21 @@ MIT License
 
 Copyright (c) 2026 Blazenetic
 
+Do whatever you want with the code. Just don’t put ads on the pause button. We have already had that conversation with the universe and we won.
+
 ---
 
 Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
-See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
+See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.
 
-**Blazenetic:** “The software stays calm. The documentation gets to be chaotic. That is the deal.”  
-**Darling:** “And for once, he is correct.”  
+**Blazenetic:** “I research the maths. I find the elegant version. I implement it. Then I complain about the edge cases. That is the job.”  
+**Darling:** “And somehow the product still helps people sleep.”  
+**Melchett:** “A crushing victory for the forces of rest!”  
+**Baldrick:** “I still think the potato equaliser had merit—”  
+**Darling:** “No.”
+
+The software stays calm.  
+The documentation gets to be chaotic.  
+That is the deal.
 
 Sleep well. (Or don’t. We’re not your parents.)

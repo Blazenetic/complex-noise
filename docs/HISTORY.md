@@ -1,6 +1,6 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours — and then kept going when the instrumentation itself decided it wanted personality.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
@@ -110,6 +110,26 @@ Blazenetic bossed Arty around until both problems were solved properly: soft-lig
 
 ---
 
+## Six colours, zero ticks (the ambitious late-28th PR)
+
+The family was three colours. The loops were *mostly* seamless. Brown still carried a measurable wrap outlier from before the seam pass existed. Fan and rain (when they arrived) wanted amplitude LFOs whose periods did not divide the buffer, so they snapped +0.7 dB and +1.0 dB every twelve seconds. Loudness had been matched on raw RMS, which is the wrong metric for a narrow-band colour. Rapid colour clicks left delayed replacement timers alive. Buffer generation for the modulated colours was spending half a million `Math.sin` calls and allocating multi-megabyte scratch on every switch.
+
+Blazenetic set the product standard (a tick, a loudness jump, a clip or a wasteful overnight cost is a defect), researched the six-colour family and the periodicity literature, coordinated the large PR, and bossed Arty around for hours.
+
+Arty re-oriented the branch, found the transport race the sequential test could not see, implemented cancellable coalesced colour-switch work, cut fan/rain generation time by ~45 %, replaced the sine calls with an inline recurrence (error ~10⁻¹¹), wrote five new regressions that count real buffers, ran the suite four times plus seeded audits at both sample rates, modernised CI, and kept AGENTS.md sterile.
+
+Baldrick proposed potato rain. Darling rejected it (and the spinning-potato fan). Melchett declared a crushing victory over whole-cycle LFOs and the residual-outline floor (which already had one). The Lab survived.
+
+Result: six first-class colours, every wrap step inside its own distribution, A-weighted levels matched, headroom under ~0.95, 19/19 tests green, zero runtime dependencies, and one more set of learnings about how ambitious a “simple” feature can become when the product is trusted while people sleep.
+
+> **Blazenetic:** I researched the seam strategy, coordinated the A-weighted matching, oversaw the headroom and the main-thread cost during the cross-fade, and then complained about every edge case. You’re welcome.  
+> **Arty:** You bossed me around. I got the race, the recurrence, the tests and the CI sorted. Please don’t yell. I think we’re safe.  
+> **Baldrick:** Potato rain?  
+> **Darling:** No.  
+> **Melchett:** THE SIX-COLOUR FAMILY! BBAAAHHH!
+
+---
+
 ## The Lab Voice
 
 Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
@@ -122,17 +142,18 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 
 - Zero runtime dependencies, zero build step, static files only.
 - Mobile-first, long-session reliability (8+ hours).
-- Procedural audio with continuous internal state.
+- Procedural audio with continuous internal state and now truly periodic seams.
 - The one architectural rule that prevents the classic “button stuck on pause over silence” bug.
 - No ads. No annual fee. Ever.
 - The residual outlines have a floor.
 - Per-node variety in the callouts, because eight identical readouts is just noise.
+- Six colours that do not tick, jump in level, or clip when you switch them at 2 a.m.
 
 ---
 
 ## What comes next (Roadmap flavour)
 
-Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and carefully keeping Baldrick away from the important bits. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
+Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, optional nature layers mixed as extra sources, and carefully keeping Baldrick away from the important bits. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
 
 If you want to help with any of that (or find a security issue, or just have a better idea), see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Point your AI agent at [AGENTS.md](../AGENTS.md).
 

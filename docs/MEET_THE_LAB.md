@@ -95,6 +95,30 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
+## The six-colour chaos Tuesday (the ambitious one)
+
+**Melchett:** Gentlemen! Three new colours! Green! Fan! Rain! Six colours in total! Seamless loops! No ticks! Forty-five percent faster! Nineteen tests green! A crushing quantitative victory of historic scale! BBAAAHHH!
+
+**Darling:** It is three new generators and a transport-race fix, Melchett. Sit down.
+
+**Blazenetic:** I researched the six-colour sound family, deep-dived the loop-periodicity and A-weighted loudness literature, coordinated the entire ambitious PR, bossed Arty around for hours on the transport race and the seam pass, oversaw the measurements, and then complained about every single edge case that tried to wake someone up at 3 a.m. You’re welcome. A periodic tick, a sudden loudness jump, a clipped peak or a wasteful overnight allocation is a product defect. We do not ship those.
+
+**Arty:** Okay, okay — you *really* bossed me around. I found the race the sequential test could not see, implemented the cancellable coalesced work, cut the fan/rain generation time by roughly 45 %, replaced half a million `Math.sin` calls with an inline recurrence whose error stays around 10⁻¹¹, expanded the suite so it counts real buffers, ran everything four times plus the seeded audits, fixed the CI, and kept AGENTS.md sterile. Please don’t yell. I think we’re safe? Lots of learnings. Good times. Chaos. Shenanigans. We survived.
+
+**Baldrick:** I have a cunning plan, sir. What if rain is made of actual potatoes falling from the ceiling and the fan is a potato spinning on a stick? Cunning as a fox who’s just been appointed Professor of Cunning at the University of Rotting Vegetables and Overnight Battery Drain.
+
+**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies. You dropped them *again*.
+
+**Melchett:** The potato rain is rejected! Another victory for whole-cycle LFOs and the residual outlines!
+
+**Darling:** That is not how victories work. And the residual outlines already had a floor long before this PR.
+
+**Blazenetic:** Research first. Architecture second. Potato plans last. The wall holds. The play button still works at 3 a.m. That is non-negotiable.
+
+**Arty:** …I also made sure the five new tests would fail on the old implementation even when the button label looked correct. Just saying.
+
+---
+
 ## Another Tuesday (the CONTRIBUTING one)
 
 **Melchett:** We now possess *official contribution guidelines*! The forces of open source tremble!  
@@ -113,7 +137,7 @@ We ship serious, zero-dependency, mobile-first tools for humans, and sometimes f
 We also refuse to write boring release notes.
 
 If you just want the noise, hit play on the [live demo](https://blazenetic.github.io/complex-noise/).  
-If you want to know who is responsible for the residual outlines having a floor, or why the glass is allowed to be ultra, or why eight callouts now say eight different things, or why Baldrick is still employed — you are in the right place.
+If you want to know who is responsible for the residual outlines having a floor, or why the glass is allowed to be ultra, or why eight callouts now say eight different things, or why we now have six colours that refuse to tick, or why Baldrick is still employed — you are in the right place.
 
 If you want to help, see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Message the Lab. Point your AI agent at [AGENTS.md](../AGENTS.md) first.
 

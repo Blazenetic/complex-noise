@@ -273,6 +273,10 @@ test('all six noise colours are wired, exclusive and persisted', async page => {
     (await import('/js/constants.js')).NOISE_TYPES);
   assertEqual(types.join(','), expected.join(','),
     'the type buttons and NOISE_TYPES must agree, in order — app.js binds from data-type');
+  const generators = await page.evaluate(async () =>
+    Object.keys((await import('/js/noise.js')).GENERATORS));
+  assertEqual(generators.sort().join(','), [...expected].sort().join(','),
+    'GENERATORS and NOISE_TYPES must contain the same colours — fallback audio can otherwise hide a missing generator');
 
   for (const type of ['green', 'fan', 'rain']) {
     await page.click(`.type-btn[data-type="${type}"]`);
@@ -311,6 +315,45 @@ test('every colour survives a real cross-fade through the audio graph', async pa
   assertEqual(state.isPlaying, true, 'playback should have survived six colour changes');
   assertEqual(state.type, order[order.length - 1], 'the last colour clicked should be current');
   assert(/rain/i.test(state.status), `status should name the current colour, got "${state.status}"`);
+});
+
+test('rapid colour changes coalesce and cannot replace a resumed source', async page => {
+  // Count real generated AudioBuffers. Before the timer was made cancellable,
+  // three quick clicks generated three full 12 s buffers, and a colour timeout
+  // that survived pause → play replaced the newly resumed source.
+  await page.evaluate(() => {
+    window.noiseBufferCount = 0;
+    const createBuffer = window.AudioContext.prototype.createBuffer;
+    window.AudioContext.prototype.createBuffer = function (...args) {
+      window.noiseBufferCount++;
+      return createBuffer.apply(this, args);
+    };
+  });
+
+  await page.click('#playBtn', { force: true });
+  await page.waitForTimeout(250);
+  assertEqual(await page.evaluate(() => window.noiseBufferCount), 1,
+    'starting playback should build exactly one noise buffer');
+
+  await page.click('.type-btn[data-type="green"]');
+  await page.click('.type-btn[data-type="fan"]');
+  await page.click('.type-btn[data-type="rain"]');
+  await page.waitForTimeout(450);
+  assertEqual(await page.evaluate(() => window.noiseBufferCount), 2,
+    'rapid colour clicks should coalesce into one replacement buffer');
+
+  await page.click('.type-btn[data-type="green"]');
+  await page.waitForTimeout(40);
+  await page.click('#playBtn', { force: true });
+  await page.waitForTimeout(40);
+  await page.click('#playBtn', { force: true });
+  await page.waitForTimeout(450);
+
+  assertEqual(await page.evaluate(() => window.noiseBufferCount), 3,
+    'a colour timeout from before pause must not replace the newly resumed source');
+  const state = await page.evaluate(async () => (await import('/js/audio.js')).getState());
+  assertEqual(state.isPlaying, true, 'playback should remain active after pause and immediate resume');
+  assertEqual(state.type, 'green', 'the selected colour should survive pause and immediate resume');
 });
 
 test('every colour is level-matched, has headroom, and loops without a seam', async page => {

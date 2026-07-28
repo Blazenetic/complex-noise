@@ -4,9 +4,15 @@ A short, mostly true account of how a small Australian lab turned a quiet idea i
 
 ## Origin — 26 July 2026
 
-Complex Noise began as a single-file, pure client-side procedural noise generator. Brown (the default), Pink and White noise, synthesised live with the Web Audio API, looping ~12-second buffers whose seams are inaudible for these stochastic signals. Volume, a sleep timer, Wake Lock, titanium-and-purple branding, and a determined refusal to ship any runtime dependency or network call after load.
+It started with a commercial white-noise app and a growing sense of quiet fury.
 
-The goal was simple: something that would keep going all night on a phone without clicking, without getting louder, and without draining the battery more than necessary.
+Every time you paused, every time you hit play, every time you tried to quit — another ad. Then the app decided the only civilised way to listen to static was to pay an annual subscription. Blazenetic had had enough.
+
+**Blazenetic:** “Stuff it. We’ll make our own. Zero ads, zero fees, zero dependencies, and it will actually keep going all night on a phone.”
+
+So on 26 July 2026 a small Australian lab (one human systems architect + a supporting cast of AI agents) sat down and built the first single-file, pure client-side procedural noise generator. Brown (the default), Pink and White noise, synthesised live with the Web Audio API, looping ~12-second buffers whose seams are inaudible for these stochastic signals. Volume, a sleep timer, Wake Lock, titanium-and-purple branding, and a determined refusal to ship any runtime dependency or network call after load.
+
+The goal was simple and slightly stubborn: something that would keep going all night without clicking, without getting louder, without draining the battery more than necessary, and without ever asking for money or attention.
 
 Live from the first day: https://blazenetic.github.io/complex-noise/
 
@@ -28,7 +34,7 @@ The public [0.1.0] release landed on 28 July 2026. Full details live in the [Cha
 
 ## The Lab Voice
 
-Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
+Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
 
 The cast, the wall between narrative and agent docs, and the style rules live in the project Google Drive. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
@@ -38,10 +44,11 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 - Mobile-first, long-session reliability (8+ hours).
 - Procedural audio with continuous internal state.
 - The one architectural rule that prevents the classic “button stuck on pause over silence” bug.
+- No ads. No annual fee. Ever.
 
 ## What comes next (Roadmap flavour)
 
-Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully measured quantity of Easter eggs. The full origin story and further Lab Logs will continue as the project grows.
+Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully measured quantity of Easter eggs. Further Lab Logs will continue as the project grows.
 
 ---
 

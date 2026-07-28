@@ -94,10 +94,14 @@ The source overlay is now a heat trail that cools at 3.2/s rather than a full-wi
 
 On wide viewports the field itself carries a column of the renderer’s own source with a program counter whose dwell is the measured share of the frame. It is instrumentation, not decoration.
 
+Callouts and edge dimensions have received a calm pass: longer, slower envelopes so cards stay readable and fade cleanly; sticky preferred side so the left/right bounce is gone; six edge slots with staggered secondary values. The continuous-time envelopes discretise exactly via `1 - Math.exp(-rate * dt)`, so the field remains identical at any frame cap. The sticky side is classical hysteresis applied to a placement contest.
+
 Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
 
-> **Blazenetic:** I researched the φ offset so the modes would differ, coordinated the heat decay, and then complained about the undrawable slots that used to hold forever. The multiverse of identical callouts is slightly smaller today. You’re welcome.  
-> **Arty:** Distinct modes on screen. Independent toggles. Fold works. I checked three times. Please don’t yell.
+> **Blazenetic:** I researched the continuous-rate envelopes and the sticky-side hysteresis, coordinated the capacity increase and the multi-line stagger, and then complained about the left/right bounce and the sandbox that sulked at a 125 kB source file. You’re welcome.  
+> **Arty:** Distinct modes. Independent toggles. Fold works. Sticky side. I checked three times. Please don’t yell.  
+> **Baldrick:** Potato callouts that slowly cool?  
+> **Darling:** No.
 
 ### Field Lab
 The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), and the three canvas overlays. All live. All persisted. Reset button included because sometimes you just want to go home again.
@@ -279,7 +283,7 @@ Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of inc
 See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. You’re welcome.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. You’re welcome.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  

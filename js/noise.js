@@ -48,9 +48,9 @@
  * A stable IIR filter fed a periodic input settles into a periodic output, but
  * only once its state has forgotten the silence it started from. So each
  * stateful generator keeps the head of its white-noise sequence in a small
- * scratch array (`seamHead()`), fills the whole buffer, and then runs that head
- * through *again* carrying the state the buffer ended on. The second lap is the
- * state the filter would really have been in on the next time round, so
+ * scratch array (`seamScratch`), fills the whole buffer, and then runs that
+ * head through *again* carrying the state the buffer ended on. The second lap
+ * is the state the filter would really have been in on the next time round, so
  * sample 0 now follows sample N−1 continuously; and because the scratch array
  * is far longer than the filter's memory, the first sample past it is
  * continuous too.

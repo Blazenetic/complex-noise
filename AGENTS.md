@@ -325,7 +325,7 @@ noise rather than the listening volume.
   put a step in the level every twelve seconds, all night. A filter started from
   zero state makes sample 0 come out of a silent filter while sample N−1 does
   not; every stateful generator therefore runs a second pass over the head of its
-  white-noise sequence (`seamHead()`) to carry the state round the join. And an
+  white-noise sequence (`seamScratch`) to carry the state round the join. And an
   amplitude LFO whose period does not divide the buffer snaps back to its
   starting phase at the wrap; rates come from `lfoStep()`, which rounds to whole
   cycles. Do not replace either with a plain loop or a literal period.

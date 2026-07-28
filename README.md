@@ -14,7 +14,7 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 
 A pure client-side procedural noise generator (Brown, Pink, White, Green, Fan, Rain) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
-> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks!  
+> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead!  
 > **Darling:** It is a noise generator, Melchett.  
 > **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, oversaw the seam passes and the A-weighted matching, and then complained about the edge cases. You’re welcome.
 
@@ -94,14 +94,14 @@ The source overlay is now a heat trail that cools at 3.2/s rather than a full-wi
 
 On wide viewports the field itself carries a column of the renderer’s own source with a program counter whose dwell is the measured share of the frame. It is instrumentation, not decoration.
 
-Callouts and edge dimensions have received a calm pass: longer, slower envelopes so cards stay readable and fade cleanly; sticky preferred side so the left/right bounce is gone; six edge slots with staggered secondary values. The continuous-time envelopes discretise exactly via `1 - Math.exp(-rate * dt)`, so the field remains identical at any frame cap. The sticky side is classical hysteresis applied to a placement contest.
+Callouts and edge dimensions have received a calm pass. Attack and release envelopes slowed and lengthened so cards stay readable and fade cleanly. Minimum hold raised. Edge slots increased to six with staggered secondary values on distinct lines. Nodes now remember their preferred side and only flip when that side is clearly unusable. The left/right bounce is gone. The continuous-time envelopes discretise exactly via `1 - Math.exp(-rate * dt)`, so the field remains identical at any frame cap. The sticky side is classical hysteresis applied to a placement contest.
 
 Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
 
-> **Blazenetic:** I researched the continuous-rate envelopes and the sticky-side hysteresis, coordinated the capacity increase and the multi-line stagger, and then complained about the left/right bounce and the sandbox that sulked at a 125 kB source file. You’re welcome.  
-> **Arty:** Distinct modes. Independent toggles. Fold works. Sticky side. I checked three times. Please don’t yell.  
-> **Baldrick:** Potato callouts that slowly cool?  
-> **Darling:** No.
+> **Blazenetic:** I researched the continuous-rate envelopes and the sticky-side hysteresis. I coordinated the capacity increase and the multi-line stagger. Then I complained about the left/right bounce and the sandbox that sulked at a hundred-and-twenty-five-kilobyte source file. You’re welcome.  
+> **Arty:** Distinct modes. Independent toggles. Fold works. Sticky side. The bounce is dead. I checked three times. Please don’t yell.  
+> **Baldrick:** Potato callouts that slowly cool and then fall off the screen? Potato counterweights on the leader lines?  
+> **Darling:** No. And stop leaking process details. That was supposed to stay in the cabinet.
 
 ### Field Lab
 The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), and the three canvas overlays. All live. All persisted. Reset button included because sometimes you just want to go home again.
@@ -283,11 +283,11 @@ Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of inc
 See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. You’re welcome.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. The bounce is dead. You’re welcome.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  
-**Darling:** “No.”
+**Darling:** “No. And stop leaking things that were supposed to stay in the cabinet.”
 
 Research first. Architecture second. Potato plans last.  
 The residual outlines have a floor. You’re welcome.  

@@ -1,6 +1,6 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks, and then kept going *one more time* when the callouts decided they wanted to stop bouncing left and right.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks, and then kept going *one more time* when the callouts decided they wanted to stop bouncing left and right and simply *calm down*.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
@@ -158,17 +158,19 @@ Result: six first-class colours, every wrap step inside its own distribution, A-
 
 ## The calm pass (still the 28th, after the six-colour dust settled)
 
-The callouts were readable, but they still flipped left and right whenever two nearby nodes swapped depth by a hair. Cards could vanish before the eye finished the number. Edge secondary values sat on the same baseline and fought each other. The previous agent session then hit a 125 kB source-file size limit in the sandbox and produced more stack traces than a poorly-damped oscillator.
+The callouts were readable, but they still flipped left and right whenever two nearby nodes swapped depth by a hair. Cards could vanish before the eye finished the number. Edge secondary values sat on the same baseline and fought each other. Then a previous session tried to paste a hundred-and-twenty-five-kilobyte source file in one go and the sandbox produced more stack traces than a poorly-damped oscillator.
 
-Blazenetic researched the continuous-rate envelopes that become exact discrete updates via `1 - Math.exp(-rate * dt)`, coordinated the sticky-side hysteresis (prefer the previous decision until the preferred side is *clearly* unusable), oversaw the capacity increase to six edge slots and the multi-line stagger, and then complained about the sandbox and the edge cases of keep-outs. Arty applied the timing constants, the capacity, the staggered baselines and the sticky side while looking like someone was about to yell. Baldrick’s “just paste the whole file” cunning plan is officially blamed for the sandbox trauma. Darling sat everyone down. Melchett declared victory over hysteresis.
+Blazenetic researched the continuous-rate envelopes that become exact discrete updates via `1 - Math.exp(-rate * dt)` — the exact solution of the linear rate equation, which is why the field looks identical at thirty, forty-five and sixty frames. He coordinated the sticky-side hysteresis so a callout does not flip the moment two nodes swap depth by a hair. He oversaw the capacity jump to six edge slots and the multi-line stagger. Then he complained about the keep-outs, the energy gate, and the fact that Baldrick’s “just paste the whole file” cunning plan had traumatised an entire sandbox.
 
-The mathematics is ordinary and useful: the exponential map is the exact solution of the linear rate equation, so the envelopes are identical at 30, 45 and 60 fps. The sticky side is classical hysteresis applied to a leader-line placement contest. The φ offset continues to guarantee that consecutive lifetime IDs land far apart in mode space. Pre-sized typed arrays still mean zero allocation in the render loop. The residual outlines still have a floor.
+Arty applied the slower attack, the longer hold, the extra edge slots, the staggered secondary baselines and the preferred-side memory while looking like someone was about to yell. The eight modes still disagree. The φ offset still spreads them. The pair-identity kinds are untouched. The residual outlines still have a floor.
 
-> **Blazenetic:** I researched the continuous-time envelope discretisation, coordinated the sticky-side hysteresis, oversaw the capacity and the multi-line stagger, and then complained about the sandbox size limit and the left/right bounce. You’re welcome.  
-> **Arty:** The previous agent hit the size limit hard. Baldrick’s paste plan made it worse. I applied the changes carefully. Please don’t yell. I think we’re safe.  
-> **Baldrick:** Potato sandbox?  
-> **Darling:** No. And the large-file issue is still your fault.  
-> **Melchett:** THE BOUNCE IS DEAD! A CRUSHING VICTORY FOR HYSTERESIS! BBAAAHHH!
+Baldrick proposed potato callouts that cool and fall off the screen, a potato sandbox for large files, and potato counterweights on the leader lines. Darling rejected every single one and also blamed Baldrick for accidentally leaking the existence of the documentation process itself. Melchett declared the death of the left-right bounce a strategic masterpiece of historic scale.
+
+> **Blazenetic:** I researched the continuous-time envelope discretisation and the sticky-side hysteresis. I coordinated the capacity and the multi-line stagger. Then I complained about the sandbox trauma and the bounce. You’re welcome.  
+> **Arty:** The previous session hit the size limit hard. There were stack traces. Many stack traces. I applied the changes carefully. Please don’t yell. I think we’re safe.  
+> **Baldrick:** Potato counterweight on the leader line? Real aerodynamic potential—  
+> **Darling:** No. And the leak is still your fault.  
+> **Melchett:** THE BOUNCE IS DEAD! A CRUSHING VICTORY FOR HYSTERESIS AND EXPONENTIAL SMOOTHING! BBAAAHHH!
 
 ---
 
@@ -178,7 +180,7 @@ Somewhere in the middle of the sprint the documentation decided it was allowed t
 
 The cast, the wall between narrative and agent docs, and the style rules live in a mysterious cabinet in the lab. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
-**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor.
+**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor. Any accidental leaks of process details are also his fault.
 
 ---
 

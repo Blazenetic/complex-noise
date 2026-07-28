@@ -21,7 +21,7 @@ The goal was simple and slightly stubborn: something that would keep going all n
 Live from the first day: https://blazenetic.github.io/complex-noise/
 
 > **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
-> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry.
+> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry. I research these things.
 
 ---
 
@@ -43,6 +43,7 @@ The public [0.1.0] release landed on 28 July 2026. Full details live in the [Cha
 
 > **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! The war is as good as won! BBAAAHHH!  
 > **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.  
+> **Blazenetic:** I researched the perspective and lifecycle maths, coordinated the modular architecture, and then complained about the edge cases. You’re welcome.  
 > **Baldrick:** My cunning plan was to make the nodes explode when they die.  
 > **Darling:** No.
 
@@ -68,14 +69,14 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 
 ## What comes next (Roadmap flavour)
 
-Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully measured quantity of Easter eggs. Further Lab Logs will continue as the project grows.
+Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully measured quantity of Easter eggs. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
 
 If you want to help with any of that (or find a security issue, or just have a better idea), see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Point your AI agent at [AGENTS.md](../AGENTS.md).
 
 ---
 
 Made in a small Australian lab.  
-The software stays calm. The documentation gets to be chaotic. That is the deal.  
+The residual outlines have a floor.  
 Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md)
 
-Sleep well. Or don’t. Melchett has already declared the next victory.
+Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.

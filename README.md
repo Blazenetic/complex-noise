@@ -82,12 +82,21 @@ Default **on**. Intensity and speed controls (practical range 0.7–4.8). Batter
 ### Stats / Info Layer
 Engineering-drawing callouts with leader lines, axis-coloured transform rows (X red, Y green, Z blue — the convention that actually makes sense), edge dimensions rotated onto the lines they measure, and a Live / Math / Code panel that shows real numbers, live equations with their operands evaluated, and per-stage timings.
 
+Eight detail modes (energy, transform, velocity, projection, wave, links, lifecycle, seed) instead of five. The mode a given node shows is the global rotation offset by its own lifetime ID through the golden ratio — consecutive IDs land far apart, so the callouts on screen reliably read different quantities and each still walks the full set over a few dwells. Handle glyphs follow the family: circle for scalar, square for transform, diamond for phase, crosshair for vector.
+
+Four kinds of edge dimension (span, coupling, reach, energy), stable for the life of the pair. Degree, coupling and nearest-neighbour distance are accumulated inside the existing link pass — no second graph scan.
+
+The source overlay is now a heat trail that cools at 3.2/s rather than a full-width purple strobe. It folds from its own title bar. Three independent overlay chips in the Field Lab with a live “n of 3” readout.
+
 On wide viewports the field itself carries a column of the renderer’s own source with a program counter whose dwell is the measured share of the frame. It is instrumentation, not decoration.
 
 Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
 
+> **Blazenetic:** I researched the φ offset so the modes would differ, coordinated the heat decay, and then complained about the undrawable slots that used to hold forever. You’re welcome.  
+> **Arty:** Distinct modes on screen. Independent toggles. Fold works. I checked three times.
+
 ### Field Lab
-The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), source overlay. All live. All persisted. Reset button included because sometimes you just want to go home again.
+The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), and the three canvas overlays. All live. All persisted. Reset button included because sometimes you just want to go home again.
 
 ### Glass UI & Immersion
 Translucent surfaces with backdrop blur so the living field shows through. An **ultra-transparent** mode that drops the panels almost to nothing when you want the field to be the entire world.
@@ -166,7 +175,7 @@ Two full-viewport Canvas 2D layers behind the UI. No WebGL. No library. The dept
 - **Energy.** Three layers that never line up. Violet stays calm under brown; white pushes cyan.
 - **Battery.** 30 fps default, motion integrated from real elapsed time, loop stops when the page is hidden, zero per-frame allocation, `shadowBlur` rationed. `prefers-reduced-motion` slows it and drops the glow.
 
-See [Info Layer](./docs/INFO_LAYER.md) for the full instrumentation contract.
+See [Info Layer](./docs/INFO_LAYER.md) for the full instrumentation contract — including the eight modes, the φ offset, the heat trail and the fold.
 
 **Glass surfaces**  
 Transparency is a second axis alongside the theme (`data-glass="standard|ultra"`). Both combine freely with either theme. Text, the play button and the active noise type keep their contrast in all four combinations. Ultra is not a gimmick; it is for people who want the field to be the only thing left.
@@ -192,7 +201,7 @@ npm test        # headless browser suite, ~30s
 npm test -- --headed
 ```
 
-`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer, persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, and basic accessibility (labels + 44 px targets).
+`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer, persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, and basic accessibility (labels + 44 px targets). Three new cases cover mode variety, independent overlay toggles, and the fold.
 
 Several tests exist because a plausible-looking refactor broke playback in a way that only shows up minutes later. The sleep-timer test in particular is the result of lived experience.
 
@@ -270,4 +279,5 @@ See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 **Darling:** “No.”
 
 Research first. Architecture second. Potato plans last.  
-The residual outlines have a floor. You’re welcome.
+The residual outlines have a floor. You’re welcome.  
+The software stays calm. The documentation gets to be chaotic. That is the deal.

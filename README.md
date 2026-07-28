@@ -5,9 +5,11 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 
 > It began because a commercial noise app decided ads on every pause and an annual fee were reasonable.  
 > We disagreed.  
->  
-> Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
-> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, finds the elegant solution, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
+
+Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
+Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, keeps up with the news and deep-dives into mathematics and computer science, finds the elegant solution, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
+
+We also build other interesting tools for humans and AI agents when the mood takes us. This one just happens to be the quiet one.
 
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
@@ -16,7 +18,10 @@ A pure client-side procedural noise generator (Brown, Pink, White) optimised for
 
 > **Melchett:** A mighty instrument in the war against sleeplessness!  
 > **Darling:** It is a noise generator, Melchett.  
-> **Blazenetic:** A *correct* noise generator. You’re welcome.
+> **Blazenetic:** A *correct* noise generator. You’re welcome.  
+> **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
+> **Baldrick:** I have a cunning plan involving a single potato—  
+> **Darling:** No.
 
 ---
 
@@ -193,7 +198,9 @@ Several tests exist because a plausible-looking refactor broke playback in a way
 
 > **Arty:** I ran the full suite twice before this commit.  
 > **Blazenetic:** Good.  
-> **Arty:** …I ran it a third time. Just in case.
+> **Arty:** …I ran it a third time. Just in case.  
+> **Baldrick:** My cunning plan is we skip the tests and declare victory early.  
+> **Darling:** No.
 
 CI runs the suite and ESLint on every pull request. If your environment ships a pre-provisioned Chromium, point the suite at it with `PLAYWRIGHT_CHROMIUM_PATH=...`.
 
@@ -209,7 +216,9 @@ CI runs the suite and ESLint on every pull request. If your environment ships a 
 
 > **Baldrick:** I have a cunning plan for the service worker. We just tell people to keep the tab open forever.  
 > **Darling:** That is not a plan. That is a lifestyle.  
-> **Blazenetic:** Write the service worker, Arty. Ignore him.
+> **Blazenetic:** Write the service worker, Arty. Ignore him.  
+> **Melchett:** Another crushing victory for the forces of offline!  
+> **Darling:** It is not written yet, Melchett. Sit down.
 
 ---
 
@@ -242,14 +251,17 @@ Do whatever you want with the code. Just don’t put ads on the pause button. We
 Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
 See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.
 
-**Blazenetic:** “I research the maths. I find the elegant version. I implement it. Then I complain about the edge cases. That is the job.”  
+**Blazenetic:** “I research the maths. I deep-dive. I find the elegant version. I implement it. Then I complain about the edge cases. That is the job.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  
-**Darling:** “No.”
+**Darling:** “No.”  
+**Arty:** “I also made sure the wall between narrative docs and AGENTS.md is still mostly intact. Mostly.”
 
 The software stays calm.  
 The documentation gets to be chaotic.  
 That is the deal.
 
-Sleep well. (Or don’t. We’re not your parents.)
+If the field helps you sleep, good.  
+If it doesn’t, the nodes keep breathing anyway.  
+We’re not your parents, and the universe is large enough for both outcomes.

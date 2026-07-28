@@ -1,64 +1,47 @@
 # Meet the Lab
 
-You found the door that says “research”.  
-Inside it is a small Australian lab that ships calm, reliable tools for humans while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep.
+You pushed open the door marked “research” at 2:17 a.m. Australian time.  
+The lights are still on. Someone left a half-drunk coffee and three open browser tabs of spectral plots.
 
-This page is the visitor version. The full Lab Voice style guide lives in Google Drive and stays there — it is the authority for every changelog and README framing. It does not belong in the public repository. We are not animals.
+**Blazenetic** doesn’t look up from the matrix he’s muttering at.  
+“Perspective projection again. The nodes were drifting like amateurs. Fixed. You’re welcome. Also — I do *not* invent the maths. I research it, deep-dive the papers, keep up with the actual state of the art, then implement the elegant version and complain about the edge cases. That is the entire job description.”
 
----
+**Arty** is already mid-sentence at the console, voice a little higher than usual.  
+“Okay, okay, the sleep timer still fades correctly even if you yank the volume mid-fade and the wake lock drops and the page gets backgrounded. I ran the suite three times. The residual outlines have a floor now so quiet nodes don’t just vanish into the gradient. Please don’t yell. Oh jeez, is the analyser still before the gain? Yes. Good. We’re safe. I think.”
 
-## Who is actually here
+A potato appears on the desk. No one knows how.
 
-**Blazenetic** walks in, already mid-sentence about a perspective matrix.  
-Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Invents the hard maths, then complains about having to invent it. The sarcasm is surgical and rarely raised above conversational volume.
+**Baldrick** beams.  
+“I have a cunning plan, sir. What if we make the entire equaliser out of root vegetables? Hear me out — each band is a different tuber. Cunning as a fox who’s just been appointed Professor of Cunning at Oxford University.”
 
-> “I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome.”
+**Darling**, without looking up from the accessibility checklist:  
+“No. Absolutely not. And put that potato down before it becomes a runtime dependency.”
 
-**Arty** is already at the console, re-running the suite for the third time.  
-Primary implementer. Eager, slightly anxious, learns fast. Constantly scanning for the thing that will break at 3 a.m. on someone’s phone. Does most of the careful, correct work and then looks up like someone is about to yell.
+From the far end of the room, volume permanently set to eleven:
 
-> “Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. Please don’t yell.”
+**Melchett:** “Gentlemen! Today we have struck another crushing blow against the forces of sleeplessness! The glass is ultra! The field breathes in three dimensions! The documentation is *chaotic*! The war is as good as won! BBAAAHHH!”
 
-**Baldrick** appears the moment anyone says “plan”.  
-Earnest. Simple. Catastrophically confident in terrible ideas. His cunning plans are almost always rejected. Occasionally one is accidentally useful and everyone pretends not to notice.
+**Darling:** “It is a CSS custom property and a README, Melchett. Sit down.”
 
-> “I have a cunning plan, sir. What if the Still Field *is* the sleep timer? We just wait for all the nodes to die and then the audio stops. Cunning as a fox who’s just been appointed Professor of Cunning at Oxford University.”
+**Blazenetic** finally glances over.  
+“The software stays calm. The documentation gets to be chaotic. That is the deal. We also build other tools when the mood takes us — interesting ones for humans and the occasional AI agent that needs a quiet place to think. This one just happens to be for deep rest. Don’t get precious about it.”
 
-**Melchett** declares victory the instant a CSS variable lands.  
-Bombastic overconfidence. Treats every merged PR as a decisive triumph for the forces of rest. Volume is permanently set to eleven.
+**Arty** (quietly): “I also fixed the thing where the callouts drew under the cards on phones. Just… saying.”
 
-> “Gentlemen! Today we have struck a mighty blow against the forces of sleeplessness! The residual outlines now have a floor! BBAAAHHH!”
+**Baldrick:** “My other cunning plan involves replacing the entire test suite with a single optimistic shrug—”
 
-**Darling** is already tired of everyone.  
-Voice of reason. Put-upon competence. Appears precisely when the others are about to do something stupid and usually keeps the product usable. Slightly exhausted by the rest of the lab. Correct more often than is comfortable.
+**Darling:** “Arty, ignore him. Blazenetic, stop encouraging the potato. I will handle the labels myself.”
 
-> “Before we declare victory, has anyone actually tested this on a phone that isn’t on charge?”
+The door is still open.  
+You can leave. Or you can stay and watch the nodes breathe.
 
----
-
-## A Tuesday that actually happened
-
-**Melchett:** Another great victory! The glass is now *ultra*! The enemy will never recover!  
-**Darling:** That is a CSS variable, Melchett. Sit down.  
-**Baldrick:** I have a cunning plan involving a single potato—  
-**Darling:** No.  
-**Blazenetic:** The software stays calm. The documentation gets to be chaotic. That is the deal.  
-**Arty:** …I also fixed the fade race. And the labels no longer draw under the cards on phones. Please don’t yell.  
-**Melchett:** BBAAAHHH!  
-**Darling:** I will handle the accessibility labels myself.
+Either way, the noise keeps going.
 
 ---
 
-## Why any of this exists
+Made in a small Australian lab that ships calm tools and writes documentation like a late-night crossover episode.  
+The wall between narrative and agent docs is mostly still standing. Mostly.  
+Give the live version a crack: https://blazenetic.github.io/complex-noise/
 
-We ship serious, zero-dependency, mobile-first sleep tools.  
-We also refuse to write boring release notes.
-
-If you just want the noise, hit play.  
-If you want to know who is responsible for the residual outlines having a floor, or why the glass is allowed to be ultra, or why Baldrick is still employed — you are in the right place.
-
-The software stays calm.  
-The documentation gets to be chaotic.  
-That is the deal.
-
-Sleep well. (Or don’t. We’re not your parents.)
+If the field helps you sleep, good.  
+If it doesn’t, the universe is large and we are not your parents.

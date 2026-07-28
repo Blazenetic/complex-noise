@@ -2,21 +2,21 @@
 
 This folder holds product requirements, implementation context, visitor-facing Lab notes, and the project history for Complex Noise.
 
-The Lab ships serious sleep tools. The documentation is allowed to have a little more personality.
+The Lab ships serious, calm tools (this one for deep rest; others for humans and AI agents when the mood takes us). The documentation is allowed to have a little more personality. Sometimes a lot more.
 
 ## Documents
 
 | File | Purpose |
 |------|---------|
-| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — now more realistic, less descriptive |
+| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint — now with more chaos and fewer duplicated closings |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — rewritten as a scene rather than a cast list |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance |
 
 The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications.
 
-The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries) lives in the project Google Drive and is the authority for narrative docs. It is deliberately kept out of the public repository.
+The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries, the research-not-invention maths note, and the broader “tools for humans and AI agents” framing) lives in the project Google Drive and is the authority for narrative docs. It is deliberately kept out of the public repository — mostly.
 
 For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running, testing, architecture — professional, zero banter) and the [README](../README.md).  
 For what shipped and the Lab’s reaction to it, see **[CHANGELOG.md](../CHANGELOG.md)**.
@@ -40,4 +40,5 @@ A fuller work report covering the intensive 26–28 July development lives in th
 
 ---
 
-The software stays calm. The documentation gets to be chaotic. That is the deal.
+The software stays calm. The documentation gets to be chaotic. That is the deal.  
+If this helps you rest, excellent. If it doesn’t, the nodes will keep breathing anyway.

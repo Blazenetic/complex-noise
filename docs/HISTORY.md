@@ -69,7 +69,7 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 
 ## What comes next (Roadmap flavour)
 
-Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully measured quantity of Easter eggs. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
+Service worker for true cold-start offline, AudioWorklet continuous synthesis, stereo width, more noise colours, and a carefully keeping Baldric away from the important bits. Further Lab Logs will continue as the project grows. (Arty has already written the service-worker issue title three times.)
 
 If you want to help with any of that (or find a security issue, or just have a better idea), see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Point your AI agent at [AGENTS.md](../AGENTS.md).
 

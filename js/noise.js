@@ -77,17 +77,22 @@ const SEAM_WARMUP = 16384;
 
 /**
  * White-noise scratch for the seam pass — the head of the sequence, which each
- * stateful generator consumes twice. 64 KB, versus the megabytes a full copy of
- * the sequence would cost for no extra accuracy.
+ * stateful generator consumes twice. It is module-owned because generators run
+ * synchronously: allocating 64 KB on every colour change only gives the garbage
+ * collector more work, while a full sequence copy would cost several megabytes.
+ */
+const seamScratch = new Float32Array(SEAM_WARMUP);
+
+/**
+ * Fill the reusable seam scratch and return its active length.
  *
  * @param {number} length buffer length in samples
- * @returns {Float32Array} samples in −1…1
+ * @returns {number}
  */
-function seamHead(length) {
+function fillSeamHead(length) {
   const n = Math.min(SEAM_WARMUP, length);
-  const head = new Float32Array(n);
-  for (let i = 0; i < n; i++) head[i] = Math.random() * 2 - 1;
-  return head;
+  for (let i = 0; i < n; i++) seamScratch[i] = Math.random() * 2 - 1;
+  return n;
 }
 
 /**
@@ -117,8 +122,8 @@ export function lfoStep(targetPeriodSec, length, sampleRate) {
 }
 
 /**
- * Robert Bristow-Johnson constant-skirt bandpass, normalised by a0. `b1` is
- * always zero in this form, so it is not returned.
+ * Robert Bristow-Johnson constant-0-dB-peak bandpass, normalised by a0. `b1`
+ * is always zero in this form, so it is not returned.
  *
  * @param {number} f0 centre frequency in Hz
  * @param {number} q
@@ -180,13 +185,12 @@ export const GENERATORS = {
 
   /** Brownian / red noise — leaky integrator of white noise (−6 dB/octave). */
   brown(data, length) {
-    const head = seamHead(length);
-    const warm = head.length;
+    const warm = fillSeamHead(length);
     let lastOut = 0.0;
     for (let pass = 0; pass < 2; pass++) {
       const end = pass === 0 ? length : warm;
       for (let i = 0; i < end; i++) {
-        const white = i < warm ? head[i] : Math.random() * 2 - 1;
+        const white = i < warm ? seamScratch[i] : Math.random() * 2 - 1;
         lastOut = (lastOut + (0.02 * white)) / 1.02;
         data[i] = lastOut * 3.5;
       }
@@ -195,13 +199,12 @@ export const GENERATORS = {
 
   /** Pink noise — Paul Kellet refined multi-pole approximation (−3 dB/octave). */
   pink(data, length) {
-    const head = seamHead(length);
-    const warm = head.length;
+    const warm = fillSeamHead(length);
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
     for (let pass = 0; pass < 2; pass++) {
       const end = pass === 0 ? length : warm;
       for (let i = 0; i < end; i++) {
-        const white = i < warm ? head[i] : Math.random() * 2 - 1;
+        const white = i < warm ? seamScratch[i] : Math.random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
         b2 = 0.96900 * b2 + white * 0.1538520;
@@ -220,18 +223,17 @@ export const GENERATORS = {
    * Why this shape: white is too bright to listen to for eight hours and brown
    * is too dark to have any texture at all. A moderate-Q bandpass near 520 Hz
    * puts the energy where soft running water and moving leaves live, for the
-   * cost of one biquad. Its gain looks low next to the others because 520 Hz is
-   * close to where the ear is most sensitive — see the loudness note at the top.
+   * cost of one biquad. The ear is much more sensitive here than in brown's
+   * bass-heavy range, so its output is matched perceptually rather than by RMS.
    */
   green(data, length, sampleRate = 44100) {
     const { b0, b2, a1, a2 } = bandpassCoeffs(520, 1.0, sampleRate);
-    const head = seamHead(length);
-    const warm = head.length;
+    const warm = fillSeamHead(length);
     let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
     for (let pass = 0; pass < 2; pass++) {
       const end = pass === 0 ? length : warm;
       for (let i = 0; i < end; i++) {
-        const x0 = i < warm ? head[i] : Math.random() * 2 - 1;
+        const x0 = i < warm ? seamScratch[i] : Math.random() * 2 - 1;
         const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
         x2 = x1; x1 = x0;
         y2 = y1; y1 = y0;
@@ -261,15 +263,18 @@ export const GENERATORS = {
     // BUFFER_DURATION so `lfoStep` has nothing to round and the number here is
     // the number you hear.
     const lfo = lfoStep(12, length, sampleRate);
+    const lfoSin = Math.sin(lfo);
+    const lfoCos = Math.cos(lfo);
     const depth = 0.11;
-    const head = seamHead(length);
-    const warm = head.length;
+    const warm = fillSeamHead(length);
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
     let lp = 0;
     for (let pass = 0; pass < 2; pass++) {
       const end = pass === 0 ? length : warm;
+      let sinPhase = 0;
+      let cosPhase = 1;
       for (let i = 0; i < end; i++) {
-        const white = i < warm ? head[i] : Math.random() * 2 - 1;
+        const white = i < warm ? seamScratch[i] : Math.random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
         b2 = 0.96900 * b2 + white * 0.1538520;
@@ -279,7 +284,10 @@ export const GENERATORS = {
         const pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
         b6 = white * 0.115926;
         lp += alphaLp * (pink - lp);
-        data[i] = lp * (1 + depth * Math.sin(i * lfo)) * FAN_GAIN;
+        data[i] = lp * (1 + depth * sinPhase) * FAN_GAIN;
+        const nextSin = sinPhase * lfoCos + cosPhase * lfoSin;
+        cosPhase = cosPhase * lfoCos - sinPhase * lfoSin;
+        sinPhase = nextSin;
       }
     }
   },
@@ -300,21 +308,27 @@ export const GENERATORS = {
     const { b0, b2, a1, a2 } = bandpassCoeffs(1400, 1.2, sampleRate);
     // Two cycles per buffer — again an exact divisor of BUFFER_DURATION.
     const swell = lfoStep(6, length, sampleRate);
+    const swellSin = Math.sin(swell);
+    const swellCos = Math.cos(swell);
     const depth = 0.14;
-    const head = seamHead(length);
-    const warm = head.length;
+    const warm = fillSeamHead(length);
     let bed = 0;
     let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
     for (let pass = 0; pass < 2; pass++) {
       const end = pass === 0 ? length : warm;
+      let sinPhase = 0;
+      let cosPhase = 1;
       for (let i = 0; i < end; i++) {
-        const white = i < warm ? head[i] : Math.random() * 2 - 1;
+        const white = i < warm ? seamScratch[i] : Math.random() * 2 - 1;
         bed = (bed + (0.02 * white)) / 1.02;
         const y0 = b0 * white + b2 * x2 - a1 * y1 - a2 * y2;
         x2 = x1; x1 = white;
         y2 = y1; y1 = y0;
-        const surface = y0 * 0.9 * (1 + depth * Math.sin(i * swell));
+        const surface = y0 * 0.9 * (1 + depth * sinPhase);
         data[i] = (bed * 3.5 * 0.65 + surface) * RAIN_GAIN;
+        const nextSin = sinPhase * swellCos + cosPhase * swellSin;
+        cosPhase = cosPhase * swellCos - sinPhase * swellSin;
+        sinPhase = nextSin;
       }
     }
   },

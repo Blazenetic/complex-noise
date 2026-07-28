@@ -334,7 +334,14 @@ noise rather than the listening volume.
   is why the per-sample work in each generator is written out inline instead of
   being handed to one shared loop taking a step function: the tidier version
   measured six times slower, because the shared call site sees a different
-  closure per colour and nothing inlines. Keep new colours inline.
+  closure per colour and nothing inlines. Keep new colours inline. Slow periodic
+  modulation uses an inline sine/cosine recurrence too; do not put `Math.sin`
+  back in a per-sample loop.
+- **A colour-change timeout is transport state.** Rapid type clicks must
+  coalesce to the final selection, and pause/play must cancel any pending
+  replacement. Otherwise every click builds a 12 s buffer and a stale timeout
+  can tear down the source that `play()` just created. Keep
+  `cancelPendingTypeSwitch()` paired with the fade-out cancellation paths.
 - **Defaults live in `constants.js`.** Volume default is intentionally soft
   (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (practical range
   **0.7–4.8**). The Field Lab defaults (density 1.0, reach 1.0, trail 8.2/s,

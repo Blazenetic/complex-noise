@@ -61,6 +61,7 @@ let stillEqHigh = clampEq(readNumber(STORAGE_KEYS.stillEqHigh, DEFAULTS.eq));
 let timerId = null;           // sleep timer
 let fadeOutTimerId = null;    // teardown scheduled after a fade-out
 let fadingSourceNode = null;  // source still audible during a fade-out
+let typeSwitchTimerId = null; // delayed source replacement during a colour dip
 let wakeLock = null;
 
 function clampEq(v) {
@@ -241,6 +242,20 @@ function cancelPendingFadeOut() {
   }
 }
 
+/**
+ * Cancel a delayed colour replacement.
+ *
+ * Type changes are intentionally delayed until the gain dip reaches zero. The
+ * timeout must be coalesced when buttons are pressed quickly, and cancelled by
+ * transport changes, or stale work can replace a newly resumed source.
+ */
+function cancelPendingTypeSwitch() {
+  if (typeSwitchTimerId) {
+    clearTimeout(typeSwitchTimerId);
+    typeSwitchTimerId = null;
+  }
+}
+
 // ----------------------------------------------------------
 // Transport
 // ----------------------------------------------------------
@@ -254,6 +269,7 @@ export async function play() {
   // A pause started less than FADE_TIME ago has a teardown queued that would
   // otherwise stop the source we are about to create.
   cancelPendingFadeOut();
+  cancelPendingTypeSwitch();
 
   try {
     await ensureAudio();
@@ -284,6 +300,7 @@ export async function play() {
 export function stop(fade = true, endStatus = 'Paused') {
   if (!audioCtx || !isPlaying) return;
 
+  cancelPendingTypeSwitch();
   cancelPendingFadeOut();
   const now = audioCtx.currentTime;
 
@@ -323,6 +340,9 @@ export function setType(type) {
   if (type === currentType) return;
   if (!NOISE_TYPES.includes(type)) return;
 
+  // Only the final click matters. Without this, each quick click builds a full
+  // 12 s buffer and a stale timeout can replace a source created by play().
+  cancelPendingTypeSwitch();
   currentType = type;
   write(STORAGE_KEYS.type, type);
 
@@ -336,7 +356,8 @@ export function setType(type) {
   gainNode.gain.setValueAtTime(gainNode.gain.value, now);
   gainNode.gain.linearRampToValueAtTime(0, now + TYPE_SWITCH_FADE_OUT);
 
-  setTimeout(() => {
+  typeSwitchTimerId = setTimeout(() => {
+    typeSwitchTimerId = null;
     // The user may have paused during the 160 ms dip.
     if (!isPlaying) return;
     startSource();

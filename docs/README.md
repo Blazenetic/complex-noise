@@ -7,7 +7,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 > **Melchett:** Behold the documentation index! A strategic masterpiece!
 > **Darling:** It is a table of links, Melchett.
-> **Blazenetic:** With correct cross-references and a CONTRIBUTING.md that actually tells people how to report security issues. You’re welcome.
+> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, and a clear reminder that I research the maths rather than invent it. You’re welcome.
 
 ---
 
@@ -27,7 +27,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications. The live technical contract is [AGENTS.md](../AGENTS.md).
 
-The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries) lives in the project Google Drive and is the authority for narrative docs. It is deliberately kept out of the public repository so agents cannot “improve” it into AGENTS.md.
+The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries, closing variations, Easter-egg guidance) lives in the project Google Drive and is the authority for narrative docs. It is deliberately kept out of the public repository so agents cannot “improve” it into AGENTS.md.
 
 ---
 
@@ -61,8 +61,5 @@ A fuller work report covering the intensive 26–28 July development lives in th
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 
-The software stays calm.  
-The documentation gets to be chaotic.  
-That is the deal.
-
+The wall holds. AGENTS.md remains sterile.  
 See also the [live demo](https://blazenetic.github.io/complex-noise/) and the [root README](../README.md).

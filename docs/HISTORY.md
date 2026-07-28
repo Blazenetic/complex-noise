@@ -45,7 +45,7 @@ What followed was intensive, iterative development. In roughly **36–48 hours**
 
 - **Arty** fixed the fade race and the labels that had been drawing under the cards on phones.
 - **Blazenetic** coordinated the independent theme/glass axes and the soft volume default (0.22).
-- **Darling** insisted on 44 px touch targets and then handled the labels herself.
+- **Darling** insisted on 44 px touch targets and then handled the labels himself.
 - **Melchett** declared another victory when the glass became *ultra*.
 - **Baldrick** suggested replacing the equaliser with a single potato. Rejected again.
 

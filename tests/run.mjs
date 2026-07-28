@@ -380,6 +380,47 @@ test('the source overlay folds from its own title bar', async page => {
     'a second press should unfold it');
 });
 
+test('the Still Field facade keeps its whole public API', async page => {
+  // The renderer is a directory now, and `js/still-field.js` is the front door
+  // that re-composes it. `app.js` imports that door as one namespace, so an
+  // export left behind in a module nobody re-exports is a `TypeError` at the
+  // moment some button is pressed — possibly a button nobody presses until a
+  // user does. Naming the surface here is what makes the *next* phase of the
+  // split safe to attempt: move whatever you like, but this list must still
+  // resolve.
+  const expected = [
+    'getState', 'subscribe',
+    'initStillField', 'initStillFieldNodes', 'startStillFieldLoop', 'handleResize',
+    'handleOverlayPointer', 'refreshThemeColors', 'setLabelKeepOuts',
+    'getStillFieldStats', 'getStillAudioMetrics', 'getStillEnergy',
+    'getStillFieldEnabled', 'getStillFieldIntensity', 'getStillFieldSpeed',
+    'getStillFieldNerd', 'getStillFieldTexture', 'getStillFieldCode',
+    'getStillFieldCallouts', 'getStillFieldEdges', 'getStillFieldDwell',
+    'getStillFieldFps', 'getNerdFolded',
+    'setStillFieldEnabled', 'setStillFieldIntensity', 'setStillFieldSpeed',
+    'setStillFieldNerd', 'setStillFieldTexture', 'setStillFieldDensity',
+    'setStillFieldReach', 'setStillFieldTrail', 'setStillFieldDepth',
+    'setStillFieldDwell', 'setStillFieldFps', 'setStillFieldCode',
+    'setStillFieldCallouts', 'setStillFieldEdges', 'setCodeFolded',
+    'setNerdFolded', 'toggleNerdFolded', 'setNerdView',
+  ];
+  const missing = await page.evaluate(async names => {
+    const mod = await import('/js/still-field.js');
+    return names.filter(name => typeof mod[name] !== 'function');
+  }, expected);
+  assertEqual(missing.join(', '), '', 'js/still-field.js stopped exporting these');
+
+  // MODE_HANDLE is indexed by mode, so a mode added to one array and not the
+  // other draws `undefined` as a glyph — and MODE_WEIGHTS re-derives itself
+  // from the same length, so a mismatch silently shortens the rotation too.
+  const modes = await page.evaluate(async () => {
+    const m = await import('/js/still-field/modes.js');
+    return { names: m.LABEL_MODE_NAMES.length, handles: m.MODE_HANDLE.length, weights: m.MODE_WEIGHTS.length };
+  });
+  assertEqual(modes.handles, modes.names, 'MODE_HANDLE needs exactly one glyph per detail mode');
+  assertEqual(modes.weights, modes.names, 'MODE_WEIGHTS needs exactly one weight per detail mode');
+});
+
 test('theme toggles to bone and uses deep-bone #E0D6C8', async page => {
   assertEqual(await page.getAttribute('html', 'data-still-theme'), 'dark', 'should start dark');
   await page.click('.theme-seg[data-theme="bone"]');

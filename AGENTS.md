@@ -108,22 +108,41 @@ once; `tests/run.mjs` now guards against it.
   The full description is in [docs/INFO_LAYER.md](docs/INFO_LAYER.md); the parts
   that constrain a change are:
   - Engineering-drawing callouts on the info canvas: node handle, leader line,
-    plate, key/value rows. Detail rotates through energy, position (axis-coloured
-    transform rows), velocity, projection and wave on a golden-ratio-weighted
-    dwell. Caps are 8 / 6 / 4 by viewport width, reduced by screen bounds,
-    interface keep-outs, the source overlay's corner and block collisions.
-    Dynamic strings refresh once a second, not at frame rate.
+    plate, key/value rows (up to four). There are **eight** detail modes —
+    energy, transform (axis-coloured), velocity, projection, wave, links,
+    lifecycle, seed — and the mode a given node shows is the globally rotating
+    base index **offset by that node's own `modeOffset`**, derived from its
+    lifetime ID through φ. Several different quantities are therefore on screen
+    at once; the base still rotates on the golden-ratio-weighted dwell. The
+    node's handle glyph follows the mode (`MODE_HANDLE`). Caps are 8 / 6 / 4 by
+    viewport width, reduced by screen bounds, interface keep-outs, the source
+    overlay's corner and block collisions. Dynamic strings refresh once a
+    second, not at frame rate.
   - Up to five edge dimensions, rotated onto the lines they measure, gathered
-    inside the existing link pass. Do not add a second graph scan or per-frame
+    inside the existing link pass. Each carries one of four **kinds** (span,
+    coupling, reach, energy) chosen from the *pair's* identity, so it is stable
+    for the life of the pair. Do not add a second graph scan or per-frame
     sorting.
+  - Per-node `degree`, `coupling` and `nearest` for the `links` mode, zeroed at
+    the top of `update()` and accumulated inside `drawLinks()` on values the
+    renderer had already computed. This is the only acceptable way to add graph
+    telemetry.
   - One top-left panel (`#nerdHud`) with keyboard-navigable **Live**, **Math**
-    and **Code** views. Math rows carry live evaluated operands; Code carries
-    per-stage `performance.now()` timings. Dynamic DOM values are rendered by
-    `app.js` on a 250 ms interval — *not* in the render loop — and the interval
-    is cleared whenever the page is hidden or the layer is off. Values are
-    ordinary text, never live regions or `<output>` elements.
+    and **Code** views. Live is grouped (Frame / Graph / Instrumentation / Field
+    / Audio) and scrolls inside a bounded height. Math rows carry live evaluated
+    operands; Code carries per-stage `performance.now()` timings. Dynamic DOM
+    values are rendered by `app.js` on a 250 ms interval — *not* in the render
+    loop — and only for the view that is actually showing, and not at all while
+    the panel is folded. The interval is cleared whenever the page is hidden or
+    the layer is off. Values are ordinary text, never live regions or `<output>`
+    elements.
 
   All of it is disabled alongside the sliders when the field is off.
+- **Canvas overlays** — node callouts, edge dimensions and the source listing
+  are three independent persisted settings, exposed as a chip bank in the Field
+  Lab (`.lab-chip`, `aria-pressed`). Each is also gated behind Stats and the
+  field switch. The source listing additionally folds from its own on-canvas
+  title bar via `handleOverlayPointer()`; that fold is session-only.
 - **Background texture** — controllable procedural overlay (default on). Independent of the field, so it stays available with the field off. Toggle in the Still Field card.
 - **Field Lab** (`#labPanel`, under the equaliser, open by default) — node
   density, link reach, trail persistence, perspective, callout dwell, frame cap

@@ -137,6 +137,9 @@ const WAVE_KY = 0.0042 * 1.6180339887;
 /** Only the highest-energy nodes glow, and never more than this many. */
 const GLOW_THRESHOLD = 0.52;
 const MAX_GLOW_NODES = 10;
+/** Nodes pass 0 deferred to the glow pass, so pass 1 never rescans the field. */
+const glowQueue = new Int16Array(MAX_GLOW_NODES);
+let glowQueueLength = 0;
 
 /** Quantisation of the purple→spark colour ramp. 16 steps is past the eye. */
 const COLOR_STEPS = 16;
@@ -205,10 +208,15 @@ let stillFieldFps = STILL_FPS_OPTIONS.includes(
   readNumber(STORAGE_KEYS.stillFieldFps, DEFAULTS.stillFieldFps),
 ) ? readNumber(STORAGE_KEYS.stillFieldFps, DEFAULTS.stillFieldFps) : DEFAULTS.stillFieldFps;
 let stillFieldCode = readBool(STORAGE_KEYS.stillFieldCode, DEFAULTS.stillFieldCode);
+let stillFieldCallouts = readBool(STORAGE_KEYS.stillFieldCallouts, DEFAULTS.stillFieldCallouts);
+let stillFieldEdges = readBool(STORAGE_KEYS.stillFieldEdges, DEFAULTS.stillFieldEdges);
 
 // Session-only fold for the HUD panel (does not persist). Default folded on
 // narrow viewports so the main interface is not blocked on first open.
 let nerdFolded = typeof window !== 'undefined' && window.innerWidth <= 520;
+// Session-only fold for the on-canvas source listing. Folding leaves the header
+// bar, which is both the affordance and the reminder that the listing is there.
+let codeFolded = false;
 
 // --- Runtime ---
 let stillFieldNodes = [];
@@ -276,8 +284,39 @@ const LABEL_CAP_PHONE = 4;
 const LABEL_WIDE_VIEWPORT = 1180;
 const LABEL_MEDIUM_VIEWPORT = 720;
 
-const LABEL_MODE_NAMES = ['energy', 'position', 'velocity', 'projection', 'wave'];
+/**
+ * Detail modes a node callout can be showing.
+ *
+ * The rotation is global — the field walks these on a quasi-periodic schedule —
+ * but the mode a *given* node displays is that base index offset by the node's
+ * own stable offset (see `MODE_OFFSET_OF`). Eight nodes on screen therefore read
+ * eight different quantities at once, and each of them still cycles through the
+ * whole set over a few dwells. One global mode meant every callout on screen was
+ * a copy of its neighbour, which is a lot of pixels spent saying one thing.
+ */
+const LABEL_MODE_NAMES = [
+  'energy', 'transform', 'velocity', 'projection',
+  'wave', 'links', 'lifecycle', 'seed',
+];
 const LABEL_MODE_COUNT = LABEL_MODE_NAMES.length;
+
+/**
+ * Per-mode handle glyph, drawn on the node the callout belongs to. A square for
+ * a transform, a circle for a scalar, a diamond for a phase, a crosshair for a
+ * vector: the shape says which family of quantity is being read before the text
+ * is legible at all. Values index HANDLE_* below.
+ */
+const HANDLE_SQUARE = 0, HANDLE_CIRCLE = 1, HANDLE_DIAMOND = 2, HANDLE_CROSS = 3;
+const MODE_HANDLE = Int8Array.from([
+  HANDLE_CIRCLE,   // energy
+  HANDLE_SQUARE,   // transform
+  HANDLE_CROSS,    // velocity
+  HANDLE_SQUARE,   // projection
+  HANDLE_DIAMOND,  // wave
+  HANDLE_CROSS,    // links
+  HANDLE_CIRCLE,   // lifecycle
+  HANDLE_DIAMOND,  // seed
+]);
 
 /**
  * Per-mode dwell weights, from the golden ratio.
@@ -331,8 +370,11 @@ const MONO_FONT = '11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace
 const DIM_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 const CODE_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
+/** Most key/value rows any one detail mode prints. */
+const CALLOUT_MAX_ROWS = 4;
+
 /** Callout block geometry, CSS px. Fixed so nothing has to call measureText. */
-const CALLOUT_W = 124;
+const CALLOUT_W = 132;
 const CALLOUT_PAD_X = 8;
 const CALLOUT_PAD_Y = 6;
 const CALLOUT_HEAD_H = 13;
@@ -349,6 +391,24 @@ const MAX_EDGE_LABELS = 5;
 const EDGE_LABEL_MIN_STRENGTH = 0.18;
 const EDGE_LABEL_HALF_W = 46;
 const EDGE_LABEL_HALF_H = 15;
+/** Shortest projected edge that can carry a caption legibly, in CSS px. */
+const EDGE_LABEL_MIN_SPAN = 52;
+
+/**
+ * What a given edge dimension measures.
+ *
+ * Every dimension used to read `d u / θ / Δz`, five times over, which makes the
+ * fifth one worth nothing. The kind is derived from the *pair's* identity
+ * (`frac((idA + idB·φ))`), so it is stable for as long as the pair exists — a
+ * dimension never mutates into a different quantity while you are reading it —
+ * and neighbouring edges reliably disagree, because consecutive integers land in
+ * different buckets under the golden ratio.
+ */
+const EDGE_KIND_SPAN = 0;      // d u          θ …°     Δz …
+const EDGE_KIND_COUPLING = 1;  // κ 0.62       t …      Δz …
+const EDGE_KIND_REACH = 2;     // d/r 0.48     r … u    θ …°
+const EDGE_KIND_ENERGY = 3;    // E 0.55       ΔE …     deg …
+const EDGE_KIND_COUNT = 4;
 /** Attack/release for an annotation's opacity, per second. */
 const EDGE_LABEL_ATTACK = 2.4;
 const EDGE_LABEL_RELEASE = 1.0;
@@ -415,15 +475,37 @@ const edgeSlotDistance = new Uint16Array(MAX_EDGE_LABELS);
 const edgeSlotDegrees = new Int16Array(MAX_EDGE_LABELS);
 const edgeSlotDz = new Uint8Array(MAX_EDGE_LABELS);
 const edgeSlotStrength = new Float32Array(MAX_EDGE_LABELS);
+const edgeSlotKind = new Uint8Array(MAX_EDGE_LABELS);
+const edgeSlotTarget = new Uint8Array(MAX_EDGE_LABELS);   // 0–100
+const edgeSlotReach = new Uint8Array(MAX_EDGE_LABELS);    // d/r, 0–100
+const edgeSlotEnergy = new Uint8Array(MAX_EDGE_LABELS);   // mean E, 0–100
+const edgeSlotDeltaE = new Uint8Array(MAX_EDGE_LABELS);   // |ΔE|, 0–100
+const edgeSlotDegrees2 = new Uint8Array(MAX_EDGE_LABELS); // summed endpoint degree
 
 // Quantised once at module load. Edge annotations can then paint changing
-// measurements without allocating strings in the render loop.
+// measurements without allocating strings in the render loop — and there are
+// four kinds of dimension now, so there are four families of table.
 const DISTANCE_TEXT = new Array(2001);
 for (let i = 0; i < DISTANCE_TEXT.length; i++) DISTANCE_TEXT[i] = `${i} u`;
+const RADIUS_TEXT = new Array(2001);
+for (let i = 0; i < RADIUS_TEXT.length; i++) RADIUS_TEXT[i] = `r ${i} u`;
 const ANGLE_TEXT = new Array(361);
 for (let i = 0; i < ANGLE_TEXT.length; i++) ANGLE_TEXT[i] = `θ ${i - 180}°`;
-const DZ_TEXT = new Array(101);
-for (let i = 0; i < DZ_TEXT.length; i++) DZ_TEXT[i] = `Δz ${(i / 100).toFixed(2)}`;
+
+/** `prefix` + a 0.00–1.00 value, for every hundredth. */
+function unitTable(prefix) {
+  const out = new Array(101);
+  for (let i = 0; i < 101; i++) out[i] = `${prefix}${(i / 100).toFixed(2)}`;
+  return out;
+}
+const DZ_TEXT = unitTable('Δz ');
+const STRENGTH_TEXT = unitTable('κ ');
+const TARGET_TEXT = unitTable('t ');
+const REACH_TEXT = unitTable('d/r ');
+const ENERGY_TEXT = unitTable('E ');
+const DELTA_E_TEXT = unitTable('ΔE ');
+const DEGREE_TEXT = new Array(65);
+for (let i = 0; i < DEGREE_TEXT.length; i++) DEGREE_TEXT[i] = `deg ${i}`;
 
 // ----------------------------------------------------------
 // The code ticker — the renderer's own source, on the canvas
@@ -448,32 +530,66 @@ const CODE_LINES = [
   [0, 1, 'node.vx += (rand() - .5) * J * dt;', 3],
   [0, 1, 'node.vx *= exp(-0.55 * dt);', -1],
   [0, 1, 'node.z = zBase + sin(zPhase) * zAmp;', 4],
-  [0, 1, 'node.scale = 1 / (1 + node.z * DEPTH);', 5],
+  [0, 1, 'node.scale = 1 / (1 + node.z * δ);', 5],
+  [0, 1, 'node.E = .30b + .24w + .46a;', 12],
+  [0, 1, 'if (node.life >= 1) respawn(node);', 16],
   [0, 0, '}', -1],
   [1, 0, 'grid.rebuild(nodes);', 6],
   [1, 0, 'for (const [a, b] of grid.pairs()) {', 7],
   [1, 1, 'd = hypot(dx, dy, dz * zWorld);', 8],
   [1, 1, 't = pow(1 - d / radius, 0.65);', 9],
   [1, 1, 's += (t - s) * (1 - exp(-λ * dt));', 10],
+  [1, 1, 'a.deg++; b.deg++; a.κ += s;', 17],
   [1, 1, 'batch.stroke(a, b, shade(s));', 11],
   [1, 0, '}', -1],
-  [2, 0, 'shade = pow(node.energy, 1.35);', 12],
+  [2, 0, 'shade = pow(node.energy, 1.35);', 18],
   [2, 0, 'ctx.arc(sx, sy, radius, 0, TAU);', 13],
-  [3, 0, 'info.clearRect(0, 0, w, h);', -1],
-  [3, 0, 'label.α += (target - label.α) * k;', 14],
-  [3, 0, 'drawCallouts(nearest(nodes));', 15],
+  [3, 0, 'info.clearRect(0, 0, w, h);', 14],
+  [3, 0, 'mode = (base + node.slot) % 8;', 20],
+  [3, 0, 'label.α += (target - label.α) * k;', 15],
+  [3, 0, 'dimension(a, b, kind(idA + idB·φ));', 19],
 ];
-const CODE_VALUE_COUNT = 16;
+const CODE_VALUE_COUNT = 22;
+const CODE_SUMMARY_SLOT = 21;
 const codeValueText = new Array(CODE_VALUE_COUNT).fill('');
 /** Lines per stage, so the cursor can spread a stage's real cost across them. */
 const CODE_STAGE_LINES = new Int32Array(4);
 for (const line of CODE_LINES) CODE_STAGE_LINES[line[CODE_STAGE]]++;
+/**
+ * First and last line index of each stage's contiguous run, so the gutter can
+ * draw one rail per stage rather than one mark per line.
+ */
+const CODE_STAGE_FIRST = Int32Array.from([-1, -1, -1, -1]);
+const CODE_STAGE_LAST = new Int32Array(4);
+for (let i = 0; i < CODE_LINES.length; i++) {
+  const stage = CODE_LINES[i][CODE_STAGE];
+  if (CODE_STAGE_FIRST[stage] < 0) CODE_STAGE_FIRST[stage] = i;
+  CODE_STAGE_LAST[stage] = i;
+}
 const CODE_LINE_H = 13;
-const CODE_BLOCK_W = 352;
+const CODE_BLOCK_W = 356;
 const CODE_GUTTER = 22;
 const CODE_MIN_VIEWPORT = 1000;
-/** Seconds for the program counter to complete one sweep of the listing. */
-const CODE_SWEEP_S = 1.4;
+const CODE_HEAD_H = 20;
+const CODE_FOOT_H = 20;
+/**
+ * Seconds for the program counter to complete one sweep of the listing.
+ *
+ * Deliberately slow. The counter used to paint a full-width purple bar behind
+ * one line and jump it every 70 ms, which on a screen you are falling asleep to
+ * is a strobe with a monospace font on it. It is now a heat value per line that
+ * rises as the counter passes and decays exponentially, so what you see is a
+ * soft comet moving down the listing rather than a row flashing on and off.
+ */
+const CODE_SWEEP_S = 2.8;
+/** Per-second decay of a line's heat. Sets the length of the comet's tail. */
+const CODE_HEAT_DECAY = 3.2;
+/** Below this a line is at rest and skips its highlight work entirely. */
+const CODE_HEAT_EPSILON = 0.02;
+const codeLineHeat = new Float32Array(CODE_LINES.length);
+/** Descending opacity for the footer's four stacked stage segments. */
+const CODE_STAGE_ALPHA = Float32Array.from([0.75, 0.55, 0.4, 0.28]);
+const stageShareScratch = new Float32Array(4);
 let codeCursor = 0;
 let codeValueNextUpdate = 0;
 let codeActiveLine = 0;
@@ -505,6 +621,13 @@ let lastBatches = 0;
 let lastGridCells = 0;
 let lastDt = 0;
 let lastJitter = 0;
+/** Nodes that actually reached the glow pass, against its hard cap. */
+let lastGlowNodes = 0;
+/** Highest degree any single node reached, and how many modes are on screen. */
+let lastMaxDegree = 0;
+let lastModesOnScreen = 0;
+/** Edge-dimension slots currently holding a pair. */
+let lastEdgeSlotsUsed = 0;
 /** Lifetime respawn count, for the observed turnover rate in the readout. */
 let respawnCount = 0;
 
@@ -531,14 +654,20 @@ const statsSnapshot = {
   msUpdate: 0, msLinks: 0, msNodes: 0, msInfo: 0, stage: 'update',
   nodes: 0, edges: 0, pairTests: 0, bruteTests: 0, gridCells: 0, batches: 0,
   turnover: 0, meanLifeS: 0,
-  meanDegree: 0, density: 0, labels: 0, edgeLabels: 0, labelCapacity: 0,
+  meanDegree: 0, maxDegree: 0, density: 0,
+  labels: 0, edgeLabels: 0, labelCapacity: 0, edgeSlots: 0,
   labelMode: LABEL_MODE_NAMES[0], modeRemaining: 0, dwell: 0,
+  modeCount: LABEL_MODE_COUNT, modesOnScreen: 0,
+  glowNodes: 0, glowCap: MAX_GLOW_NODES,
   energy: 0, wavePhase: 0,
   waveAngle: Math.atan2(WAVE_KY, WAVE_KX) * RAD_TO_DEG,
   waveLength: 0,
   speed: 0, intensity: 0, reducedMotion: false,
-  densityScale: 1, reach: 1, trail: 8.2, depth: 0.75, codeOverlay: true,
+  densityScale: 1, reach: 1, trail: 8.2, depth: 0.75,
+  codeOverlay: true, calloutsOn: true, edgesOn: true, codeFolded: false,
   linkRadius: 0, zWorld: 0, worldW: 0, worldH: 0, minScale: 0,
+  gridCell: 0, occupancy: 0, viewportW: 0, viewportH: 0, dpr: 1,
+  linkBytes: 0, clock: 0, realClock: 0, keepOuts: 0,
   probeId: 0, probeZ: 0, probeScale: 0, probeEnergy: 0,
   probeBreath: 0, probeWave: 0, probeAudio: 0,
   sampleDistance: 0, sampleTarget: 0, sampleStrength: 0, attackK: 0,
@@ -553,7 +682,7 @@ const listeners = new Set();
  * @returns {{enabled: boolean, intensity: number, speed: number, nerd: boolean,
  *   texture: boolean, nerdView: string, nerdFolded: boolean, density: number,
  *   reach: number, trail: number, depth: number, dwell: number, fps: number,
- *   code: boolean}}
+ *   code: boolean, codeFolded: boolean, callouts: boolean, edges: boolean}}
  */
 export function getState() {
   return {
@@ -571,6 +700,9 @@ export function getState() {
     dwell: stillFieldDwell,
     fps: stillFieldFps,
     code: stillFieldCode,
+    codeFolded,
+    callouts: stillFieldCallouts,
+    edges: stillFieldEdges,
   };
 }
 
@@ -612,6 +744,16 @@ export function getStillFieldTexture() {
 
 export function getStillFieldCode() {
   return stillFieldCode;
+}
+
+/** Are node callouts being painted on the canvas? */
+export function getStillFieldCallouts() {
+  return stillFieldCallouts;
+}
+
+/** Are edge dimensions being painted on the canvas? */
+export function getStillFieldEdges() {
+  return stillFieldEdges;
 }
 
 export function getNerdFolded() {
@@ -691,12 +833,16 @@ export function getStillFieldStats() {
   statsSnapshot.turnover = infoClockS > 1 ? respawnCount / infoClockS * 60 : 0;
   statsSnapshot.meanLifeS = statsSnapshot.turnover > 0 ? n / statsSnapshot.turnover * 60 : 0;
   statsSnapshot.meanDegree = n ? lastEdgeCount * 2 / n : 0;
+  statsSnapshot.maxDegree = lastMaxDegree;
   statsSnapshot.density = statsSnapshot.bruteTests ? lastEdgeCount / statsSnapshot.bruteTests : 0;
   statsSnapshot.labels = lastLabelCount;
   statsSnapshot.edgeLabels = lastEdgeLabelCount;
   statsSnapshot.labelCapacity = labelCapacity();
+  statsSnapshot.edgeSlots = lastEdgeSlotsUsed;
   statsSnapshot.labelMode = LABEL_MODE_NAMES[modeAt(infoClockS)];
   statsSnapshot.modeRemaining = modeRemainingS;
+  statsSnapshot.modesOnScreen = lastModesOnScreen;
+  statsSnapshot.glowNodes = lastGlowNodes;
   statsSnapshot.dwell = stillFieldDwell;
   statsSnapshot.energy = stillEnergy;
   statsSnapshot.wavePhase = ((clockS * WAVE_RATE) % TAU) * RAD_TO_DEG;
@@ -709,11 +855,23 @@ export function getStillFieldStats() {
   statsSnapshot.trail = stillFieldTrail;
   statsSnapshot.depth = depth;
   statsSnapshot.codeOverlay = stillFieldCode;
+  statsSnapshot.calloutsOn = stillFieldCallouts;
+  statsSnapshot.edgesOn = stillFieldEdges;
+  statsSnapshot.codeFolded = codeFolded;
   statsSnapshot.linkRadius = linkRadius;
   statsSnapshot.zWorld = zWorld;
   statsSnapshot.worldW = worldW;
   statsSnapshot.worldH = worldH;
   statsSnapshot.minScale = minScale;
+  statsSnapshot.gridCell = gridCell;
+  statsSnapshot.occupancy = lastGridCells ? n / lastGridCells : 0;
+  statsSnapshot.viewportW = stillFieldW;
+  statsSnapshot.viewportH = stillFieldH;
+  statsSnapshot.dpr = stillFieldDpr;
+  statsSnapshot.linkBytes = linkState.byteLength;
+  statsSnapshot.clock = clockS;
+  statsSnapshot.realClock = infoClockS;
+  statsSnapshot.keepOuts = labelKeepOuts.length;
   statsSnapshot.probeId = probeId;
   statsSnapshot.probeZ = probeZ;
   statsSnapshot.probeScale = probeScale;
@@ -1012,8 +1170,19 @@ function respawnNode(n, seeded = false) {
   if (!seeded) respawnCount++;
 
   // World coordinates are centred on the origin; the camera sits on the axis.
-  n.x = (((0.5 + R2_A1 * i) % 1) - 0.5) * worldW;
-  n.y = (((0.5 + R2_A2 * i) % 1) - 0.5) * worldH;
+  n.seed = i;
+  n.u = (0.5 + R2_A1 * i) % 1;
+  n.v = (0.5 + R2_A2 * i) % 1;
+  n.x = (n.u - 0.5) * worldW;
+  n.y = (n.v - 0.5) * worldH;
+
+  // Which detail mode this node is offset to. Derived from the lifetime ID
+  // through the golden ratio, so consecutive IDs land far apart and the eight
+  // callouts on a wide screen are reliably reading eight different quantities.
+  n.modeOffset = Math.min(
+    LABEL_MODE_COUNT - 1,
+    ((n.id * PHI) % 1) * LABEL_MODE_COUNT | 0,
+  );
 
   // Depth is the *centre* of this node's excursion, kept off both planes so it
   // always has room to move toward and away from the viewer.
@@ -1032,6 +1201,9 @@ function respawnNode(n, seeded = false) {
   n.life = seeded ? Math.random() : 0;
   n.lifeRate = 1 / (LIFE_MIN_S + Math.random() * (LIFE_MAX_S - LIFE_MIN_S));
   n.energy = 0;
+  n.degree = 0;
+  n.coupling = 0;
+  n.nearest = 0;
   resetNodeCallout(n);
 }
 
@@ -1045,6 +1217,7 @@ function resetNodeCallout(n) {
   n.calloutRows = 0;
   n.calloutAxis = false;
   n.calloutGauge = -1;
+  n.calloutHandle = HANDLE_SQUARE;
 }
 
 /** Forget every link touching node `index` — a respawned node is a new node. */
@@ -1060,17 +1233,21 @@ function clearLinksFor(index) {
 
 function makeNode() {
   return {
-    id: 0,
+    id: 0, seed: 0, u: 0, v: 0, modeOffset: 0,
     x: 0, y: 0, z: 0, zBase: 0, zAmp: 0, zRate: 0, zPhase: 0,
     vx: 0, vy: 0, phase: 0, phaseRate: 0,
     life: 0, lifeRate: 0, energy: 0,
+    // Graph telemetry, gathered inside the existing link pass — never by a
+    // second scan. Reset at the top of update(), accumulated in drawLinks().
+    degree: 0, coupling: 0, nearest: 0,
     // Callout state. Rows are key/value pairs so the block can right-align its
     // numbers the way a transform panel does, rather than printing one string.
     labelMode: -1, labelNextUpdate: 0, labelAlpha: 0,
     labelHeld: false, labelHoldUntil: 0,
     calloutHead: '', calloutRows: 0, calloutAxis: false, calloutGauge: -1,
-    rowKey0: '', rowKey1: '', rowKey2: '',
-    rowVal0: '', rowVal1: '', rowVal2: '',
+    calloutHandle: HANDLE_SQUARE,
+    rowKey0: '', rowKey1: '', rowKey2: '', rowKey3: '',
+    rowVal0: '', rowVal1: '', rowVal2: '', rowVal3: '',
     // Scratch fields, written during update and read during draw. Keeping
     // them on the node is what lets the draw pass allocate nothing.
     sx: 0, sy: 0, scale: 0, fade: 0,
@@ -1136,6 +1313,7 @@ function resetEdgeSlots() {
     edgeSlotAlpha[s] = 0;
     edgeSlotHold[s] = 0;
   }
+  lastEdgeSlotsUsed = 0;
 }
 
 // ----------------------------------------------------------
@@ -1398,8 +1576,19 @@ function update(adt, dt) {
 
   let bestEnergy = -1;
 
+  // Graph telemetry is only accumulated when something is going to read it, and
+  // it is always accumulated inside the link pass. Zeroing it here is the whole
+  // cost outside that pass.
+  const collectGraph = stillFieldNerd;
+
   for (let i = 0; i < n; i++) {
     const node = nodes[i];
+
+    if (collectGraph) {
+      node.degree = 0;
+      node.coupling = 0;
+      node.nearest = 0;
+    }
 
     node.life += node.lifeRate * adt;
     if (node.life >= 1) {
@@ -1446,7 +1635,7 @@ function update(adt, dt) {
     // Callout hold and opacity. Acquisition and release use different gates, so
     // a node hovering on the threshold cannot flicker, and a callout that has
     // been acquired is guaranteed a readable dwell before it can be dropped.
-    if (stillFieldNerd) {
+    if (stillFieldNerd && stillFieldCallouts) {
       const keepGate = node.labelHeld ? LABEL_ENERGY_GATE - LABEL_ENERGY_RELEASE : LABEL_ENERGY_GATE;
       const qualifies = node.fade > 0 && node.energy > keepGate;
       if (qualifies && !node.labelHeld) {
@@ -1562,8 +1751,10 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
   if (collectEdges) {
     for (let s = 0; s < MAX_EDGE_LABELS; s++) edgeSlotSeen[s] = 0;
   }
+  const trackDimensions = collectEdges && stillFieldEdges;
   const edgeCap = Math.min(MAX_EDGE_LABELS, stillFieldW >= LABEL_MEDIUM_VIEWPORT ? MAX_EDGE_LABELS : 2);
   let sampleTaken = false;
+  let maxDegree = 0;
 
   const cells = gridCols * gridRows;
   for (let c = 0; c < cells; c++) {
@@ -1679,6 +1870,19 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
 
           if (!collectEdges || distance <= 0) continue;
 
+          // Per-node graph telemetry. Four increments and two comparisons on
+          // values the renderer has already computed — this is what feeds the
+          // `links` callout mode, and it is why that mode does not need its own
+          // pass over the graph.
+          a.degree++;
+          b.degree++;
+          a.coupling += strength;
+          b.coupling += strength;
+          if (a.nearest === 0 || distance < a.nearest) a.nearest = distance;
+          if (b.nearest === 0 || distance < b.nearest) b.nearest = distance;
+          if (a.degree > maxDegree) maxDegree = a.degree;
+          if (b.degree > maxDegree) maxDegree = b.degree;
+
           // One live pair feeds the Math view's worked example. Taking the
           // first strong edge of the frame keeps it stable enough to read.
           if (!sampleTaken && strength >= EDGE_LABEL_MIN_STRENGTH) {
@@ -1688,7 +1892,9 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
             sampleTaken = true;
           }
 
-          trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, edgeCap);
+          if (trackDimensions) {
+            trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, target, strength, edgeCap);
+          }
         }
       }
     }
@@ -1699,6 +1905,7 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
   lastEdgeCount = drawn;
   lastPairTests = tests;
   lastBatches = batches;
+  lastMaxDegree = maxDegree;
 }
 
 /**
@@ -1709,14 +1916,14 @@ function drawLinks(ctx, nodes, n, intensity, adt) {
  * edge list. A slot follows one pair (identified by both lifetime IDs, because
  * array indices are recycled) until the pair breaks or its dwell expires.
  */
-function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, cap) {
+function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, target, strength, cap) {
   const idA = a.id < b.id ? a.id : b.id;
   const idB = a.id < b.id ? b.id : a.id;
 
   let free = -1;
   for (let s = 0; s < cap; s++) {
     if (edgeSlotIdA[s] === idA && edgeSlotIdB[s] === idB) {
-      writeEdgeSlot(s, ax, ay, bx, by, distance, strength, Math.abs(a.z - b.z));
+      writeEdgeSlot(s, a, b, ax, ay, bx, by, distance, target, strength);
       edgeSlotSeen[s] = 1;
       return;
     }
@@ -1724,8 +1931,18 @@ function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, cap) {
   }
   if (free < 0 || strength < EDGE_LABEL_MIN_STRENGTH) return;
 
-  // A candidate has to be readable where it lands: on screen, clear of the
-  // interface, and not on top of an annotation that already exists.
+  // A candidate has to be readable where it lands: long enough to carry the
+  // caption, on screen, clear of the interface and the listing, and not on top
+  // of an annotation that already exists.
+  //
+  // The span test used to live only in the draw pass, which meant a short edge
+  // could claim a slot, hold it for a full dwell and never draw a thing — five
+  // slots held, one dimension on screen. Rejecting it here keeps the slots for
+  // pairs that can actually be read.
+  const sx = bx - ax;
+  const sy = by - ay;
+  if (sx * sx + sy * sy < EDGE_LABEL_MIN_SPAN * EDGE_LABEL_MIN_SPAN) return;
+
   const mx = (ax + bx) * 0.5;
   const my = (ay + by) * 0.5;
   // The caption is rotated onto the line, so its footprint is a rotated box of
@@ -1736,6 +1953,8 @@ function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, cap) {
   if (my < EDGE_LABEL_HALF_W || my > stillFieldH - EDGE_LABEL_HALF_W) return;
   if (hitsKeepOut(mx - EDGE_LABEL_HALF_W, my - EDGE_LABEL_HALF_H,
     mx + EDGE_LABEL_HALF_W, my + EDGE_LABEL_HALF_H)) return;
+  if (hitsCodeBlock(mx - EDGE_LABEL_HALF_W, my - EDGE_LABEL_HALF_W,
+    mx + EDGE_LABEL_HALF_W, my + EDGE_LABEL_HALF_W)) return;
   for (let s = 0; s < cap; s++) {
     if (edgeSlotAlpha[s] <= 0.01) continue;
     if (Math.abs(mx - edgeSlotX[s]) < EDGE_LABEL_HALF_W * 2
@@ -1744,14 +1963,26 @@ function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, strength, cap) {
 
   edgeSlotIdA[free] = idA;
   edgeSlotIdB[free] = idB;
+  // What this dimension measures is a property of the *pair*, not of the slot,
+  // so it survives the pair being re-picked into a different slot and never
+  // changes under the reader mid-dwell.
+  edgeSlotKind[free] = Math.min(
+    EDGE_KIND_COUNT - 1,
+    (((idA + idB * PHI) % 1) * EDGE_KIND_COUNT) | 0,
+  );
   // Dwell rides the same quasi-periodic schedule as the node modes, offset by
   // the slot index so several annotations never expire on the same frame.
   edgeSlotHold[free] = infoClockS + stillFieldDwell * MODE_WEIGHTS[free % LABEL_MODE_COUNT];
   edgeSlotSeen[free] = 1;
-  writeEdgeSlot(free, ax, ay, bx, by, distance, strength, Math.abs(a.z - b.z));
+  writeEdgeSlot(free, a, b, ax, ay, bx, by, distance, target, strength);
 }
 
-function writeEdgeSlot(s, ax, ay, bx, by, distance, strength, dz) {
+/**
+ * Refresh one slot's measurements. Everything here is either already computed by
+ * the link pass or a quantisation of it into a table index — no strings are
+ * built, because this runs for every tracked pair on every frame.
+ */
+function writeEdgeSlot(s, a, b, ax, ay, bx, by, distance, target, strength) {
   const dx = bx - ax;
   const dy = by - ay;
   const angle = Math.atan2(dy, dx);
@@ -1761,8 +1992,13 @@ function writeEdgeSlot(s, ax, ay, bx, by, distance, strength, dz) {
   edgeSlotLength[s] = Math.sqrt(dx * dx + dy * dy);
   edgeSlotDistance[s] = clamp(Math.round(distance), 0, DISTANCE_TEXT.length - 1);
   edgeSlotDegrees[s] = clamp(Math.round(angle * RAD_TO_DEG), -180, 180);
-  edgeSlotDz[s] = clamp(Math.round(dz * 100), 0, 100);
+  edgeSlotDz[s] = clamp(Math.round(Math.abs(a.z - b.z) * 100), 0, 100);
   edgeSlotStrength[s] = strength;
+  edgeSlotTarget[s] = clamp(Math.round(target * 100), 0, 100);
+  edgeSlotReach[s] = clamp(Math.round(distance / Math.max(1, linkRadius) * 100), 0, 100);
+  edgeSlotEnergy[s] = clamp(Math.round((a.energy + b.energy) * 50), 0, 100);
+  edgeSlotDeltaE[s] = clamp(Math.round(Math.abs(a.energy - b.energy) * 100), 0, 100);
+  edgeSlotDegrees2[s] = clamp(a.degree + b.degree, 0, DEGREE_TEXT.length - 1);
 }
 
 // ----------------------------------------------------------
@@ -1779,20 +2015,26 @@ function drawNodes(ctx, nodes, n, intensity) {
   // Two passes: everything flat first, then the few brightest nodes again with
   // a shadow. Setting shadowBlur is a pipeline change on most canvas backends,
   // so doing it 8 times beats doing it 32.
+  //
+  // Pass 0 records which nodes it deferred, so pass 1 walks a list of at most
+  // MAX_GLOW_NODES entries instead of the whole population a second time. At the
+  // Lab's top density that is 10 iterations rather than 150.
   for (let pass = 0; pass < 2; pass++) {
     if (pass === 1) {
-      if (reducedMotion) break;
+      if (reducedMotion || glowQueueLength === 0) break;
       ctx.shadowColor = glowColor;
     }
 
     // Bright nodes are handed to the glow pass — but only the ones that pass
     // will actually reach. It stops at MAX_GLOW_NODES and never runs at all
     // under reduced motion, so deferring every bright node unconditionally
-    // deletes the highest-energy nodes from the field outright. Counting them
-    // here in the same index order pass 1 uses tells us which ones to draw flat.
-    let brightSeen = 0;
+    // deletes the highest-energy nodes from the field outright. Queueing them
+    // here is what tells us which ones still have to be drawn flat.
+    if (pass === 0) glowQueueLength = 0;
+    const count = pass === 0 ? n : glowQueueLength;
 
-    for (let i = 0; i < n; i++) {
+    for (let k = 0; k < count; k++) {
+      const i = pass === 0 ? k : glowQueue[k];
       const node = nodes[i];
       // `fade` is the lifecycle envelope, and it is the only honest test for
       // "is this node worth drawing". Testing `life` instead cannot work:
@@ -1801,15 +2043,12 @@ function drawNodes(ctx, nodes, n, intensity) {
       // pop on and off at full shell opacity instead of easing.
       if (node.fade <= 0) continue;
 
-      const bright = node.energy > GLOW_THRESHOLD;
-      if (pass === 0 && bright) {
-        const willGlow = !reducedMotion && brightSeen < MAX_GLOW_NODES;
-        brightSeen++;
-        if (willGlow) continue;                // drawn in the glow pass instead
-      }
-      if (pass === 1) {
-        if (!bright) continue;
-        if (glowed >= MAX_GLOW_NODES) break;
+      if (pass === 0) {
+        if (node.energy > GLOW_THRESHOLD && !reducedMotion && glowQueueLength < MAX_GLOW_NODES) {
+          glowQueue[glowQueueLength++] = i;
+          continue;                            // drawn in the glow pass instead
+        }
+      } else {
         glowed++;
         ctx.shadowBlur = Math.min(12, 4 + node.energy * 8);
       }
@@ -1857,6 +2096,7 @@ function drawNodes(ctx, nodes, n, intensity) {
   }
 
   ctx.shadowBlur = 0;
+  lastGlowNodes = glowed;
 }
 
 // ----------------------------------------------------------
@@ -1886,8 +2126,9 @@ function drawInfoLayer(nodes, n, dt) {
   // and dimensions can treat it as one more region to stay out of. It is drawn
   // last so it sits on top of the field's own lines.
   layoutCodeTicker();
-  lastEdgeLabelCount = drawEdgeAnnotations(ctx, dt);
-  lastLabelCount = drawCallouts(ctx, nodes, n);
+  lastEdgeLabelCount = stillFieldEdges ? drawEdgeAnnotations(ctx, dt) : 0;
+  lastLabelCount = stillFieldCallouts ? drawCallouts(ctx, nodes, n) : 0;
+  if (!stillFieldCallouts) lastModesOnScreen = 0;
   if (codeVisible) drawCodeTicker(ctx, dt);
 
   ctx.globalAlpha = 1;
@@ -1905,12 +2146,31 @@ function drawEdgeAnnotations(ctx, dt) {
   const attackK = 1 - Math.exp(-EDGE_LABEL_ATTACK * dt);
   const releaseK = 1 - Math.exp(-EDGE_LABEL_RELEASE * dt);
   let shown = 0;
+  let held = 0;
 
   for (let s = 0; s < MAX_EDGE_LABELS; s++) {
+    if (edgeSlotIdA[s] !== 0) held++;
     if (edgeSlotIdA[s] === 0 && edgeSlotAlpha[s] <= 0.01) continue;
 
     const expired = infoClockS >= edgeSlotHold[s];
-    const alive = edgeSlotSeen[s] === 1 && !expired;
+
+    // A slot that cannot be drawn where it currently sits is doing no work and
+    // is holding one of five places. That is not hypothetical: the listing
+    // changes corner when the interface is minimised, and every dimension that
+    // was happily in the top right became permanently unpaintable — five slots
+    // held, nothing on screen, for as long as the pairs stayed linked. Treating
+    // undrawable as dead lets the slot fade out and free itself for a pair that
+    // can actually be read.
+    //
+    // Same disc bound as the screen test: the caption's rotation is unknown
+    // here, and the listing is drawn last, so an overlap is not a near miss —
+    // it is a caption painted over.
+    const span = Math.min(edgeSlotLength[s] * 0.5, EDGE_LABEL_HALF_W);
+    const blocked = span < 22
+      || hitsCodeBlock(edgeSlotX[s] - EDGE_LABEL_HALF_W, edgeSlotY[s] - EDGE_LABEL_HALF_W,
+        edgeSlotX[s] + EDGE_LABEL_HALF_W, edgeSlotY[s] + EDGE_LABEL_HALF_W);
+
+    const alive = edgeSlotSeen[s] === 1 && !expired && !blocked;
     edgeSlotAlpha[s] += ((alive ? 1 : 0) - edgeSlotAlpha[s]) * (alive ? attackK : releaseK);
 
     if (!alive && edgeSlotAlpha[s] <= 0.02) {
@@ -1921,17 +2181,12 @@ function drawEdgeAnnotations(ctx, dt) {
       continue;
     }
 
+    // Still fading is still worth drawing — but not while it is over the
+    // listing, which is exactly what made it undrawable in the first place.
+    if (blocked) continue;
+
     const alpha = edgeSlotAlpha[s] * clamp(0.35 + edgeSlotStrength[s] * 0.9, 0, 0.95);
     if (alpha < 0.02) continue;
-    // Same disc bound as the screen test: the caption's rotation is unknown at
-    // this point, and the listing is drawn last, so an overlap is not a near
-    // miss — it is a caption painted over.
-    if (hitsCodeBlock(edgeSlotX[s] - EDGE_LABEL_HALF_W, edgeSlotY[s] - EDGE_LABEL_HALF_W,
-      edgeSlotX[s] + EDGE_LABEL_HALF_W, edgeSlotY[s] + EDGE_LABEL_HALF_W)) continue;
-
-    // A span shorter than the caption cannot carry it legibly.
-    const span = Math.min(edgeSlotLength[s] * 0.5, EDGE_LABEL_HALF_W);
-    if (span < 22) continue;
 
     let angle = edgeSlotAngle[s];
     if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
@@ -1950,22 +2205,48 @@ function drawEdgeAnnotations(ctx, dt) {
     ctx.moveTo(span, -4.5); ctx.lineTo(span, 4.5);
     ctx.stroke();
 
+    // What the dimension reads depends on the pair, not the slot. All three
+    // strings come out of tables indexed by the quantised measurement, so a
+    // dimension that changes every frame still allocates nothing.
+    const kind = edgeSlotKind[s];
+    let lead, left, right;
+    if (kind === EDGE_KIND_SPAN) {
+      lead = DISTANCE_TEXT[edgeSlotDistance[s]];
+      left = ANGLE_TEXT[edgeSlotDegrees[s] + 180];
+      right = DZ_TEXT[edgeSlotDz[s]];
+    } else if (kind === EDGE_KIND_COUPLING) {
+      lead = STRENGTH_TEXT[clamp(Math.round(edgeSlotStrength[s] * 100), 0, 100)];
+      left = TARGET_TEXT[edgeSlotTarget[s]];
+      right = DZ_TEXT[edgeSlotDz[s]];
+    } else if (kind === EDGE_KIND_REACH) {
+      lead = REACH_TEXT[edgeSlotReach[s]];
+      left = RADIUS_TEXT[clamp(Math.round(linkRadius), 0, RADIUS_TEXT.length - 1)];
+      right = ANGLE_TEXT[edgeSlotDegrees[s] + 180];
+    } else {
+      lead = ENERGY_TEXT[edgeSlotEnergy[s]];
+      left = DELTA_E_TEXT[edgeSlotDeltaE[s]];
+      right = DEGREE_TEXT[edgeSlotDegrees2[s]];
+    }
+
     ctx.globalAlpha = alpha;
     ctx.textAlign = 'center';
     ctx.font = DIM_FONT;
     ctx.textBaseline = 'bottom';
-    ctx.fillStyle = inkColor;
-    ctx.fillText(DISTANCE_TEXT[edgeSlotDistance[s]], 0, -5);
+    // The energy dimension is the one that is not a geometric measurement, so
+    // it carries the accent ink — the same signal the callouts use for a head.
+    ctx.fillStyle = kind === EDGE_KIND_ENERGY ? accentColor : inkColor;
+    ctx.fillText(lead, 0, -5);
     ctx.textBaseline = 'top';
     ctx.globalAlpha = alpha * 0.8;
     ctx.fillStyle = inkMutedColor;
-    ctx.fillText(ANGLE_TEXT[edgeSlotDegrees[s] + 180], -18, 5);
-    ctx.fillText(DZ_TEXT[edgeSlotDz[s]], 26, 5);
+    ctx.fillText(left, -20, 5);
+    ctx.fillText(right, 24, 5);
     ctx.restore();
 
     shown++;
   }
 
+  lastEdgeSlotsUsed = held;
   return shown;
 }
 
@@ -1997,12 +2278,17 @@ function refreshNodeCallout(node, mode) {
   const id = `n${String(node.id).padStart(3, '0')}`;
   node.calloutAxis = false;
   node.calloutGauge = -1;
+  node.calloutHandle = MODE_HANDLE[mode];
 
   if (mode === 0) {
+    // Energy is three layers that never line up; showing the sum without its
+    // terms is the one thing that would make the callout look like a mood ring.
     node.calloutHead = `${id}  ENERGY`;
     node.rowKey0 = 'E'; node.rowVal0 = node.energy.toFixed(3);
-    node.rowKey1 = 'φ'; node.rowVal1 = `${Math.round(((node.phase % TAU) + TAU) % TAU * RAD_TO_DEG)}°`;
-    node.calloutRows = 2;
+    node.rowKey1 = 'b'; node.rowVal1 = (0.5 + 0.5 * Math.sin(node.phase)).toFixed(3);
+    node.rowKey2 = 'w'; node.rowVal2 = (0.5 + 0.5 * Math.sin(nodeWavePhase(node))).toFixed(3);
+    node.rowKey3 = 'a'; node.rowVal3 = probeAudio.toFixed(3);
+    node.calloutRows = 4;
     node.calloutGauge = node.energy;
   } else if (mode === 1) {
     node.calloutHead = `${id}  TRANSFORM`;
@@ -2011,25 +2297,57 @@ function refreshNodeCallout(node, mode) {
     node.rowKey2 = 'Z'; node.rowVal2 = node.z.toFixed(3);
     node.calloutRows = 3;
     node.calloutAxis = true;
+    node.calloutGauge = 1 - node.z;
   } else if (mode === 2) {
     node.calloutHead = `${id}  VELOCITY`;
     node.rowKey0 = '|v|'; node.rowVal0 = `${Math.hypot(node.vx, node.vy).toFixed(2)} u/s`;
     node.rowKey1 = 'θ'; node.rowVal1 = `${Math.round(Math.atan2(node.vy, node.vx) * RAD_TO_DEG)}°`;
-    node.calloutRows = 2;
+    node.rowKey2 = 'ω'; node.rowVal2 = `${node.phaseRate.toFixed(3)} r/s`;
+    node.calloutRows = 3;
   } else if (mode === 3) {
     node.calloutHead = `${id}  PROJECTION`;
     node.rowKey0 = 'scale'; node.rowVal0 = node.scale.toFixed(3);
     node.rowKey1 = 'depth'; node.rowVal1 = node.z.toFixed(3);
-    node.rowKey2 = 'life'; node.rowVal2 = `${Math.round(node.life * 100)}%`;
-    node.calloutRows = 3;
-    node.calloutGauge = node.life;
-  } else {
+    node.rowKey2 = 'near'; node.rowVal2 = `${Math.round((node.scale - minScale) / (1 - minScale) * 100)}%`;
+    node.rowKey3 = 'px'; node.rowVal3 = `${Math.round(node.sx)}, ${Math.round(node.sy)}`;
+    node.calloutRows = 4;
+    node.calloutGauge = (node.scale - minScale) / (1 - minScale);
+  } else if (mode === 4) {
     const phase = nodeWavePhase(node);
     node.calloutHead = `${id}  WAVE`;
     node.rowKey0 = 'ψ'; node.rowVal0 = `${Math.round(phase * RAD_TO_DEG)}°`;
     node.rowKey1 = 'k·p'; node.rowVal1 = (node.x * WAVE_KX + node.y * WAVE_KY).toFixed(2);
-    node.calloutRows = 2;
+    node.rowKey2 = 'sin ψ'; node.rowVal2 = Math.sin(phase).toFixed(3);
+    node.calloutRows = 3;
     node.calloutGauge = 0.5 + 0.5 * Math.sin(phase);
+  } else if (mode === 5) {
+    // Everything here was accumulated inside drawLinks() on values the renderer
+    // had already computed — see the note there.
+    node.calloutHead = `${id}  LINKS`;
+    node.rowKey0 = 'deg'; node.rowVal0 = String(node.degree);
+    node.rowKey1 = 'κ'; node.rowVal1 = node.coupling.toFixed(2);
+    node.rowKey2 = 'near'; node.rowVal2 = node.nearest > 0 ? `${Math.round(node.nearest)} u` : '—';
+    node.rowKey3 = 'r'; node.rowVal3 = `${Math.round(linkRadius)} u`;
+    node.calloutRows = 4;
+    node.calloutGauge = Math.min(1, node.degree / 8);
+  } else if (mode === 6) {
+    const remaining = node.lifeRate > 0 ? (1 - node.life) / node.lifeRate : 0;
+    node.calloutHead = `${id}  LIFECYCLE`;
+    node.rowKey0 = 'life'; node.rowVal0 = `${Math.round(node.life * 100)}%`;
+    node.rowKey1 = 'fade'; node.rowVal1 = node.fade.toFixed(3);
+    node.rowKey2 = 'τ'; node.rowVal2 = `${remaining.toFixed(0)} s`;
+    node.rowKey3 = 'T'; node.rowVal3 = `${(1 / node.lifeRate).toFixed(0)} s`;
+    node.calloutRows = 4;
+    node.calloutGauge = node.fade;
+  } else {
+    // The spawn point itself: which term of the R2 low-discrepancy sequence
+    // placed this node, and the depth excursion it was given.
+    node.calloutHead = `${id}  SEED`;
+    node.rowKey0 = 'i'; node.rowVal0 = String(node.seed);
+    node.rowKey1 = 'u'; node.rowVal1 = node.u.toFixed(4);
+    node.rowKey2 = 'v'; node.rowVal2 = node.v.toFixed(4);
+    node.rowKey3 = 'z₀±'; node.rowVal3 = `${node.zBase.toFixed(2)}±${node.zAmp.toFixed(2)}`;
+    node.calloutRows = 4;
   }
 
   node.labelMode = mode;
@@ -2042,7 +2360,8 @@ function formatAxis(v) {
 }
 
 function calloutBlockHeight(node) {
-  return CALLOUT_PAD_Y * 2 + CALLOUT_HEAD_H + node.calloutRows * CALLOUT_ROW_H
+  const rows = node.calloutRows < CALLOUT_MAX_ROWS ? node.calloutRows : CALLOUT_MAX_ROWS;
+  return CALLOUT_PAD_Y * 2 + CALLOUT_HEAD_H + rows * CALLOUT_ROW_H
     + (node.calloutGauge >= 0 ? CALLOUT_GAUGE_H + 3 : 0);
 }
 
@@ -2058,7 +2377,7 @@ function calloutBlockHeight(node) {
  */
 function drawCallouts(ctx, nodes, n) {
   const maxLabels = labelCapacity();
-  const mode = modeAt(infoClockS);
+  const baseMode = modeAt(infoClockS);
 
   let count = 0;
   for (let i = 0; i < n; i++) {
@@ -2082,12 +2401,20 @@ function drawCallouts(ctx, nodes, n) {
     labelScores[b] = score;
   }
 
-  if (count === 0) return 0;
+  if (count === 0) {
+    lastModesOnScreen = 0;
+    return 0;
+  }
 
   // --- Placement -------------------------------------------------------
   let placed = 0;
+  let modeMask = 0;
   for (let k = 0; k < count; k++) {
     const node = nodes[labelCandidates[k]];
+    // The rotation is global; the mode a given node lands on is that index
+    // offset by the node's own. Two callouts side by side therefore read two
+    // different quantities, and each one still walks the whole set over time.
+    const mode = (baseMode + node.modeOffset) % LABEL_MODE_COUNT;
     refreshNodeCallout(node, mode);
 
     const height = calloutBlockHeight(node);
@@ -2138,8 +2465,15 @@ function drawCallouts(ctx, nodes, n) {
     calloutHeight[placed] = height;
     calloutSide[placed] = side;
     calloutAlpha[placed] = alpha;
+    modeMask |= 1 << mode;
     placed++;
   }
+
+  // Popcount of the mask: how many distinct quantities the field is currently
+  // reading out. It is the honest measure of whether the variety is working.
+  let distinct = 0;
+  for (let m = modeMask; m; m >>= 1) distinct += m & 1;
+  lastModesOnScreen = distinct;
 
   if (placed === 0) return 0;
 
@@ -2167,11 +2501,15 @@ function drawCallouts(ctx, nodes, n) {
     let y = calloutTop[k] + CALLOUT_PAD_Y + CALLOUT_HEAD_H;
 
     for (let row = 0; row < node.calloutRows; row++) {
-      const key = row === 0 ? node.rowKey0 : row === 1 ? node.rowKey1 : node.rowKey2;
-      const value = row === 0 ? node.rowVal0 : row === 1 ? node.rowVal1 : node.rowVal2;
+      const key = row === 0 ? node.rowKey0 : row === 1 ? node.rowKey1
+        : row === 2 ? node.rowKey2 : node.rowKey3;
+      const value = row === 0 ? node.rowVal0 : row === 1 ? node.rowVal1
+        : row === 2 ? node.rowVal2 : node.rowVal3;
 
       ctx.globalAlpha = alpha * 0.9;
-      ctx.fillStyle = node.calloutAxis ? axisColors[row] : inkMutedColor;
+      // Axis colouring only ever covers the first three rows: X, Y, Z is the
+      // convention, and a fourth axis colour would be inventing one.
+      ctx.fillStyle = node.calloutAxis && row < 3 ? axisColors[row] : inkMutedColor;
       ctx.textAlign = 'left';
       ctx.fillText(key, snap(left + CALLOUT_PAD_X), snap(y));
 
@@ -2250,13 +2588,39 @@ function drawCalloutFurniture(ctx, nodes, placed) {
     ctx.lineTo(snap(anchorX) + 0.5, snap(anchorY) + 0.5);
     ctx.stroke();
 
-    // Open square handle on the node itself, so it is obvious which of a dozen
-    // nodes the block belongs to.
+    // Open handle on the node itself, so it is obvious which of a dozen nodes
+    // the block belongs to — and, because the glyph follows the detail mode,
+    // which family of quantity is being read before the text is legible.
     ctx.globalAlpha = alpha * 0.9;
-    ctx.beginPath();
-    ctx.rect(snap(node.sx - NODE_HANDLE) + 0.5, snap(node.sy - NODE_HANDLE) + 0.5, NODE_HANDLE * 2, NODE_HANDLE * 2);
-    ctx.stroke();
+    drawNodeHandle(ctx, node.calloutHandle, snap(node.sx) + 0.5, snap(node.sy) + 0.5);
   }
+}
+
+/** One stroked glyph, centred on `(x, y)`. See MODE_HANDLE. */
+function drawNodeHandle(ctx, handle, x, y) {
+  const h = NODE_HANDLE;
+  ctx.beginPath();
+  if (handle === HANDLE_CIRCLE) {
+    ctx.arc(x, y, h, 0, TAU);
+  } else if (handle === HANDLE_DIAMOND) {
+    const d = h * 1.3;
+    ctx.moveTo(x, y - d);
+    ctx.lineTo(x + d, y);
+    ctx.lineTo(x, y + d);
+    ctx.lineTo(x - d, y);
+    ctx.closePath();
+  } else if (handle === HANDLE_CROSS) {
+    // Open crosshair: four ticks with a gap at the centre, so the node itself
+    // stays visible inside its own marker.
+    const g = h * 0.45;
+    ctx.moveTo(x - h - 2, y); ctx.lineTo(x - g, y);
+    ctx.moveTo(x + g, y); ctx.lineTo(x + h + 2, y);
+    ctx.moveTo(x, y - h - 2); ctx.lineTo(x, y - g);
+    ctx.moveTo(x, y + g); ctx.lineTo(x, y + h + 2);
+  } else {
+    ctx.rect(x - h, y - h, h * 2, h * 2);
+  }
+  ctx.stroke();
 }
 
 // ----------------------------------------------------------
@@ -2271,14 +2635,15 @@ function refreshCodeValues() {
   if (infoClockS < codeValueNextUpdate) return;
   codeValueNextUpdate = infoClockS + LABEL_VALUE_SECONDS;
 
+  const n = stillFieldNodes.length;
   codeValueText[0] = lastDt.toFixed(4);
   codeValueText[1] = `${(clockS % 1000).toFixed(1)} s`;
-  codeValueText[2] = `n = ${stillFieldNodes.length}`;
+  codeValueText[2] = `n = ${n}`;
   codeValueText[3] = `J = ${lastJitter.toFixed(1)}`;
   codeValueText[4] = `z = ${probeZ.toFixed(3)}`;
   codeValueText[5] = `s = ${probeScale.toFixed(3)}`;
   codeValueText[6] = `${lastGridCells} cells`;
-  codeValueText[7] = `${lastPairTests} of ${(stillFieldNodes.length * (stillFieldNodes.length - 1) / 2) | 0}`;
+  codeValueText[7] = `${lastPairTests} of ${(n * (n - 1) / 2) | 0}`;
   codeValueText[8] = `d = ${sampleDistance.toFixed(0)}`;
   codeValueText[9] = `t = ${sampleTarget.toFixed(3)}`;
   codeValueText[10] = `s = ${sampleStrength.toFixed(3)}`;
@@ -2287,6 +2652,14 @@ function refreshCodeValues() {
   codeValueText[13] = `${lastEdgeCount} edges`;
   codeValueText[14] = `${measuredFps.toFixed(0)} fps`;
   codeValueText[15] = `${lastLabelCount} shown`;
+  codeValueText[16] = infoClockS > 1
+    ? `${(respawnCount / infoClockS * 60).toFixed(1)}/min`
+    : 'settling';
+  codeValueText[17] = `x̄ ${(n ? lastEdgeCount * 2 / n : 0).toFixed(2)} · ↑${lastMaxDegree}`;
+  codeValueText[18] = `${lastGlowNodes}/${MAX_GLOW_NODES} glow`;
+  codeValueText[19] = `${lastEdgeLabelCount} dims`;
+  codeValueText[20] = `${LABEL_MODE_NAMES[modeAt(infoClockS)]} +${lastModesOnScreen}`;
+  codeValueText[CODE_SUMMARY_SLOT] = `u ${stageUpdateMs.toFixed(2)} · l ${stageLinksMs.toFixed(2)} · n ${stageNodesMs.toFixed(2)} · i ${stageInfoMs.toFixed(2)} ms`;
 }
 
 /**
@@ -2305,7 +2678,12 @@ function layoutCodeTicker() {
   if (!stillFieldCode) return;
   if (stillFieldW < CODE_MIN_VIEWPORT) return;
 
-  const height = CODE_LINES.length * CODE_LINE_H + 22;
+  // Folded, the listing is just its header bar — small enough that it always
+  // fits, which is the point: the corner is freed without the overlay
+  // disappearing and leaving no way back to it.
+  const height = codeFolded
+    ? CODE_HEAD_H
+    : CODE_HEAD_H + CODE_LINES.length * CODE_LINE_H + CODE_FOOT_H;
   if (height + 48 > stillFieldH) return;
 
   for (let c = 0; c < 4; c++) {
@@ -2319,6 +2697,29 @@ function layoutCodeTicker() {
     codeVisible = true;
     return;
   }
+}
+
+/**
+ * Route a pointer press at viewport coordinates to the source overlay.
+ *
+ * The overlay is canvas, so it cannot be a button — but a listing you can only
+ * dismiss from a panel two scrolls away is a listing people leave switched off.
+ * app.js calls this for presses that landed on the page background, and only
+ * the header bar is live. The Field Lab switch remains the keyboard-reachable,
+ * persisted control; this is the direct affordance on top of it.
+ *
+ * @param {number} x viewport CSS px
+ * @param {number} y viewport CSS px
+ * @returns {boolean} true if the overlay consumed the press
+ */
+export function handleOverlayPointer(x, y) {
+  if (!codeVisible || !stillFieldEnabled || !stillFieldNerd) return false;
+  // The plate extends a little past the text column on every side; matching it
+  // keeps the target at the size it looks.
+  if (x < codeLeft - 10 || x > codeLeft + CODE_BLOCK_W + 10) return false;
+  if (y < codeTop - 8 || y > codeTop + CODE_HEAD_H) return false;
+  setCodeFolded(!codeFolded);
+  return true;
 }
 
 /** Does a box overlap the listing? Used by callouts and dimensions. */
@@ -2353,6 +2754,26 @@ function drawCodeTicker(ctx, dt) {
   const share3 = total > 0 ? Math.max(0.06, stageInfoMs / total) : 0.25;
   const shareSum = share0 + share1 + share2 + share3;
 
+  ctx.textBaseline = 'top';
+  ctx.font = CODE_FONT;
+
+  // A very light plate. The listing sits over the field's own lines, and
+  // without something behind it an edge crossing a line of code is read as part
+  // of the code. Kept far more transparent than a callout plate — this is
+  // ambient, not a readout you are meant to stop and study.
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = plateColor;
+  ctx.beginPath();
+  if (hasRoundRect) ctx.roundRect(snap(left - 10), snap(top - 8), CODE_BLOCK_W + 20, codeHeight + 4, 6);
+  else ctx.rect(snap(left - 10), snap(top - 8), CODE_BLOCK_W + 20, codeHeight + 4);
+  ctx.fill();
+
+  drawCodeHeader(ctx, left, top, total);
+  if (codeFolded) {
+    ctx.textAlign = 'left';
+    return;
+  }
+
   codeCursor += dt / (reducedMotion ? CODE_SWEEP_S * 3 : CODE_SWEEP_S);
   if (codeCursor >= 1) codeCursor -= Math.floor(codeCursor);
 
@@ -2368,60 +2789,145 @@ function drawCodeTicker(ctx, dt) {
     codeActiveLine = i;
   }
 
-  ctx.textBaseline = 'top';
-  ctx.font = CODE_FONT;
+  // Heat, not a highlight. The counter deposits warmth on the line it reaches
+  // and every line cools exponentially, so the marker reads as a soft comet
+  // passing down the listing rather than a row switching on and off. The decay
+  // is a rate per second like every other decay here, so the tail is the same
+  // length at 30, 45 and 60 fps.
+  const cool = Math.exp(-CODE_HEAT_DECAY * dt);
+  for (let i = 0; i < lines; i++) codeLineHeat[i] *= cool;
+  codeLineHeat[codeActiveLine] = 1;
 
-  // A very light plate. The listing sits over the field's own lines, and
-  // without something behind it an edge crossing a line of code is read as part
-  // of the code. Kept far more transparent than a callout plate — this is
-  // ambient, not a readout you are meant to stop and study.
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = plateColor;
-  ctx.beginPath();
-  if (hasRoundRect) ctx.roundRect(snap(left - 10), snap(top - 8), CODE_BLOCK_W + 20, codeHeight + 4, 6);
-  else ctx.rect(snap(left - 10), snap(top - 8), CODE_BLOCK_W + 20, codeHeight + 4);
-  ctx.fill();
+  const bodyTop = top + CODE_HEAD_H;
+  drawCodeGutter(ctx, left, bodyTop, share0, share1, share2, share3);
 
-  // Header rule and caption.
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = inkMutedColor;
-  ctx.textAlign = 'left';
-  ctx.fillText('js/still-field.js — render loop', snap(left + CODE_GUTTER), snap(top));
-  ctx.globalAlpha = 0.28;
-  ctx.fillRect(snap(left), snap(top + 14), CODE_BLOCK_W, 1);
-
-  const bodyTop = top + 20;
   for (let i = 0; i < lines; i++) {
     const line = CODE_LINES[i];
     const y = bodyTop + i * CODE_LINE_H;
-    const active = i === codeActiveLine;
+    const heat = codeLineHeat[i];
+    const warm = heat > CODE_HEAT_EPSILON;
 
-    ctx.globalAlpha = active ? 0.30 : 0;
-    if (active) {
+    if (warm) {
+      // A wash this faint is under the threshold at which a moving band is
+      // distracting, which is the entire brief for this overlay.
+      ctx.globalAlpha = heat * 0.085;
       ctx.fillStyle = accentColor;
-      ctx.fillRect(snap(left), snap(y - 1), CODE_BLOCK_W, CODE_LINE_H);
+      ctx.fillRect(snap(left - 4), snap(y - 1), CODE_BLOCK_W + 8, CODE_LINE_H);
+      ctx.globalAlpha = heat * 0.5;
+      ctx.fillRect(snap(left - 8), snap(y - 1), 2, CODE_LINE_H);
     }
 
     ctx.textAlign = 'right';
-    ctx.globalAlpha = active ? 0.75 : 0.3;
+    ctx.globalAlpha = 0.26 + heat * 0.24;
     ctx.fillStyle = inkMutedColor;
     ctx.fillText(String(i + 1).padStart(2, '0'), snap(left + CODE_GUTTER - 6), snap(y));
 
+    const textX = snap(left + CODE_GUTTER + line[CODE_INDENT] * 12);
     ctx.textAlign = 'left';
-    ctx.globalAlpha = active ? 0.95 : 0.42;
-    ctx.fillStyle = active ? accentColor : inkColor;
-    ctx.fillText(line[CODE_TEXT], snap(left + CODE_GUTTER + line[CODE_INDENT] * 12), snap(y));
+    ctx.globalAlpha = 0.40 + heat * 0.22;
+    ctx.fillStyle = inkColor;
+    ctx.fillText(line[CODE_TEXT], textX, snap(y));
+    // Warmth tints rather than replaces: over-printing in the accent at the
+    // heat's own alpha crossfades the colour instead of stepping it.
+    if (warm) {
+      ctx.globalAlpha = heat * 0.42;
+      ctx.fillStyle = accentColor;
+      ctx.fillText(line[CODE_TEXT], textX, snap(y));
+    }
 
     const slot = line[CODE_SLOT];
     if (slot >= 0) {
       ctx.textAlign = 'right';
-      ctx.globalAlpha = active ? 0.9 : 0.34;
-      ctx.fillStyle = active ? inkColor : inkMutedColor;
+      ctx.globalAlpha = 0.32 + heat * 0.34;
+      ctx.fillStyle = inkMutedColor;
       ctx.fillText(codeValueText[slot], snap(left + CODE_BLOCK_W), snap(y));
     }
   }
 
+  drawCodeFooter(ctx, left, bodyTop + lines * CODE_LINE_H, share0, share1, share2, share3);
   ctx.textAlign = 'left';
+}
+
+/** Title bar: the file, the frame cost, and the fold chevron that toggles it. */
+function drawCodeHeader(ctx, left, top, totalMs) {
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = inkMutedColor;
+  ctx.textAlign = 'left';
+  ctx.fillText('js/still-field.js — render loop', snap(left + CODE_GUTTER), snap(top));
+
+  ctx.textAlign = 'right';
+  ctx.globalAlpha = 0.42;
+  ctx.fillText(
+    codeFolded ? `${CODE_LINES.length} lines` : `${totalMs.toFixed(2)} ms/frame`,
+    snap(left + CODE_BLOCK_W - 14),
+    snap(top),
+  );
+
+  // Chevron: down when expanded (it will collapse), right when folded.
+  const cx = left + CODE_BLOCK_W - 5;
+  const cy = top + 5;
+  ctx.globalAlpha = 0.6;
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  if (codeFolded) {
+    ctx.moveTo(snap(cx - 3) + 0.5, snap(cy - 4) + 0.5);
+    ctx.lineTo(snap(cx + 1) + 0.5, snap(cy) + 0.5);
+    ctx.lineTo(snap(cx - 3) + 0.5, snap(cy + 4) + 0.5);
+  } else {
+    ctx.moveTo(snap(cx - 5) + 0.5, snap(cy - 2) + 0.5);
+    ctx.lineTo(snap(cx - 1) + 0.5, snap(cy + 2) + 0.5);
+    ctx.lineTo(snap(cx + 3) + 0.5, snap(cy - 2) + 0.5);
+  }
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = inkMutedColor;
+  ctx.fillRect(snap(left - 4), snap(top + 14), CODE_BLOCK_W + 8, 1);
+}
+
+/**
+ * Stage rails down the left margin. One bar per contiguous run of lines, its
+ * opacity the stage's measured share — so the shape of the frame is legible
+ * from the gutter alone, without reading a single number.
+ */
+function drawCodeGutter(ctx, left, bodyTop, share0, share1, share2, share3) {
+  const x = snap(left - 8);
+  for (let stage = 0; stage < 4; stage++) {
+    const first = CODE_STAGE_FIRST[stage];
+    if (first < 0) continue;
+    const share = stage === 0 ? share0 : stage === 1 ? share1 : stage === 2 ? share2 : share3;
+    const y = snap(bodyTop + first * CODE_LINE_H);
+    const h = (CODE_STAGE_LAST[stage] - first + 1) * CODE_LINE_H - 3;
+    ctx.globalAlpha = 0.10 + share * 0.42;
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(x, y, 2, h);
+  }
+}
+
+/** A stacked bar of where the frame's time actually went, plus the raw figures. */
+function drawCodeFooter(ctx, left, y, share0, share1, share2, share3) {
+  const sum = share0 + share1 + share2 + share3;
+  const barY = snap(y + 4);
+  let x = left;
+  // Written into a pre-allocated array rather than a literal: this runs every
+  // frame, and an array literal here is an allocation in the render loop.
+  stageShareScratch[0] = share0;
+  stageShareScratch[1] = share1;
+  stageShareScratch[2] = share2;
+  stageShareScratch[3] = share3;
+  ctx.fillStyle = accentColor;
+  for (let stage = 0; stage < 4; stage++) {
+    const w = (stageShareScratch[stage] / sum) * CODE_BLOCK_W;
+    ctx.globalAlpha = CODE_STAGE_ALPHA[stage];
+    ctx.fillRect(snap(x), barY, Math.max(1, w - 1), 2);
+    x += w;
+  }
+
+  ctx.globalAlpha = 0.34;
+  ctx.fillStyle = inkMutedColor;
+  ctx.textAlign = 'left';
+  ctx.fillText(codeValueText[CODE_SUMMARY_SLOT], snap(left), snap(y + 8));
 }
 
 // ----------------------------------------------------------
@@ -2443,6 +2949,9 @@ function stopLoop() {
   lastEdgeLabelCount = 0;
   lastPairTests = 0;
   lastBatches = 0;
+  lastGlowNodes = 0;
+  lastMaxDegree = 0;
+  lastModesOnScreen = 0;
 }
 
 export function startStillFieldLoop() {
@@ -2527,6 +3036,8 @@ export function setStillFieldNerd(on) {
   if (!stillFieldNerd) {
     measuredFrameMs = 0;
     stageUpdateMs = stageLinksMs = stageNodesMs = stageInfoMs = 0;
+    lastModesOnScreen = 0;
+    lastGlowNodes = 0;
     resetEdgeSlots();
     infoCleared = false;
     clearInfoCanvas();
@@ -2612,6 +3123,51 @@ export function setStillFieldFps(v) {
 export function setStillFieldCode(on) {
   stillFieldCode = Boolean(on);
   write(STORAGE_KEYS.stillFieldCode, stillFieldCode);
+  emit();
+}
+
+/**
+ * Toggle the on-canvas node callouts. Persists the choice.
+ *
+ * Independent of the edge dimensions and the source listing: the three overlays
+ * cost different amounts and suit different moods, and one switch for all three
+ * meant wanting quiet edges cost you the callouts too.
+ * @param {boolean} on
+ */
+export function setStillFieldCallouts(on) {
+  stillFieldCallouts = Boolean(on);
+  write(STORAGE_KEYS.stillFieldCallouts, stillFieldCallouts);
+  if (!stillFieldCallouts) {
+    // Drop every hold, or re-enabling would pop a screenful of callouts back in
+    // at whatever opacity they froze at.
+    for (const node of stillFieldNodes) resetNodeCallout(node);
+    lastLabelCount = 0;
+    lastModesOnScreen = 0;
+  }
+  emit();
+}
+
+/**
+ * Toggle the on-canvas edge dimensions. Persists the choice.
+ * @param {boolean} on
+ */
+export function setStillFieldEdges(on) {
+  stillFieldEdges = Boolean(on);
+  write(STORAGE_KEYS.stillFieldEdges, stillFieldEdges);
+  if (!stillFieldEdges) {
+    resetEdgeSlots();
+    lastEdgeLabelCount = 0;
+  }
+  emit();
+}
+
+/**
+ * Fold or expand the on-canvas source listing. Session-only, like the HUD's
+ * fold: the persisted setting is whether the overlay exists at all.
+ * @param {boolean} folded
+ */
+export function setCodeFolded(folded) {
+  codeFolded = Boolean(folded);
   emit();
 }
 

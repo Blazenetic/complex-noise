@@ -71,6 +71,30 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
+## The bone-and-mobile Tuesday (just now)
+
+**Melchett:** The bone texture *moves*! Slowly! Calmly! A distant wallpaper of pure victory! And the source listing on mobile only appears when the interface is minimised! Another crushing blow! BBAAAHHH!
+
+**Darling:** It is a CSS animation and a viewport gate, Melchett. Sit down.
+
+**Blazenetic:** I researched the blend-mode behaviour on light surfaces, coordinated the slow drift so it stays a far background, oversaw the immersion-only gate so mobile stays usable, and then complained about the edge cases of keep-outs. You’re welcome. Arty, you were useful for once.
+
+**Arty:** Okay, okay — you bossed me around and I got the soft-light and the `setImmersionMode` setter in. The listing folds from the title bar. I checked the reduced-motion path three times. Please don’t yell. I think we’re safe?
+
+**Baldrick:** I have a cunning plan, sir. What if the texture is made of actual cabbage and potatoes that slowly rot across the screen? Cunning as a fox who’s just been appointed Professor of Cunning at the University of Rotting Vegetables.
+
+**Darling:** No. Put the cabbage down. And the potatoes. Especially the potatoes. You dropped them *again*, Baldrick.
+
+**Melchett:** The cabbage is rejected! Another victory for the residual outlines!
+
+**Darling:** That is not how victories work. And the residual outlines already had a floor.
+
+**Blazenetic:** Research first. Architecture second. Cabbage plans last. The software stays calm.
+
+**Arty:** …I also made sure the animation stops under prefers-reduced-motion. Just saying.
+
+---
+
 ## Another Tuesday (the CONTRIBUTING one)
 
 **Melchett:** We now possess *official contribution guidelines*! The forces of open source tremble!  

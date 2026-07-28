@@ -3,7 +3,7 @@
 You found the door marked “research”.  
 Welcome to the Lab.
 
-We ship a calm, zero-dependency procedural noise generator that is supposed to keep working at 3 a.m. on a phone that is not on charge. The documentation is allowed to sound like a late-night Discord channel that somehow still cares about residual outlines having a floor.
+We ship a calm, zero-dependency procedural noise generator that is supposed to keep working at 3 a.m. on a phone that is not on charge. The documentation is allowed to sound like a late-night Discord channel that somehow still cares about residual outlines having a floor — and about eight callouts saying eight different things.
 
 If you want to help — brilliant. Fork it. Break things carefully. Tell us what you found.
 
@@ -17,6 +17,7 @@ If you want to help — brilliant. Fork it. Break things carefully. Tell us what
 - **Want to meet the cast?** → [Meet the Lab](./docs/MEET_THE_LAB.md)
 - **Want every document?** → [docs/](./docs/)
 - **Want the quantitative Lab Log?** → [Changelog](./CHANGELOG.md)
+- **Want the full instrumentation contract (eight modes, φ offset, heat trail, fold)?** → [Info Layer](./docs/INFO_LAYER.md)
 
 ---
 
@@ -57,7 +58,7 @@ PRs are welcome for anything important — especially security, battery, reliabi
 Before you open one:
 
 1. Read **[AGENTS.md](./AGENTS.md)**. It is short on purpose. The architectural rule (state modules publish; `app.js` is the only DOM writer) exists because the play button once froze on “pause” over silent audio at 3 a.m. We would prefer that not happen again.
-2. Run the suite: `npm test`. Behaviour changes need matching test updates in the same commit. The suite grew from a handful of checks to 33+ assertions for a reason.
+2. Run the suite: `npm test`. Behaviour changes need matching test updates in the same commit. The suite grew from a handful of checks to 33+ assertions for a reason. Three of the newer cases cover distinct detail modes, independent overlay toggles, and the source fold.
 3. Keep runtime dependencies at zero. Any exception must be called out loudly in the PR description.
 4. British / Australian English in user-facing copy.
 5. Do **not** inject Lab Voice into `AGENTS.md`, `CLAUDE.md`, code comments, or technical architecture sections. The wall is there for a reason. Darling will notice.
@@ -81,7 +82,7 @@ Point your AI coding agent at `AGENTS.md` first. That is the intended entry poin
 
 ---
 
-## Lab Log (first CONTRIBUTING.md + later polish)
+## Lab Log (first CONTRIBUTING.md + later polish + instrumentation awareness)
 
 **Melchett:** Gentlemen! We now have *official contribution guidelines*! Another crushing victory for the forces of open source!
 
@@ -89,7 +90,7 @@ Point your AI coding agent at `AGENTS.md` first. That is the intended entry poin
 
 **Blazenetic:** I researched how other calm tools handle security reports and contribution patterns, coordinated the short version, and then complained about the edge cases of people trying to put Lab Voice into AGENTS.md. You’re welcome.
 
-**Arty:** I double-checked that AGENTS.md is still completely clean. The wall is intact. I think we’re safe?
+**Arty:** I double-checked that AGENTS.md is still completely clean. The wall is intact. The new mode-variety tests are green. I think we’re safe?
 
 **Baldrick:** I have a cunning plan, sir. What if every PR *is* a security issue? We just treat the whole world as hostile and only accept potato-based patches.
 

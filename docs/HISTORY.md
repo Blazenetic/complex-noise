@@ -164,15 +164,15 @@ Blazenetic researched the continuous-rate envelopes that become exact discrete u
 
 Arty applied the slower attack, the longer hold, the extra edge slots, the staggered secondary baselines and the preferred-side memory while looking like someone was about to yell. The eight modes still disagree. The φ offset still spreads them. The pair-identity kinds are untouched. The residual outlines still have a floor.
 
-Baldrick proposed potato callouts that cool and fall off the screen, a potato sandbox for large files, and potato counterweights on the leader lines. Darling rejected every single one and also blamed Baldrick for accidentally leaking the existence of the documentation process itself. Melchett declared the death of the left-right bounce a strategic masterpiece of historic scale.
+Baldrick proposed potato callouts that cool and fall off the screen, a potato sandbox for large files, and potato counterweights on the leader lines. Darling rejected every single one. Melchett declared the death of the left-right bounce a strategic masterpiece of historic scale.
 
 > **Blazenetic:** I researched the continuous-time envelope discretisation and the sticky-side hysteresis. I coordinated the capacity and the multi-line stagger. Then I complained about the sandbox trauma and the bounce. You’re welcome.  
 > **Arty:** The previous session hit the size limit hard. There were stack traces. Many stack traces. I applied the changes carefully. Please don’t yell. I think we’re safe.  
 > **Baldrick:** Potato counterweight on the leader line? Real aerodynamic potential—  
-> **Darling:** No. And the leak is still your fault.  
+> **Darling:** No.  
 > **Melchett:** THE BOUNCE IS DEAD! A CRUSHING VICTORY FOR HYSTERESIS AND EXPONENTIAL SMOOTHING! BBAAAHHH!
 
-The same work became the opening chapter of the living curriculum ([Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md)) and the first entry on the affectionate accountability ledger ([Blame](./BLAME.md)). The repository itself is now deliberately a learning experience. Future sessions will keep adding to both pages.
+The same work became the opening chapter of [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) and the first entry on [Blame](./BLAME.md). Future sessions will keep adding to both pages.
 
 ---
 
@@ -182,7 +182,7 @@ Somewhere in the middle of the sprint the documentation decided it was allowed t
 
 The cast, the wall between narrative and agent docs, and the style rules live in a mysterious cabinet in the lab. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
-**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor. Any accidental leaks of process details are also his fault.
+**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor.
 
 ---
 

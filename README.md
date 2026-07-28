@@ -10,13 +10,13 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 > Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases — Scientist energy, calibrated for residual outlines), Arty (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
-[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
 
 A pure client-side procedural noise generator (Brown, Pink, White, Green, Fan, Rain) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
-> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead!  
+> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead! The clocks we control are the ones we trust!  
 > **Darling:** It is a noise generator, Melchett.  
-> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, oversaw the seam passes and the A-weighted matching, and then complained about the edge cases. You’re welcome.
+> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, oversaw the seam passes and the A-weighted matching, targeted the overnight failure modes, and then complained about the edge cases. You’re welcome.
 
 ---
 
@@ -62,9 +62,9 @@ All of it is synthesised on the device. No samples. No loops that click. No netw
 
 ### Transport & comfort
 - Volume with smooth ramps. Soft default of 0.22 so the first press does not wake the neighbours.
-- Continuous sleep-timer slider (0–10 h, 0.5 h steps) with a gentle fade-out. Not a select box. A real slider. Because someone once said “select boxes are fine for sleep timers” and we refused to live in that world.
-- Settings remembered in localStorage (with full Private Browsing throw guards, because Safari likes to punish the optimistic).
-- Wake Lock support so the screen does not fall asleep while the noise is working.
+- Continuous sleep-timer slider (0–10 h, 0.5 h steps) with a gentle fade-out. Not a select box. A real slider. Because someone once said “select boxes are fine for sleep timers” and we refused to live in that world. Absolute wall-clock deadline so a suspended phone cannot overshoot by hours.
+- Settings remembered in localStorage (with full Private Browsing throw guards, because Safari likes to punish the optimistic). Continuous controls are throttled so a slider drag does not hit the disk sixty times a second.
+- Wake Lock support so the screen does not fall asleep while the noise is working — and the lock is released if playback has already stopped by the time the browser grants it.
 - Colour switches are cancellable and coalesced: rapid clicks produce one buffer; pause → play cancels stale work so nothing tears down the newly resumed source at 3 a.m.
 
 ### Still Theme
@@ -154,7 +154,7 @@ complex-noise/
 ├── README.md               # You are here. This one is allowed to be chaotic.
 ├── LICENSE
 ├── CHANGELOG.md            # What shipped + Lab Log
-└── docs/                   # Historical requirements, visitor notes, Meet the Lab, History
+└── docs/                   # Historical requirements, visitor notes, Meet the Lab, History, Teachings, Blame
 ```
 
 **State flows one way.** `audio.js`, `still-field.js`, `theme.js` and `ui-chrome.js` own state and publish it through `subscribe(fn)`. `app.js` is the only module that writes to the app’s DOM, and it does so exclusively in those subscription callbacks. Event handlers just call into the state modules.
@@ -208,11 +208,14 @@ All keys are centralised in `js/constants.js` → `STORAGE_KEYS` and accessed on
 
 ```bash
 npm install     # Playwright is the only dev dependency
-npm test        # headless browser suite, ~30s
+npm test        # headless browser suite, ~15s with the worker pool
 npm test -- --headed
+npm test -- --filter=colour
+npm test -- --workers=1
+npm test -- --repeat=20
 ```
 
-`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer, persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, level matching, headroom, whole-cycle LFOs, rapid-switch races that count real buffers, and basic accessibility (labels + 44 px targets). Newer cases cover mode variety, independent overlay toggles, and the fold.
+`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer (including simulated suspend), persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, level matching, headroom, whole-cycle LFOs, rapid-switch races that count real buffers, wake-lock release on stop, throttled slider writes, and basic accessibility (labels + 44 px targets). Newer cases cover mode variety, independent overlay toggles, and the fold.
 
 Several tests exist because a plausible-looking refactor broke playback in a way that only shows up minutes later. The sleep-timer test in particular is the result of lived experience.
 
@@ -220,7 +223,7 @@ Several tests exist because a plausible-looking refactor broke playback in a way
 > **Blazenetic:** Good.  
 > **Arty:** …I ran it a third time. Just in case.
 
-CI runs the suite and ESLint on every pull request. If your environment ships a pre-provisioned Chromium, point the suite at it with `PLAYWRIGHT_CHROMIUM_PATH=...`.
+CI runs the suite and ESLint on every pull request (with a gate that correctly skips pure documentation changes without deadlocking the merge). If your environment ships a pre-provisioned Chromium, point the suite at it with `PLAYWRIGHT_CHROMIUM_PATH=...`.
 
 ---
 
@@ -280,10 +283,10 @@ Do whatever you want with the code. Just don’t put ads on the pause button. We
 ---
 
 Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
-See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
+See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list, [History](docs/HISTORY.md) for how we got here, [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) for the curriculum, and [Blame](docs/BLAME.md) for the affectionate ledger.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. The bounce is dead. You’re welcome.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. The bounce is dead. The clocks we control are the ones we trust. You’re welcome.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  

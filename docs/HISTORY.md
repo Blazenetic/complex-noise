@@ -53,7 +53,7 @@ The public [0.1.0] release landed on 28 July 2026. Full details live in the [Cha
 
 Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
 
-The cast, the wall between narrative and agent docs, and the style rules live in the project Google Drive. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
+The cast, the wall between narrative and agent docs, and the style rules live in a mysterious cabinet in the lab. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
 ---
 

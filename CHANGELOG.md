@@ -59,7 +59,13 @@ All of the above respects the existing constraints: zero allocations in the rend
 
 **Darling:** It is a preferred side and four timing constants, Melchett. And stop shouting at the residual outlines. They already had a floor.
 
-**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at three a.m. That is non-negotiable. And yes, Baldrick — the large-file trauma and the accidental leak of process details are both officially your fault this time. Do not invent any more professors of cunning.
+**Arty:** Okay, okay — Melchett declared victory slightly early and the test suite got bamboozled for one run. The φ offset is still spreading the eight modes. I lengthened the sample window and aligned the assertion with the sticky regime. Please don’t yell. I think we’re safe?
+
+**Melchett:** A MINOR TACTICAL ADJUSTMENT! THE VICTORY REMAINS COMPLETE! BBAAAHHH!
+
+**Darling:** That is still not how victories work.
+
+**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at three a.m. That is non-negotiable. And yes — the early victory declaration that bamboozled the mode-variety assertion is officially Melchett’s fault this time. Do not invent any more professors of cunning, Baldrick.
 
 **Baldrick:** But the potato counterweight had real aerodynamic potential—
 

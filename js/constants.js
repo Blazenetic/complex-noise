@@ -15,7 +15,7 @@ export const TYPE_SWITCH_FADE_OUT = 0.15;
 export const TYPE_SWITCH_FADE_IN = 0.25;
 
 /** Noise types the UI and generator both understand. Add new colours here first. */
-export const NOISE_TYPES = ['brown', 'pink', 'white'];
+export const NOISE_TYPES = ['brown', 'pink', 'white', 'green', 'fan', 'rain'];
 
 /** Themes supported by css/styles.css via [data-still-theme] */
 export const THEMES = ['dark', 'bone'];

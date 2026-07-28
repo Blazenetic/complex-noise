@@ -9,30 +9,40 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 ## [Unreleased]
 
 ### Documentation
-- Dramatic Lab-voice overhaul of the README (stronger framing, origin line, closing banter)
-- Meet the Lab rewritten to feel like the room is occupied rather than a cast list
-- Light polish on docs/README.md and History origin framing
+- Full Lab-voice explosion across narrative surfaces
+- New [CONTRIBUTING.md](CONTRIBUTING.md) — fork encouragement, security reporting paths, PR guidance, explicit pointer for AI agents to AGENTS.md
+- Expanded cross-links on every major doc page for usability
+- Meet the Lab rewritten with additional occupied-room scenes
+- History, docs/README, PRODUCT_REQUIREMENTS and FINDINGS framed more clearly as historical / living narrative
+- INFO_LAYER given navigation links and a light Lab aside while keeping the technical contract intact
+- README navigation and Contributing section strengthened
+- Further pass: more character variations, stronger “researches / coordinates / does not invent maths” framing for Blazenetic, varied document closers, subtle things that are Baldrick’s fault
+- Lab Voice Spec updated to v2.3 in Google Drive (Baldrick’s-fault rebrand, expanded closings, research emphasis, zero invent-maths language)
 
 ### Planned / deferred
 - Service worker for true cold-start offline / airplane-mode PWA
 - AudioWorklet migration for continuous non-buffered synthesis
 - Stereo width (independent L/R buffers)
 - Additional noise colours / nature layers
-- App Easter eggs (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
+- App-level items that are Baldrick’s fault (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
 
-### Lab Log (docs pass)
+### Lab Log (docs explosion + variations pass)
 
-**Melchett:** Another crushing victory for the forces of documentation! The README is now *dramatic*! The enemy will never recover!
+**Melchett:** Gentlemen! Today we have detonated a *documentation bomb* of historic proportions! CONTRIBUTING.md! Links everywhere! Varied closers! The enemy of boring READMEs will never recover! BBAAAHHH!
 
-**Darling:** It is a README, Melchett.
+**Darling:** It is a set of markdown files with cross-references and a longer list of sign-offs, Melchett.
 
-**Blazenetic:** I made myself look good and the technical sections still scannable. You’re welcome.
+**Blazenetic:** I researched contribution and security patterns, coordinated the short correct versions, strengthened the “I research the maths, I do not invent it” framing, and then complained about the edge cases of repetitive closers. You’re welcome.
 
-**Arty:** I checked that AGENTS.md is still completely clean. The wall is intact. I think we’re safe?
+**Arty:** I checked the wall three times. AGENTS.md is still completely clean. The new Spec is in Drive. I think we’re safe?
 
-**Baldrick:** My cunning plan was to put the entire Lab Voice guide into AGENTS.md so the agents would be more fun.
+**Baldrick:** I have a cunning plan, sir. What if the CONTRIBUTING.md *is* the security policy? We just tell everyone that every PR is a security issue and only accept potato-based patches.
 
-**Darling:** No. Absolutely not. Sit down.
+**Darling:** No. Absolutely not. Sit down. Put the potato down. Arty, keep the links working. Blazenetic, stop encouraging him.
+
+**Melchett:** The potato is rejected! Another victory!
+
+**Darling:** That is still not how victories work.
 
 ---
 
@@ -92,7 +102,7 @@ First public release after intensive iterative development (26–28 July 2026).
 
 **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.
 
-**Blazenetic:** I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
+**Blazenetic:** I spent four hours researching the perspective and lifecycle maths so people can fall asleep harder. I coordinated the modular architecture. You’re welcome. Also the sleep timer still works. I checked it myself this time. Don’t look so surprised.
 
 **Arty:** Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. I fixed the fade race, guarded every localStorage throw, and ran the full suite twice. The labels no longer draw under the cards on phones. Please don’t yell.
 
@@ -113,4 +123,4 @@ First public release after intensive iterative development (26–28 July 2026).
 ---
 
 Made in a small Australian lab.  
-Sleep well. (Or don’t. We’re not your parents.)
+Research first. Architecture second. Potato plans last.

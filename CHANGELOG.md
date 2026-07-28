@@ -16,15 +16,15 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 - History, docs/README, PRODUCT_REQUIREMENTS and FINDINGS framed more clearly as historical / living narrative
 - INFO_LAYER given navigation links and a light Lab aside while keeping the technical contract intact
 - README navigation and Contributing section strengthened
-- Further pass: more character variations, stronger “researches / coordinates / does not invent maths” framing for Blazenetic, varied document closers, subtle Easter eggs
-- Lab Voice Spec updated to v2.2 in Google Drive (expanded closings list, Easter-egg guidance, research emphasis)
+- Further pass: more character variations, stronger “researches / coordinates / does not invent maths” framing for Blazenetic, varied document closers, subtle things that are Baldrick’s fault
+- Lab Voice Spec updated to v2.3 in Google Drive (Baldrick’s-fault rebrand, expanded closings, research emphasis, zero invent-maths language)
 
 ### Planned / deferred
 - Service worker for true cold-start offline / airplane-mode PWA
 - AudioWorklet migration for continuous non-buffered synthesis
 - Stereo width (independent L/R buffers)
 - Additional noise colours / nature layers
-- App Easter eggs (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
+- App-level items that are Baldrick’s fault (console greeting, hidden Info panel lines, Baldrick interaction, etc.)
 
 ### Lab Log (docs explosion + variations pass)
 

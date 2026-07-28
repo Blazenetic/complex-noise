@@ -5,8 +5,8 @@ it is short on purpose.
 
 ## What this is
 
-A zero-dependency, client-side procedural noise generator (brown / pink / white)
-for sleep. It runs entirely in the browser, ships as static files, and is served
+A zero-dependency, client-side procedural noise generator (brown / pink / white /
+green / fan / rain) for sleep. It runs entirely in the browser, ships as static files, and is served
 from GitHub Pages. There is no build step, no bundler, and no runtime
 dependency — **keep it that way**. If a change would introduce a build step or a
 runtime package, raise it in the PR rather than doing it quietly.
@@ -175,8 +175,18 @@ New localStorage keys:
 **Add a noise colour** — add a generator to `GENERATORS` in `js/noise.js`, add
 the name to `NOISE_TYPES` in `js/constants.js`, add a
 `<button class="type-btn" data-type="…">` to `index.html`. No event wiring
-needed; `app.js` binds from `data-type`. Match the perceived loudness of the
-existing colours.
+needed; `app.js` binds from `data-type`. The type selector is a 3-column grid, so
+colours arrive in rows of three.
+
+Read the header comment in `js/noise.js` first — it carries three rules with
+teeth, and `tests/run.mjs` asserts all three:
+
+- **Loudness is matched A-weighted, not on RMS.** Where the energy sits matters
+  as much as how much of it there is. Equal-RMS put the first cut of green
+  +4.3 dB above brown, which in this app means the room gets louder at 3 a.m.
+- **Leave headroom.** A noise of this buffer length peaks near 5.15× its RMS, so
+  an RMS much over 0.2 clips on the loudest sample.
+- **Be periodic over the buffer, not merely long.** See the bite below.
 
 **Rebrand** — every colour is a CSS custom property in the `:root` /
 `[data-still-theme="…"]` blocks at the top of `css/styles.css`.
@@ -310,6 +320,28 @@ noise rather than the listening volume.
 - **Fades are asynchronous.** Anything scheduled after a fade must capture the
   node it intends to clean up, or it will tear down whatever happens to be
   playing when it fires.
+- **The noise buffer loops forever, so it has to be periodic — long is not
+  enough.** Two ways to break it, both of which shipped once and both of which
+  put a step in the level every twelve seconds, all night. A filter started from
+  zero state makes sample 0 come out of a silent filter while sample N−1 does
+  not; every stateful generator therefore runs a second pass over the head of its
+  white-noise sequence (`seamScratch`) to carry the state round the join. And an
+  amplitude LFO whose period does not divide the buffer snaps back to its
+  starting phase at the wrap; rates come from `lfoStep()`, which rounds to whole
+  cycles. Do not replace either with a plain loop or a literal period.
+- **Buffer generation blocks the main thread inside a 150 ms cross-fade.**
+  `setType()` dips the gain, then builds a fresh 12 s buffer synchronously. That
+  is why the per-sample work in each generator is written out inline instead of
+  being handed to one shared loop taking a step function: the tidier version
+  measured six times slower, because the shared call site sees a different
+  closure per colour and nothing inlines. Keep new colours inline. Slow periodic
+  modulation uses an inline sine/cosine recurrence too; do not put `Math.sin`
+  back in a per-sample loop.
+- **A colour-change timeout is transport state.** Rapid type clicks must
+  coalesce to the final selection, and pause/play must cancel any pending
+  replacement. Otherwise every click builds a 12 s buffer and a stale timeout
+  can tear down the source that `play()` just created. Keep
+  `cancelPendingTypeSwitch()` paired with the fade-out cancellation paths.
 - **Defaults live in `constants.js`.** Volume default is intentionally soft
   (0.22). Field defaults to on with intensity 0.7 and speed 2.0 (practical range
   **0.7–4.8**). The Field Lab defaults (density 1.0, reach 1.0, trail 8.2/s,

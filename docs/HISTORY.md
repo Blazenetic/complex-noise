@@ -2,7 +2,7 @@
 
 A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks, and then kept going *one more time* when the callouts decided they wanted to stop bouncing left and right and simply *calm down* — and then kept going *yet again* when it turned out the calm pass had only shipped as prose.
 
-**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
+**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
 ---
 
@@ -177,15 +177,17 @@ Blazenetic called the audit on a closed, green, merged PR. The real code landed:
 > **Melchett:** A TACTICAL WITHDRAWAL FOLLOWED BY A GENUINE VICTORY! BBAAAHHH!  
 > **Darling:** That is, for once, roughly how victories work.
 
+The same work became the opening chapter of [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) and the first entry on [Blame](./BLAME.md). Future sessions will keep adding to both pages.
+
 ---
 
 ## The Lab Voice
 
-Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
+Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing, Teachings, Blame) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.
 
 The cast, the wall between narrative and agent docs, and the style rules live in a mysterious cabinet in the lab. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
-**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor. Any accidental leaks of process details are also his fault.
+**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor.
 
 ---
 

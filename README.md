@@ -7,7 +7,7 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 > We disagreed.  
 >  
 > Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
-> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, finds the elegant solution, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
+> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases), Arty (the one who actually tests the sleep timer at 3 a.m.), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
@@ -16,7 +16,7 @@ A pure client-side procedural noise generator (Brown, Pink, White) optimised for
 
 > **Melchett:** A mighty instrument in the war against sleeplessness!  
 > **Darling:** It is a noise generator, Melchett.  
-> **Blazenetic:** A *correct* noise generator. You’re welcome.
+> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, and then complained about the edge cases. You’re welcome.
 
 ---
 
@@ -55,7 +55,7 @@ This is the part where most READMEs list bullet points like a product manager wr
 All of it is synthesised on the device. No samples. No loops that click. No network after the first load. The buffers are long enough that the seam is effectively inaudible for these stochastic signals. Continuous internal state inside each buffer means the generators do not restart from zero every twelve seconds like an amateur.
 
 > **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
-> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry.
+> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry. I research these things.
 
 ### Transport & comfort
 - Volume with smooth ramps. Soft default of 0.22 so the first press does not wake the neighbours.
@@ -75,7 +75,7 @@ Colour rides a violet → cyan ramp driven by three non-aligning energy layers (
 
 Default **on**. Intensity and speed controls (practical range 0.7–4.8). Battery-conscious 30 fps, stops completely when the page is hidden, respects `prefers-reduced-motion`.
 
-> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. You’re welcome.  
+> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. I coordinated the architecture so the state modules own their state. You’re welcome.  
 > **Baldrick:** My cunning plan was to make the nodes explode when they die.  
 > **Darling:** No.
 
@@ -229,7 +229,7 @@ Short version:
 
 > **Baldrick:** I have a cunning plan for the service worker. We just tell people to keep the tab open forever.  
 > **Darling:** That is not a plan. That is a lifestyle.  
-> **Blazenetic:** Write the service worker, Arty. Ignore him.
+> **Blazenetic:** Write the service worker, Arty. Ignore him. I already researched the offline constraints.
 
 ---
 
@@ -263,14 +263,11 @@ Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of inc
 See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I find the elegant version. I implement it. Then I complain about the edge cases. That is the job.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  
 **Darling:** “No.”
 
-The software stays calm.  
-The documentation gets to be chaotic.  
-That is the deal.
-
-Sleep well. (Or don’t. We’re not your parents.)
+Research first. Architecture second. Potato plans last.  
+The residual outlines have a floor. You’re welcome.

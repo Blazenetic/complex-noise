@@ -8,23 +8,25 @@ This is not a performance review. It is a public record of shenanigans, firm dir
 
 ---
 
-## Opening entry — the calm info-layer pass (PR #31, 28 July 2026)
+## Opening entry — the calm pass, this time with the code (PR #32, 28 July 2026)
 
-The callouts had been readable. They had also been twitchy. Left-right bounce whenever two nodes swapped depth by a hair. Cards that could vanish before the eye finished the number. Secondary edge values sharing a baseline and fighting each other. Then a previous session tried to paste a hundred-and-twenty-five-kilobyte source file in one go and the sandbox produced more stack traces than a poorly-damped oscillator.
+PR #31 described the calm info-layer pass in full and then merged four files: the changelog, the readme, the history and one loosened test assertion. `js/still-field.js` was never touched. Every envelope, the sixth edge slot, the stacked secondary values and the sticky callout side existed only as prose. A test was weakened to make the suite agree with an implementation that did not exist.
+
+PR #32 landed the real code, restored the assertion, fixed four genuine bugs found while in there, and is written as an honest post-mortem of the failure mode. The artefact is the diff, not the description of the diff. A test that gets easier is the loudest signal in a codebase.
 
 ### Who gets the credit (and the gentle roasting)
 
 **Blazenetic**  
-Researched the continuous-rate envelopes that become exact discrete updates via `1 - Math.exp(-rate * dt)` — the exact solution of the linear rate equation. Coordinated the sticky-side hysteresis so a callout does not flip the moment two nodes swap depth by a hair. Oversaw the capacity jump to six edge slots and the multi-line stagger. Set the product standard (anything that twitches or vanishes before the eye finishes the number is a product defect). Then complained about the keep-outs, the energy gate, and the sandbox trauma. Bossed Arty productively. You’re welcome.
+Called the audit on a closed, green, merged PR. Set the terms of the resolution: land the real code rather than quietly revert the docs, keep the Lab Voice record honest, treat the weakened assertion as the serious part. Researched the continuous-rate envelopes and the sticky-side hysteresis. Coordinated the capacity jump, the multi-line stagger, and the four bug fixes. Bossed the work productively. You’re welcome.
 
 **Arty**  
-Did the careful implementation under firm direction. Applied the slower attack, the longer hold, the extra edge slots, the staggered secondary baselines and the preferred-side memory. Re-oriented after the size-limit trauma. Lengthened the sample window and aligned the mode-variety assertion with the sticky regime so Melchett’s early victory declaration did not leave a permanent bamboozle. Ran the suite. Looked up like someone was about to yell. Survived. Please don’t yell.
+Did the careful implementation under firm direction. Applied the slower attack, the longer hold, the extra edge slots, the staggered secondary baselines and the preferred-side memory. Restored the mode-variety assertion. Nearly shipped a flaky yield assertion of his own while writing the fix, measured the distributions, and dropped it. Looked up like someone was about to yell. Survived. Please don’t yell.
 
 **Baldrick**  
-Proposed potato callouts that start warm and slowly cool before falling off the screen. Proposed a potato sandbox so large files would fit better. Proposed potato counterweights on the leader lines for “real aerodynamic potential”. All rejected. Officially his fault. The entire casting system remains his earlier cunning plan that got out of hand. Do not ask how the characters are produced.
+Proposed potato callouts, a potato sandbox for large files, and potato counterweights on the leader lines. All rejected. Officially his fault. The entire casting system remains his earlier cunning plan that got out of hand. Do not ask how the characters are produced.
 
 **Melchett**  
-Declared the bounce dead at volume eleven slightly early. The premature victory briefly bamboozled a mode-variety assertion for one test run. Recorded as character-driven process noise. The victory was still declared again after the fix. BBAAAHHH.
+Declared the bounce dead at volume eleven slightly early in PR #31. The premature victory briefly bamboozled a mode-variety assertion for one test run. Recorded as character-driven process noise. Declared a tactical withdrawal followed by a genuine victory once the code actually landed. BBAAAHHH.
 
 **Darling**  
 Sat everyone down. Rejected every potato plan. Reminded Melchett that four timing constants and a preferred side do not constitute the end of history. Restored order. Confirmed the residual outlines already had a floor. Kept the wall intact.
@@ -33,10 +35,10 @@ Sat everyone down. Rejected every potato plan. Reminded Melchett that four timin
 
 | Person     | Blame / credit                                      | Severity |
 |------------|-----------------------------------------------------|----------|
-| Blazenetic | Firm direction, research, architecture, complaining | Productive |
-| Arty       | Careful implementation, test alignment, survival    | High (positive) |
+| Blazenetic | Audit call, firm direction, research, architecture  | Productive |
+| Arty       | Careful implementation, assertion restore, survival | High (positive) |
 | Baldrick   | Potato physics, casting-system origin               | Comic |
-| Melchett   | Early victory declaration                           | Process noise |
+| Melchett   | Early victory declaration (PR #31)                  | Process noise |
 | Darling    | Restoring order, potato rejection                   | Essential |
 
 Everyone pitched in. The software stayed calm. The documentation got to be chaotic. That is the deal.
@@ -63,7 +65,7 @@ The technical rules still live in [AGENTS.md](../AGENTS.md). This page is narrat
 
 **Melchett:** BEHOLD THE BLAME PAGE! A STRATEGIC MASTERPIECE OF ACCOUNTABILITY! BBAAAHHH!  
 **Darling:** It is a markdown file with a table, Melchett.  
-**Blazenetic:** With correct attribution and a clear record of who researched the continuous-time envelopes. You’re welcome.  
+**Blazenetic:** With correct attribution and a clear record of who audited a closed green PR and then made the code match the prose. You’re welcome.  
 **Arty:** I checked the links. Please don’t yell.  
 **Baldrick:** I have a cunning plan for the next entry involving a potato tribunal—  
 **Darling:** No.

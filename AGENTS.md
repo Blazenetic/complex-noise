@@ -27,18 +27,69 @@ npm start           # serves on http://localhost:8123
 ## Test it
 
 ```bash
-npm install         # first time only — Playwright is the sole dev dependency
-npm test            # headless browser suite, ~30s
-npm test -- --headed
+npm install                     # first time only — Playwright is the sole dev dependency
+npm test                        # headless browser suite, ~15s
+npm test -- --filter=colour     # only tests whose name contains "colour"
+npm test -- --workers=1         # serialise, e.g. when bisecting a flake
+npm test -- --repeat=20         # run the selection 20x to hunt a flake
+npm test -- --headed            # watch it (implies --workers=1)
+npm test -- --list              # print test names and exit
 ```
 
 `tests/run.mjs` drives a real Chromium against a real Web Audio graph. It starts
 its own server on a free port, so nothing needs to be running first.
 
+Tests run in a **worker pool** (four by default, `TEST_WORKERS` to override),
+each worker owning a fresh `BrowserContext`. The context is the isolation
+boundary — separate localStorage, separate page — so tests never share state.
+The wall-clock floor is the single longest test, not the sum of all of them.
+
 **Run the suite before you open a PR.** Several tests exist because a
 plausible-looking refactor broke playback in a way that only shows up minutes
 later — the sleep-timer test in particular. If you change behaviour
 deliberately, update the test in the same commit and say so.
+
+### Writing a test that survives a busy machine
+
+- **Prefer `until(page, fn, ms, message)` to `page.waitForTimeout`.** Polling for
+  a condition with a deadline is strictly stronger than sleeping and then
+  checking once: it fails no later than the sleep would have, and passes as soon
+  as the app is ready. Use a bare sleep only when elapsed time *is* the
+  measurement — the trail has to accumulate for real seconds before "is the
+  canvas opaque?" means anything.
+- **Never assert app behaviour against wall-clock time.** The render loop
+  integrates `dt` capped at `MAX_STEP_S`, so on a loaded machine its diagnostics
+  clock deliberately advances *slower* than the clock on the wall. Assert against
+  `getFieldStats().realClock` instead. A test that says "this rotates within five
+  seconds" is testing the host's spare CPU.
+- **Drive tight timing races from inside the page.** A `page.click` costs a CDP
+  round trip. Anything measuring a window of a few hundred milliseconds — the
+  160 ms colour-switch dip, for instance — must dispatch its clicks inside one
+  `page.evaluate`, or it is really asserting that the harness is fast today.
+
+## CI
+
+`.github/workflows/ci.yml` runs lint + the browser suite on every PR and on
+pushes to `main`. Three things about it are load-bearing:
+
+- **Skipping is decided inside the workflow, never with `paths-ignore`.** A
+  workflow filtered out by `paths-ignore` does not run, and a job that does not
+  run reports *no status*, so a required check waits forever and the PR can
+  never merge. The `gate` job always runs and decides; the `CI` job always runs
+  and reports. **Point branch protection at `CI`, never at `Browser smoke
+  tests`.**
+- **A change is "docs-only" by allow-list**: `docs/*`, `*.md`, `LICENSE`,
+  `.gitignore`. Everything else counts as code, so a new directory is tested by
+  default. `.github/**` is deliberately *not* on the list — a change to the
+  workflow must run the suite whose rules it is changing.
+- **Opt-outs**: `[skip ci]` / `[ci skip]` / `[skip-ci]` / `[no ci]` in the head
+  commit message, or a `skip-ci` label on the PR. GitHub honours the commit
+  markers natively on `push` but not on `pull_request`, which is why the gate
+  checks them itself. The label is the only opt-out you can apply — and remove —
+  without rewriting history.
+
+Every uncertain case resolves to *running* the suite. A skip rule that guesses
+wrong in the other direction ships untested code.
 
 ## Layout
 
@@ -222,6 +273,20 @@ derivable from values the link pass already has.
 `localStorage` directly: it throws in Safari Private Browsing, and
 `parseFloat(x) || fallback` silently discards a stored `0`.
 
+Pick the right writer:
+
+- `write()` for a discrete choice — a colour, a theme, a toggle, a segmented
+  pill. Straight through to disk on the click.
+- `writeThrottled()` for anything driven by a **continuous control**. A slider's
+  `input` event fires at pointer-move rate, and `localStorage.setItem` is
+  synchronous and persistent, so a straight-through write meant ~60 blocking
+  disk writes a second competing with the render loop for the same thread.
+  Reads are unaffected: `read()` consults the pending value first, so the
+  setting is live immediately and merely lands on disk a moment later.
+
+Deferred writes are flushed on `pagehide` and on the hidden transition, because
+a backgrounded phone can be killed without ever running another timer.
+
 **Add an audio effect** — insert nodes in `ensureAudio()` in `js/audio.js`. The
 analyser sits before the gain node on purpose, so the visualisation tracks the
 noise rather than the listening volume.
@@ -332,6 +397,26 @@ noise rather than the listening volume.
 - **Fades are asynchronous.** Anything scheduled after a fade must capture the
   node it intends to clean up, or it will tear down whatever happens to be
   playing when it fires.
+- **So is the wake lock, and its gap is where the battery goes.**
+  `navigator.wakeLock.request()` resolves *after* the click that asked for it, so
+  playback can already have stopped by the time the browser grants it. Assigning
+  the result unconditionally strands a lock nothing will ever release, and the
+  screen stays lit all night over silent audio. `requestWakeLock()` re-checks
+  `isPlaying` after the await and releases immediately if it lost the race, and a
+  `pending` guard stops two overlapping requests orphaning the first handle. Any
+  new async acquisition needs the same shape.
+- **`setTimeout` is not a promise about when anything happens.** A backgrounded
+  tab has its timers throttled to once a minute; a suspended phone does not run
+  them at all. The sleep timer therefore stores an absolute wall-clock
+  `timerEndsAt` and treats the timeout as a hint: it re-checks the deadline
+  whenever the page becomes visible and re-arms for the remainder. Do not
+  "simplify" this back to a single `setTimeout` — the overshoot it prevents is
+  the app playing for hours past the hour the user asked for, which is the one
+  promise it makes to somebody who is asleep.
+- **Persist the parsed value, not the argument.** `setTimerHours` takes a string
+  from a range input. Writing the raw argument stored whatever arrived while the
+  engine ran on the number it fell back to, so the control and the sound
+  disagreed on the next load.
 - **The noise buffer loops forever, so it has to be periodic — long is not
   enough.** Two ways to break it, both of which shipped once and both of which
   put a step in the level every twelve seconds, all night. A filter started from

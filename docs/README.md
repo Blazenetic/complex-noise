@@ -7,7 +7,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 > **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics and eight detail modes!  
 > **Darling:** It is a table of links, Melchett.  
-> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers and the later instrumentation maturity, and a clear reminder that I research the maths rather than invent it. You’re welcome.
+> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers and the later instrumentation maturity, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
 
 ---
 
@@ -16,7 +16,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | File | Purpose |
 |------|---------|
 | [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint, now with quantitative notes and the instrumentation growth |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room (including the eight-mode Tuesday) |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room (including the eight-mode Tuesday and explicit Rick/Morty energy) |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
@@ -57,7 +57,7 @@ A fuller work report covering the intensive 26–28 July development lives in th
 3. Keep the wall: narrative surfaces may be chaotic; agent surfaces stay sterile.
 4. If you find a security issue, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-> **Arty:** I added extra links and the pair-test numbers so nobody gets lost. The mode variety is visible in Live.  
+> **Arty:** I added extra links and the pair-test numbers so nobody gets lost. The mode variety is visible in Live. I checked.  
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 

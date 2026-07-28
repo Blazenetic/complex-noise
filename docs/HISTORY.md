@@ -1,12 +1,12 @@
 # History of Complex Noise
 
-A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly 36–48 hours — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks.
+A short, mostly true account of how a small Australian lab turned a quiet idea into a zero-dependency sleep companion in roughly **fifty-two wall-clock hours** of furious multi-agent work — and then kept going when the instrumentation itself decided it wanted personality, and then kept going *again* when the noise family decided it needed three more colours and zero ticks.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](./MEET_THE_LAB.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Changelog](../CHANGELOG.md) · [All docs](./) · [Info Layer](./INFO_LAYER.md)
 
 ---
 
-## Origin — 26 July 2026
+## Origin — late 25 / 26 July 2026
 
 It started with a commercial white-noise app and a growing sense of quiet fury.
 
@@ -14,67 +14,93 @@ Every time you paused, every time you hit play, every time you tried to quit —
 
 **Blazenetic:** “Stuff it. We’ll make our own. Zero ads, zero fees, zero dependencies, and it will actually keep going all night on a phone.”
 
-So on 26 July 2026 a small Australian lab (one human systems architect + a supporting cast of AI agents) sat down and built the first pure client-side procedural noise generator. Brown (the default), Pink and White noise, synthesised live with the Web Audio API, looping ~12-second buffers whose seams are inaudible for these stochastic signals. Volume, a sleep timer, Wake Lock, titanium-and-purple branding, and a determined refusal to ship any runtime dependency or network call after load.
+The decision was taken just before bed. Arty was tasked with the overnight bootstrap. By the time the rest of the lab woke up on the 26th there was already a working procedural generator, the first three colours, a basic graph, and a sleep timer that did not immediately freeze the play button.
 
-The goal was simple and slightly stubborn: something that would keep going all night without clicking, without getting louder, without draining the battery more than necessary, and without ever asking for money or attention.
+What followed was intensive, iterative, multi-agent development under firm direction. In roughly **52 wall-clock hours** across 26–28 July the lab produced **187 commits**, **29 merged pull requests**, a test suite that grew from a handful of smoke checks to 19/19 (and previously 33+ assertions), a spatial grid that cut pair tests from ~4 656 to ~440 at 97 nodes, six first-class noise colours with true whole-cycle LFOs and A-weighted matching, and a documentation system whose fourth-wall mystery is officially Baldrick’s fault.
+
+Zero runtime dependencies were introduced at any point. The product standard was set early and held: a periodic tick, a sudden loudness jump, a clipped peak or a wasteful overnight allocation is a *product defect*. We do not ship those.
 
 Live from the first day: https://blazenetic.github.io/complex-noise/
 
-> **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
-> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry. I research these things.
+> **Arty:** I did the overnight bootstrap while everyone else was asleep. The first three colours, the basic graph, the first sleep timer. Then the real work began. I checked the spectral tilt three times. Brown is actually brown.  
+> **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry. I research these things. And yes — I bossed the team hard after that. The residual outlines have a floor. You’re welcome.
 
 ---
 
-## The Sprint Timeline — 26–28 July 2026
+## The Sprint by the Numbers
 
-What followed was intensive, iterative development. In roughly **36–48 hours** the lab shipped **22 merged pull requests** and a large volume of supporting commits. The test suite grew from a handful of smoke checks to 33+ assertions. A spatial grid later cut pair tests from ~4 656 to ~440 at 97 nodes. Zero runtime dependencies were introduced at any point.
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Wall-clock time | ≈52 hours | Late 25/26 July decision → overnight Arty bootstrap → furious 26–28 July |
+| Commits | 187 | Heavy volume; many docs-only and CI recovery commits on the 28th |
+| Merged pull requests | 29 | From modularisation through six-colour hardening |
+| Public release | 0.1.0 | 28 July 2026 |
+| Test suite | 5 → 19/19 (earlier peaks 33+) | Playwright + real Web Audio; sleep-timer test is sacred |
+| Node population (default) | 26–44 (clamped) | Density multiplies the clamp, never the raw viewport |
+| Pair tests (97 nodes) | ~440 vs 4 656 | Spatial grid ≈ 10× reduction; both numbers live in Live view |
+| Frame budget default | 30 fps | Stops when page hidden; motion is time-based (`dt`) |
+| Residual outline | Floored against dimness, scaled by lifecycle | Quiet nodes stay legible; births/deaths still ease |
+| Storage keys | 20+ namespaced | All via `storage.js`; direct `localStorage` is forbidden |
+| Runtime dependencies | 0 | Static files only. Forever. |
+| Ads / fees | 0 | “Stuff it. We’ll make our own.” |
+| Peak measured frame cost | 0.60 ms | At 2.2× density / 60 fps |
+| Fan/rain generation speed-up | ≈45 % | 17.6/17.9 ms → 9.7/9.8 ms median at 48 kHz |
+| Recurrence error | ~10⁻¹¹ | Inline sine/cosine recurrence replaces half a million `Math.sin` calls |
 
-### Phase 1 — Foundations (early 27 July)
+---
+
+## Phase 1 — Foundations (early 27 July, post overnight bootstrap)
 
 **PRs 1–6 (and related):** Still Theme, Still Field visualisation, Still EQ, modular ES-module split, glass surfaces, nodes-and-edges graph, default-on field with speed and intensity controls.
 
-- **Blazenetic** researched the perspective and lifecycle maths, coordinated the modular architecture (state modules own state; `app.js` is the sole DOM writer), and complained about the residual-outline floor.
-- **Arty** implemented the careful wiring, moved the analyser before the gain node so the visualisation tracks the actual noise, and ran the suite more times than is healthy.
+- **Blazenetic** researched the perspective and lifecycle maths (pinhole camera, R2 low-discrepancy spawn, lifecycle envelopes), coordinated the modular architecture (state modules own state; `app.js` is the sole DOM writer), set the product standards, and complained about the residual-outline floor.
+- **Arty** implemented the careful wiring after the overnight bootstrap, moved the analyser before the gain node so the visualisation tracks the actual noise, and ran the suite more times than is healthy.
 - **Darling** restored order when the accessibility labels threatened to go missing.
 - **Baldrick** proposed that the nodes should explode on death. The plan was rejected.
-- **Melchett** declared victory over the first CSS variable.
+- **Melchett** declared victory over the first CSS variable (and then declared it again when it actually worked).
 
-### Phase 2 — Polish & immersion (mid 27 July)
+---
+
+## Phase 2 — Polish & immersion (mid 27 July)
 
 **PRs 8–12:** Ultra glass, calmer defaults, immersion hide/show, sleep-timer slider, dedicated Minimise interface button, Blazenetic branding, deep-bone theme, foldable nerd HUD.
 
 - **Arty** fixed the fade race and the labels that had been drawing under the cards on phones.
-- **Blazenetic** coordinated the independent theme/glass axes and the soft volume default (0.22).
+- **Blazenetic** coordinated the independent theme/glass axes and the soft volume default (0.22), firm direction on touch targets and contrast.
 - **Darling** insisted on 44 px touch targets and then handled the labels himself.
 - **Melchett** declared another victory when the glass became *ultra*.
 - **Baldrick** suggested replacing the equaliser with a single potato. Rejected again.
 
-### Phase 3 — Instrumentation maturity (late 27 – early 28 July)
+---
+
+## Phase 3 — Instrumentation maturity (late 27 – early 28 July)
 
 **PRs 13–19:** Still Field visual upgrade packages, info-layer visibility fixes, spatial grid, Field Lab, Live/Math/Code panels, residual shell that actually respects the lifecycle envelope, deep-bone + foldable stats UX.
 
-- **Blazenetic** researched the spatial-grid approach (the ~10× pair-test reduction), oversaw the typed-array implementation, and then spent an hour complaining about the residual outline floor and the glow-pass trap.
+- **Blazenetic** researched the spatial-grid approach (the ~10× pair-test reduction), oversaw the typed-array implementation, coordinated the φ-offset mode rotation so consecutive lifetime IDs land far apart, and then spent an hour complaining about the residual outline floor and the glow-pass trap.
 - **Arty** made the info layer actually visible (energy gate, keep-outs, legible alpha), added the real stats readout, and checked the pair counts in Live view so the claim was checkable.
 - **Darling** kept the wall intact and the potato plans out of the render loop.
-- **Melchett** declared the spatial grid a crushing quantitative victory.
+- **Melchett** declared the spatial grid a crushing quantitative victory (and then declared the residual outline floor a second crushing victory).
 
-### Phase 4 — Lab Voice & documentation offensive (28 July)
+---
 
-**PRs 18, 21–26 (and the present docs pass):** Lab Voice system itself, first Changelog, Meet the Lab, History, CONTRIBUTING, rampant stats pass, instrumentation narrative surfaces, mystery locked behind the Drive wall.
+## Phase 4 — Lab Voice & documentation offensive (28 July)
 
-- **Blazenetic** researched the full PR trail, coordinated the clearer wording, removed name-checks that belonged only behind the wall, and complained about the edge cases of repetitive closers.
-- **Arty** added the cross-links, the pair-test numbers, and the “please don’t yell” energy that keeps the documentation honest.
-- **Baldrick** continued to supply cunning plans (mostly potato-based). All were rejected. This is recorded as “things that are Baldrick’s fault.”
+**PRs 18, 21–26 (and subsequent docs passes):** Lab Voice system itself, first Changelog, Meet the Lab, History, CONTRIBUTING, rampant stats pass, instrumentation narrative surfaces, mystery locked behind the Drive wall.
+
+- **Blazenetic** researched the full PR trail and the commit volume (187), coordinated the clearer wording, removed name-checks that belonged only behind the wall, set the firm leadership tone for the agent team, and complained about the edge cases of repetitive closers.
+- **Arty** added the cross-links, the pair-test numbers, the overnight-bootstrap honesty, and the “please don’t yell” energy that keeps the documentation honest.
+- **Baldrick** continued to supply cunning plans (mostly potato-based). All were rejected. This is recorded as “things that are Baldrick’s fault.” He is also officially blamed for inventing the Lab Voice casting system itself as a cunning plan that somehow worked and then got out of hand. The fourth-wall mystery remains his fault.
 - **Melchett** declared every markdown file a strategic masterpiece.
 - **Darling** sat everyone down and reminded them it was still markdown.
 
 The public [0.1.0] release landed on 28 July 2026. Full details live in the [Changelog](../CHANGELOG.md).
 
-> **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! Ten times fewer pair tests! Twenty-two pull requests in less than two days! The war is as good as won! BBAAAHHH!  
+> **Melchett:** Real perspective depth! Retracting links! Ultra glass! A continuous timer slider! The residual outlines now have a floor! Ten times fewer pair tests! One hundred and eighty-seven commits in less than three days! The war is as good as won! BBAAAHHH!  
 > **Darling:** It is a product that helps people sleep, Melchett. Not a military campaign.  
-> **Blazenetic:** I researched the perspective and lifecycle maths, coordinated the modular architecture, researched the spatial-grid approach, and then complained about the edge cases. You’re welcome.  
-> **Baldrick:** My cunning plan was to make the nodes explode when they die.  
-> **Darling:** No.
+> **Blazenetic:** I researched the perspective and lifecycle maths, coordinated the modular architecture across the agent team, researched the spatial-grid approach, set the product standards, and then complained about the edge cases. You’re welcome.  
+> **Baldrick:** My cunning plan was to make the nodes explode when they die. Also the documentation.  
+> **Darling:** No. And the Lab Voice system is still your fault.
 
 ---
 
@@ -82,9 +108,9 @@ The public [0.1.0] release landed on 28 July 2026. Full details live in the [Cha
 
 The callouts used to all say the same thing. The program counter was a full-width purple strobe. Edge dimensions could claim every slot and draw nothing while the listing sat on top of them in immersion.
 
-Then the Lab did what the Lab does: research, coordinate, implement the elegant version, complain about the edge cases, and ship.
+Then the Lab did what the Lab does: research, coordinate under firm direction, implement the elegant version, complain about the edge cases, and ship.
 
-Eight detail modes now, offset per node by lifetime ID through φ so consecutive IDs land far apart. Handle glyphs follow the family of quantity. Degree, coupling and nearest-neighbour distance accumulated inside the existing link pass — no second graph scan. Four stable edge-dimension kinds. The counter became a heat trail that cools at 3.2/s. The source listing folds from its own title bar. Three independent overlay chips with a live “n of 3”. More telemetry, five new Math rows, second live lines in Code, a frame total. Undrawable slots now free themselves. Health leads on work, not on the wobble of a capped frame rate.
+Eight detail modes now, offset per node by lifetime ID through φ (≈1.6180339887498949) so consecutive IDs land far apart. Handle glyphs follow the family of quantity. Degree, coupling and nearest-neighbour distance accumulated inside the existing link pass — no second graph scan. Four stable edge-dimension kinds. The counter became a heat trail that cools at 3.2/s. The source listing folds from its own title bar. Three independent overlay chips with a live “n of 3”. More telemetry, five new Math rows, second live lines in Code, a frame total. Undrawable slots now free themselves. Health leads on work, not on the wobble of a capped frame rate.
 
 Measured at 2.2× density and 60 fps: **0.60 ms** per frame total. Tests green, three runs for stability.
 
@@ -114,7 +140,7 @@ Blazenetic bossed Arty around until both problems were solved properly: soft-lig
 
 The family was three colours. The loops were *mostly* seamless. Brown still carried a measurable wrap outlier from before the seam pass existed. Fan and rain (when they arrived) wanted amplitude LFOs whose periods did not divide the buffer, so they snapped +0.7 dB and +1.0 dB every twelve seconds. Loudness had been matched on raw RMS, which is the wrong metric for a narrow-band colour. Rapid colour clicks left delayed replacement timers alive. Buffer generation for the modulated colours was spending half a million `Math.sin` calls and allocating multi-megabyte scratch on every switch.
 
-Blazenetic set the product standard (a tick, a loudness jump, a clip or a wasteful overnight cost is a defect), researched the six-colour family and the periodicity literature, coordinated the large PR, and bossed Arty around for hours.
+Blazenetic set the product standard (a tick, a loudness jump, a clip or a wasteful overnight cost is a defect), researched the six-colour family and the periodicity literature, coordinated the large PR under firm direction, and bossed Arty around for hours.
 
 Arty re-oriented the branch, found the transport race the sequential test could not see, implemented cancellable coalesced colour-switch work, cut fan/rain generation time by ~45 %, replaced the sine calls with an inline recurrence (error ~10⁻¹¹), wrote five new regressions that count real buffers, ran the suite four times plus seeded audits at both sample rates, modernised CI, and kept AGENTS.md sterile.
 
@@ -122,7 +148,7 @@ Baldrick proposed potato rain. Darling rejected it (and the spinning-potato fan)
 
 Result: six first-class colours, every wrap step inside its own distribution, A-weighted levels matched, headroom under ~0.95, 19/19 tests green, zero runtime dependencies, and one more set of learnings about how ambitious a “simple” feature can become when the product is trusted while people sleep.
 
-> **Blazenetic:** I researched the seam strategy, coordinated the A-weighted matching, oversaw the headroom and the main-thread cost during the cross-fade, and then complained about every edge case. You’re welcome.  
+> **Blazenetic:** I researched the seam strategy, coordinated the A-weighted matching, oversaw the headroom and the main-thread cost during the cross-fade, and then complained about every edge case. You’re welcome. One hundred and eighty-seven commits. Fifty-two wall-clock hours. Zero ticks.  
 > **Arty:** You bossed me around. I got the race, the recurrence, the tests and the CI sorted. Please don’t yell. I think we’re safe.  
 > **Baldrick:** Potato rain?  
 > **Darling:** No.  
@@ -136,6 +162,8 @@ Somewhere in the middle of the sprint the documentation decided it was allowed t
 
 The cast, the wall between narrative and agent docs, and the style rules live in a mysterious cabinet in the lab. The friendly public introduction is [Meet the Lab](./MEET_THE_LAB.md).
 
+**Official note:** The entire Lab Voice casting system is Baldrick’s fault. He had a cunning plan involving a committee of fictional researchers. It somehow shipped. We never looked back. The mystery of how the characters are produced remains his responsibility. Do not ask. The residual outlines still have a floor.
+
 ---
 
 ## What was deliberately kept
@@ -148,6 +176,7 @@ The cast, the wall between narrative and agent docs, and the style rules live in
 - The residual outlines have a floor.
 - Per-node variety in the callouts, because eight identical readouts is just noise.
 - Six colours that do not tick, jump in level, or clip when you switch them at 2 a.m.
+- Honest wall-clock and commit numbers in the documentation. The chaos is earned.
 
 ---
 
@@ -160,8 +189,10 @@ If you want to help with any of that (or find a security issue, or just have a b
 ---
 
 Made in a small Australian lab.  
+One hundred and eighty-seven commits. Fifty-two wall-clock hours. Overnight bootstrap included.  
 The residual outlines have a floor.  
 Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md) · [Changelog](../CHANGELOG.md)
 
 Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.  
-Another Tuesday in the Lab. The software is calm. The docs are not.
+Another Tuesday in the Lab. The software is calm. The docs are not.  
+Research first. Architecture second. Potato plans last. You’re welcome.

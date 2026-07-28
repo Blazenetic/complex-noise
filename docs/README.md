@@ -9,7 +9,7 @@ The Lab ships serious sleep tools. The documentation is allowed to have a little
 | File | Purpose |
 |------|---------|
 | [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — now more realistic, less descriptive |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance |
@@ -18,37 +18,25 @@ The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept
 
 The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries) lives in the project Google Drive and is the authority for narrative docs. It is deliberately kept out of the public repository.
 
-For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running, testing, architecture) and the [README](../README.md).  
+For how to work on the code today, see **[AGENTS.md](../AGENTS.md)** (running, testing, architecture — professional, zero banter) and the [README](../README.md).  
 For what shipped and the Lab’s reaction to it, see **[CHANGELOG.md](../CHANGELOG.md)**.
 
 ## Current status (as of 28 July 2026)
 
-The original Still Theme, Still Field and Still EQ features have been fully
-merged and substantially evolved on `main`:
+The original Still Theme, Still Field and Still EQ features have been fully merged and substantially evolved on `main`:
 
-- Modular ES-module architecture (`js/` + `css/`) with one-way state flow
-  (state modules publish via `subscribe()`, `app.js` is the sole DOM writer).
-- `js/storage.js` for safe typed persistence (handles Private Browsing throws
-  and a stored volume of `0`).
+- Modular ES-module architecture (`js/` + `css/`) with one-way state flow (state modules publish via `subscribe()`, `app.js` is the sole DOM writer).
+- `js/storage.js` for safe typed persistence (handles Private Browsing throws and a stored volume of `0`).
 - Playwright browser smoke suite + CI (ESLint + tests on every PR).
-- Still Field rewritten with real perspective depth, node lifecycle, energy
-  ramp (violet → cyan), spatial grid, and battery-conscious default 30 fps loop. Default **on**.
-- Integrated Stats / info layer with engineering-drawing callouts, edge dimensions,
-  Live / Math / Code views, Field Lab controls, and source overlay.
+- Still Field rewritten with real perspective depth, node lifecycle, energy ramp (violet → cyan), spatial grid, and battery-conscious default 30 fps loop. Default **on**.
+- Integrated Stats / info layer with engineering-drawing callouts, edge dimensions, Live / Math / Code views, Field Lab controls, and source overlay.
 - Glass transparency as an independent axis (`standard` / `ultra`).
-- Immersion path: dedicated Minimise interface button + floating restore
-  cluster (play + status + Show controls). Escape restores.
-- Continuous sleep-timer slider (0–10 h), Still Equaliser open by default,
-  theme as a two-sided Dark | Bone pill, Blazenetic branding throughout.
+- Immersion path: dedicated Minimise interface button + floating restore cluster (play + status + Show controls). Escape restores.
+- Continuous sleep-timer slider (0–10 h), Still Equaliser open by default, theme as a two-sided Dark | Bone pill, Blazenetic branding throughout.
 
-Additional noise colours remain out of scope for now. Accessibility is
-partially addressed — controls are labelled and all touch targets clear 44 px —
-but a full audit (screen-reader walkthrough, contrast check beyond the current
-reduced-motion support) has not been done.
+Additional noise colours remain out of scope for now. Accessibility is partially addressed — controls are labelled and all touch targets clear 44 px — but a full audit (screen-reader walkthrough, contrast check beyond the current reduced-motion support) has not been done.
 
-A fuller work report covering the intensive 26–28 July development lives in the
-project Google Drive. The public changelog is derived from it and lives at the
-repo root. A concise public history overview (including the real origin story) is now available in [HISTORY.md](./HISTORY.md).
+A fuller work report covering the intensive 26–28 July development lives in the project Google Drive. The public changelog is derived from it and lives at the repo root. A concise public history overview (including the real origin story) is available in [HISTORY.md](./HISTORY.md).
 
 ---
 

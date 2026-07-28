@@ -84,7 +84,8 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ## Why any of this exists
 
-We ship serious, zero-dependency, mobile-first sleep tools.  
+We ship serious, zero-dependency, mobile-first tools for humans, and sometimes for AI agents.
+ 
 We also refuse to write boring release notes.
 
 If you just want the noise, hit play on the [live demo](https://blazenetic.github.io/complex-noise/).  

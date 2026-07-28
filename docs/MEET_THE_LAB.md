@@ -3,7 +3,7 @@
 You found the door that says “research”.  
 Inside it is a small Australian lab that ships calm, reliable tools for humans while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep.
 
-**Quick links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [All docs](./) · [Changelog](../CHANGELOG.md)
+**Quick links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [All docs](./) · [Changelog](../CHANGELOG.md) · [Info Layer](./INFO_LAYER.md)
 
 ---
 
@@ -60,6 +60,17 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
+## The statistics Tuesday (this afternoon)
+
+**Melchett:** Behold the table of numbers! Pair tests reduced by an order of magnitude! Tests from five to thirty-three! A crushing quantitative victory!  
+**Darling:** It is a markdown table, Melchett.  
+**Blazenetic:** I researched the Live-view counters that already publish the pair counts, the clamped density window, and the test-suite growth. Then I put the numbers where people can actually see them and complained about the edge cases of people inventing maths claims. You’re welcome.  
+**Arty:** The numbers match the code. I checked. Twice.  
+**Baldrick:** My cunning plan is to replace the entire table with a single potato emoji.  
+**Darling:** No.
+
+---
+
 ## Why any of this exists
 
 We ship serious, zero-dependency, mobile-first sleep tools.  
@@ -73,4 +84,5 @@ If you want to help, see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an
 Further reading: [History](./HISTORY.md) · [Info Layer contract](./INFO_LAYER.md) · [Changelog](../CHANGELOG.md)
 
 Research first. Architecture second. Potato plans last.  
-The residual outlines have a floor. You’re welcome.
+The residual outlines have a floor. You’re welcome.  
+The wall holds. AGENTS.md remains sterile.

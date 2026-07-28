@@ -13,9 +13,10 @@ If you want to help — brilliant. Fork it. Break things carefully. Tell us what
 
 - **Just want the noise?** → [Live demo](https://blazenetic.github.io/complex-noise/)
 - **Want to understand the architecture before touching anything?** → **[AGENTS.md](./AGENTS.md)** (the technical contract — clean, professional, zero banter. Agents start here.)
-- **Want the origin story and the sprint?** → [History](./docs/HISTORY.md)
+- **Want the origin story and the sprint (with the numbers)?** → [History](./docs/HISTORY.md)
 - **Want to meet the cast?** → [Meet the Lab](./docs/MEET_THE_LAB.md)
 - **Want every document?** → [docs/](./docs/)
+- **Want the quantitative Lab Log?** → [Changelog](./CHANGELOG.md)
 
 ---
 
@@ -56,7 +57,7 @@ PRs are welcome for anything important — especially security, battery, reliabi
 Before you open one:
 
 1. Read **[AGENTS.md](./AGENTS.md)**. It is short on purpose. The architectural rule (state modules publish; `app.js` is the only DOM writer) exists because the play button once froze on “pause” over silent audio at 3 a.m. We would prefer that not happen again.
-2. Run the suite: `npm test`. Behaviour changes need matching test updates in the same commit.
+2. Run the suite: `npm test`. Behaviour changes need matching test updates in the same commit. The suite grew from a handful of checks to 33+ assertions for a reason.
 3. Keep runtime dependencies at zero. Any exception must be called out loudly in the PR description.
 4. British / Australian English in user-facing copy.
 5. Do **not** inject Lab Voice into `AGENTS.md`, `CLAUDE.md`, code comments, or technical architecture sections. The wall is there for a reason. Darling will notice.
@@ -68,7 +69,7 @@ Point your AI coding agent at `AGENTS.md` first. That is the intended entry poin
 - Fixes that keep the sleep timer honest
 - Battery or overnight reliability improvements
 - Accessibility and mobile polish
-- Clearer documentation (with links)
+- Clearer documentation (with links and, preferably, numbers that can be checked in the Live view)
 - Security hardening
 
 ### What we will push back on
@@ -80,7 +81,7 @@ Point your AI coding agent at `AGENTS.md` first. That is the intended entry poin
 
 ---
 
-## Lab Log (first CONTRIBUTING.md)
+## Lab Log (first CONTRIBUTING.md + later polish)
 
 **Melchett:** Gentlemen! We now have *official contribution guidelines*! Another crushing victory for the forces of open source!
 

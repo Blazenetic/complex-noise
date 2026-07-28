@@ -6,7 +6,7 @@
 **Current technical contract:** [AGENTS.md](../AGENTS.md)  
 **How to contribute now:** [CONTRIBUTING.md](../CONTRIBUTING.md)
 
-> **Lab note (28 July 2026):** This document captures the codebase as it existed *before* the modular rewrite and the full Still Field / Info Layer work. It is kept for historical context and for anyone who wants to understand the starting point of the intensive sprint. The architecture, state ownership rules, testing requirements and “things that will bite you” now live exclusively in [AGENTS.md](../AGENTS.md). Do not treat the layout notes below as current.
+> **Lab note (28 July 2026):** This document captures the codebase as it existed *before* the modular rewrite and the full Still Field / Info Layer work. It is kept for historical context and for anyone who wants to understand the starting point of the intensive sprint. The architecture, state ownership rules, testing requirements and “things that will bite you” now live exclusively in [AGENTS.md](../AGENTS.md). Do not treat the layout notes below as current. The spatial grid and its published pair-test numbers came later.
 
 **Melchett:** The original findings! Intelligence of the highest calibre!  
 **Darling:** It is a snapshot from before we split the single file, Melchett.  
@@ -78,10 +78,12 @@ This context document exists so the implementing team can move quickly with full
 
 For the live rules, start with [AGENTS.md](../AGENTS.md).  
 For how the Lab expects contributions, see [CONTRIBUTING.md](../CONTRIBUTING.md).  
-For the public origin story, see [HISTORY.md](./HISTORY.md).
+For the public origin story and the numbers, see [HISTORY.md](./HISTORY.md).  
+For the quantitative Lab Log, see [CHANGELOG.md](../CHANGELOG.md).
 
 > **Arty:** I left the original audio graph description intact because it is still correct.  
 > **Baldrick:** My cunning plan is to replace the entire findings document with a single potato.  
 > **Darling:** No.
 
-The software stays calm. The documentation (historical or otherwise) gets to be chaotic. That is the deal.
+The software stays calm. The documentation (historical or otherwise) gets to be chaotic. That is the deal.  
+The residual outlines have a floor. You’re welcome.

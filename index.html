@@ -57,23 +57,19 @@
       <button type="button" role="tab" id="nerdTabCode" data-nerd-view="code" aria-controls="nerdViewCode" aria-selected="false" tabindex="-1">Code</button>
     </div>
 
+    <!--
+      Live view. Grouped rather than one long table: the reader is usually after
+      one of four questions — is it fast, what does the graph look like, what is
+      the instrumentation doing, what is the audio doing — and a flat list of
+      twenty-five rows answers none of them quickly. Every value is written by
+      app.js on its 250 ms tick.
+    -->
     <section class="nerd-hud-view" id="nerdViewLive" role="tabpanel" aria-labelledby="nerdTabLive">
+      <p class="nerd-group">Frame</p>
       <dl class="nerd-hud-grid">
-        <dt>Frame</dt><dd id="nerdFps">—</dd>
+        <dt>Rate</dt><dd id="nerdFps">—</dd>
         <dt>Work</dt><dd id="nerdWork">—</dd>
-        <dt>Nodes</dt><dd id="nerdNodes">—</dd>
-        <dt>Edges</dt><dd id="nerdLinks">—</dd>
-        <dt>Pair tests</dt><dd id="nerdPairs">—</dd>
-        <dt>Grid</dt><dd id="nerdGrid">—</dd>
-        <dt>Turnover</dt><dd id="nerdTurnover">—</dd>
-        <dt>Mean degree</dt><dd id="nerdDegree">—</dd>
-        <dt>Density</dt><dd id="nerdDensity">—</dd>
-        <dt>Callouts</dt><dd id="nerdLabels">—</dd>
-        <dt>Mode</dt><dd id="nerdMode">—</dd>
-        <dt>Wave</dt><dd id="nerdWave">—</dd>
-        <dt>Source</dt><dd id="nerdSource">—</dd>
-        <dt>Drift</dt><dd id="nerdDrift">—</dd>
-        <dt>Uptime</dt><dd id="nerdUptime">—</dd>
+        <dt>Budget</dt><dd id="nerdBudget">—</dd>
       </dl>
 
       <!-- Rolling frame-time trace. Painted by app.js on the same 250 ms tick
@@ -82,6 +78,44 @@
         <canvas id="nerdSpark" width="544" height="64" aria-hidden="true"></canvas>
         <figcaption id="nerdSparkCaption">frame time</figcaption>
       </figure>
+
+      <p class="nerd-group">Graph</p>
+      <dl class="nerd-hud-grid">
+        <dt>Nodes</dt><dd id="nerdNodes">—</dd>
+        <dt>Edges</dt><dd id="nerdLinks">—</dd>
+        <dt>Pair tests</dt><dd id="nerdPairs">—</dd>
+        <dt>Grid</dt><dd id="nerdGrid">—</dd>
+        <dt>Occupancy</dt><dd id="nerdOccupancy">—</dd>
+        <dt>Degree</dt><dd id="nerdDegree">—</dd>
+        <dt>Density</dt><dd id="nerdDensity">—</dd>
+        <dt>Turnover</dt><dd id="nerdTurnover">—</dd>
+      </dl>
+
+      <p class="nerd-group">Instrumentation</p>
+      <dl class="nerd-hud-grid">
+        <dt>Callouts</dt><dd id="nerdLabels">—</dd>
+        <dt>Detail</dt><dd id="nerdMode">—</dd>
+        <dt>Dimensions</dt><dd id="nerdDims">—</dd>
+        <dt>Overlays</dt><dd id="nerdOverlays">—</dd>
+      </dl>
+
+      <p class="nerd-group">Field</p>
+      <dl class="nerd-hud-grid">
+        <dt>Wave</dt><dd id="nerdWave">—</dd>
+        <dt>World</dt><dd id="nerdWorld">—</dd>
+        <dt>Viewport</dt><dd id="nerdViewport">—</dd>
+        <dt>Trail</dt><dd id="nerdTrail">—</dd>
+        <dt>Glow</dt><dd id="nerdGlow">—</dd>
+        <dt>Clock</dt><dd id="nerdClock">—</dd>
+        <dt>Buffers</dt><dd id="nerdBuffers">—</dd>
+      </dl>
+
+      <p class="nerd-group">Audio</p>
+      <dl class="nerd-hud-grid">
+        <dt>Source</dt><dd id="nerdSource">—</dd>
+        <dt>Drift</dt><dd id="nerdDrift">—</dd>
+        <dt>Uptime</dt><dd id="nerdUptime">—</dd>
+      </dl>
 
       <div class="nerd-spectrum" aria-label="Normalised analyser and field energy">
         <div><span>Low</span><i><b id="nerdMeterLow"></b></i><span id="nerdLow">0.000</span></div>
@@ -137,6 +171,31 @@
         <code>pairs ≈ n · ρ · 5c² &lt;&lt; n(n−1)/2</code>
         <em id="nerdEvalGrid">—</em>
       </div>
+      <div>
+        <span>Lifecycle</span>
+        <code>f = S(l / f<sub>in</sub>) · S((1 − l) / f<sub>out</sub>)</code>
+        <em id="nerdEvalLife">—</em>
+      </div>
+      <div>
+        <span>Spawn</span>
+        <code>p<sub>i</sub> = frac(½ + i / g<sup>k</sup>), g ≈ 1.3247</code>
+        <em id="nerdEvalSpawn">—</em>
+      </div>
+      <div>
+        <span>Trail</span>
+        <code>α<sub>clear</sub> = 1 − e<sup>−rΔt</sup></code>
+        <em id="nerdEvalTrail">—</em>
+      </div>
+      <div>
+        <span>Neighbours</span>
+        <code>E[deg] = π(r / spacing)² − 1</code>
+        <em id="nerdEvalNeighbours">—</em>
+      </div>
+      <div>
+        <span>Detail</span>
+        <code>m = (base + ⌊frac(idφ)·M⌋) mod M</code>
+        <em id="nerdEvalDetail">—</em>
+      </div>
     </section>
 
     <!--
@@ -150,27 +209,39 @@
         <div class="nerd-stage-head"><span>update(dt)</span><em id="nerdMsUpdate">—</em></div>
         <div class="nerd-stage-bar"><i id="nerdBarUpdate"></i></div>
         <code>node.vx *= exp(-0.55 * dt);</code>
+        <code>node.z = zBase + sin(zPhase) * zAmp;</code>
         <code>node.scale = 1 / (1 + node.z * DEPTH);</code>
         <b id="nerdLiveUpdate">—</b>
+        <b id="nerdLiveUpdate2">—</b>
       </div>
       <div class="nerd-stage" id="nerdStageLinks">
         <div class="nerd-stage-head"><span>drawLinks()</span><em id="nerdMsLinks">—</em></div>
         <div class="nerd-stage-bar"><i id="nerdBarLinks"></i></div>
         <code>for (const [a, b] of grid.pairs())</code>
         <code>t = pow(1 - d / radius, 0.65);</code>
+        <code>a.deg++; a.κ += s;</code>
         <b id="nerdLiveLinks">—</b>
+        <b id="nerdLiveLinks2">—</b>
       </div>
       <div class="nerd-stage" id="nerdStageNodes">
         <div class="nerd-stage-head"><span>drawNodes()</span><em id="nerdMsNodes">—</em></div>
         <div class="nerd-stage-bar"><i id="nerdBarNodes"></i></div>
         <code>shade = pow(node.energy, 1.35);</code>
+        <code>if (bright) glowQueue[len++] = i;</code>
         <b id="nerdLiveNodes">—</b>
+        <b id="nerdLiveNodes2">—</b>
       </div>
       <div class="nerd-stage" id="nerdStageInfo">
         <div class="nerd-stage-head"><span>drawInfoLayer()</span><em id="nerdMsInfo">—</em></div>
         <div class="nerd-stage-bar"><i id="nerdBarInfo"></i></div>
         <code>info.clearRect(0, 0, w, h);</code>
+        <code>mode = (base + node.slot) % 8;</code>
         <b id="nerdLiveInfo">—</b>
+        <b id="nerdLiveInfo2">—</b>
+      </div>
+      <div class="nerd-stage-total">
+        <span>frame</span>
+        <b id="nerdStageTotal">—</b>
       </div>
     </section>
   </aside>
@@ -363,9 +434,41 @@
             </div>
           </div>
 
-          <div class="still-toggle-row is-secondary">
-            <span id="fieldCodeLabel">Source overlay</span>
-            <button type="button" class="still-switch" id="fieldCodeToggle" role="switch" aria-checked="true" aria-labelledby="fieldCodeLabel"></button>
+          <!--
+            Canvas overlays. Three separate things get painted over the field —
+            node callouts, edge dimensions and the source listing — and they cost
+            different amounts and suit different moods. One switch for all three
+            meant wanting quiet edges cost you the callouts too.
+            These are toggle buttons (aria-pressed), not switches: they are a
+            related group of on/off states, and the group reads as one control.
+          -->
+          <div class="lab-overlays">
+            <div class="lab-label-row">
+              <span id="fieldOverlayLabel">Canvas overlays</span>
+              <span class="lab-value" id="fieldOverlayValue" aria-hidden="true">3 of 3</span>
+            </div>
+            <div class="lab-chips" role="group" aria-labelledby="fieldOverlayLabel">
+              <button type="button" class="lab-chip" id="fieldCalloutToggle" aria-pressed="true" aria-label="Node callouts on the field">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="5" cy="18" r="2"/><path d="M6.5 16.5 10 13h11"/><path d="M14 6h7v5h-7z"/>
+                </svg>
+                <span>Callouts</span>
+              </button>
+              <button type="button" class="lab-chip" id="fieldEdgeToggle" aria-pressed="true" aria-label="Edge dimensions on the field">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 7v10M20 7v10M4 12h16"/><path d="m8 9-3 3 3 3M16 9l3 3-3 3"/>
+                </svg>
+                <span>Dimensions</span>
+              </button>
+              <button type="button" class="lab-chip" id="fieldCodeToggle" aria-pressed="true" aria-label="Source listing on the field">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 8-4 4 4 4M15 8l4 4-4 4"/>
+                </svg>
+                <span>Source</span>
+              </button>
+            </div>
+            <!-- Hidden under 1000 px, where the listing is not drawn at all. -->
+            <p class="lab-hint">Fold the listing from its own title bar on the field.</p>
           </div>
 
           <button type="button" id="fieldLabReset" class="minimise-btn" aria-label="Reset Field Lab to defaults">

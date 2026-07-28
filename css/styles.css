@@ -264,6 +264,57 @@ body {
   display: none;
 }
 
+/* Scroll affordance. The body can outrun a laptop screen, and a panel that
+   simply stops at a hard edge reads as a rendering bug rather than as "there is
+   more below". The gradient sits over the panel's own bottom padding. */
+.nerd-hud:not(.nerd-hud--folded)::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  left: 1px;
+  height: 18px;
+  border-radius: 0 0 13px 13px;
+  background: linear-gradient(to bottom, transparent, var(--nerd-hud-bg));
+  pointer-events: none;
+}
+
+/* The body now carries five grouped tables, so it can outgrow a laptop screen.
+   Bound it and let it scroll rather than running off the bottom — which needs
+   pointer events on the view itself, since the panel is otherwise inert. */
+.nerd-hud-view {
+  max-height: min(62vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  scrollbar-width: none;
+}
+
+.nerd-hud-view::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Group captions. The reader is usually after one of four questions, and a flat
+   list of twenty-five rows answers none of them quickly. */
+.nerd-group {
+  margin: 9px 0 3px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+  color: var(--purple-bright);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.nerd-group:first-child {
+  margin-top: 2px;
+  padding-top: 0;
+  border-top: 0;
+}
+
 /* Folded = only the head remains visible */
 .nerd-hud--folded .nerd-hud-tabs,
 .nerd-hud--folded .nerd-hud-view {
@@ -596,6 +647,32 @@ body {
   white-space: nowrap;
 }
 
+/* Whole-frame figure under the four stages: what they add up to, against the
+   budget the current cap allows. */
+.nerd-stage-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 7px;
+}
+
+.nerd-stage-total span {
+  color: var(--purple-bright);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nerd-stage-total b {
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.54rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 /* Mobile Stats launcher — sits in the same top-left corner when the HUD is off.
    Only shown on narrow viewports so desktop keeps a clean surface.
    min-height 44px satisfies the touch-target audit. */
@@ -736,6 +813,11 @@ body {
   border-color: transparent;
 }
 
+/* No surface to fade into, so the scroll gradient would just be a dark band. */
+[data-glass="ultra"] .nerd-hud::after {
+  display: none;
+}
+
 [data-glass="ultra"] .nerd-mobile-toggle {
   background: var(--surface-elevated);
 }
@@ -754,7 +836,9 @@ body {
     transition: none;
   }
 
-  .nerd-stage {
+  .nerd-stage,
+  .lab-chip,
+  .lab-chip svg {
     transition: none;
   }
 }
@@ -1340,6 +1424,99 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
 .fps-seg:disabled {
   opacity: 0.45;
   pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   Canvas overlay chips — callouts / dimensions / source listing.
+
+   A group of related on/off states reads better as one bank of chips than as
+   three more switch rows: the three things are alternatives you turn on and off
+   against each other while looking at the field, not three unrelated settings.
+   Icon over label so each chip clears the 44px touch target without needing the
+   width three side-by-side pills would take on a phone.
+   ------------------------------------------------------------ */
+.lab-overlays {
+  display: grid;
+  gap: 8px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.lab-overlays .lab-label-row span:first-child {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.lab-chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.lab-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 56px;
+  padding: 8px 4px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 60%, transparent);
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lab-chip svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.lab-chip[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--purple) 18%, transparent);
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--border));
+  color: var(--purple-bright);
+}
+
+.lab-chip[aria-pressed="true"] svg {
+  opacity: 1;
+}
+
+.lab-chip:hover,
+.lab-chip:focus-visible {
+  outline: none;
+  color: var(--text-primary);
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-glow);
+}
+
+.lab-chip:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.lab-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+/* The listing needs 1000 px to be drawn at all, so below that the hint is
+   describing something the reader cannot see. Matches CODE_MIN_VIEWPORT. */
+@media (max-width: 999px) {
+  .lab-hint {
+    display: none;
+  }
 }
 
 .still-lab input[type="range"]:disabled,

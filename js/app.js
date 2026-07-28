@@ -76,6 +76,9 @@ const els = {
   fieldDwellValue: document.getElementById('fieldDwellValue'),
   fpsSegs: Array.from(document.querySelectorAll('.fps-seg')),
   fieldCodeToggle: document.getElementById('fieldCodeToggle'),
+  fieldCalloutToggle: document.getElementById('fieldCalloutToggle'),
+  fieldEdgeToggle: document.getElementById('fieldEdgeToggle'),
+  fieldOverlayValue: document.getElementById('fieldOverlayValue'),
   fieldLabReset: document.getElementById('fieldLabReset'),
   /** Floating restore button — only visible when chrome is hidden. */
   chromeToggle: document.getElementById('uiChromeToggle'),
@@ -95,16 +98,26 @@ const els = {
   nerdHealth: document.getElementById('nerdHealth'),
   nerdFps: document.getElementById('nerdFps'),
   nerdWork: document.getElementById('nerdWork'),
+  nerdBudget: document.getElementById('nerdBudget'),
   nerdNodes: document.getElementById('nerdNodes'),
   nerdLinks: document.getElementById('nerdLinks'),
   nerdPairs: document.getElementById('nerdPairs'),
   nerdGrid: document.getElementById('nerdGrid'),
+  nerdOccupancy: document.getElementById('nerdOccupancy'),
   nerdTurnover: document.getElementById('nerdTurnover'),
   nerdDegree: document.getElementById('nerdDegree'),
   nerdDensity: document.getElementById('nerdDensity'),
   nerdLabels: document.getElementById('nerdLabels'),
   nerdMode: document.getElementById('nerdMode'),
+  nerdDims: document.getElementById('nerdDims'),
+  nerdOverlays: document.getElementById('nerdOverlays'),
   nerdWave: document.getElementById('nerdWave'),
+  nerdWorld: document.getElementById('nerdWorld'),
+  nerdViewport: document.getElementById('nerdViewport'),
+  nerdTrail: document.getElementById('nerdTrail'),
+  nerdGlow: document.getElementById('nerdGlow'),
+  nerdClock: document.getElementById('nerdClock'),
+  nerdBuffers: document.getElementById('nerdBuffers'),
   nerdEnergy: document.getElementById('nerdEnergy'),
   nerdLow: document.getElementById('nerdLow'),
   nerdMid: document.getElementById('nerdMid'),
@@ -130,6 +143,11 @@ const els = {
     wave: document.getElementById('nerdEvalWave'),
     schedule: document.getElementById('nerdEvalSchedule'),
     grid: document.getElementById('nerdEvalGrid'),
+    life: document.getElementById('nerdEvalLife'),
+    spawn: document.getElementById('nerdEvalSpawn'),
+    trail: document.getElementById('nerdEvalTrail'),
+    neighbours: document.getElementById('nerdEvalNeighbours'),
+    detail: document.getElementById('nerdEvalDetail'),
   },
   // Code view — one block per pipeline stage
   nerdStage: {
@@ -138,26 +156,31 @@ const els = {
       ms: document.getElementById('nerdMsUpdate'),
       bar: document.getElementById('nerdBarUpdate'),
       live: document.getElementById('nerdLiveUpdate'),
+      live2: document.getElementById('nerdLiveUpdate2'),
     },
     links: {
       root: document.getElementById('nerdStageLinks'),
       ms: document.getElementById('nerdMsLinks'),
       bar: document.getElementById('nerdBarLinks'),
       live: document.getElementById('nerdLiveLinks'),
+      live2: document.getElementById('nerdLiveLinks2'),
     },
     nodes: {
       root: document.getElementById('nerdStageNodes'),
       ms: document.getElementById('nerdMsNodes'),
       bar: document.getElementById('nerdBarNodes'),
       live: document.getElementById('nerdLiveNodes'),
+      live2: document.getElementById('nerdLiveNodes2'),
     },
     info: {
       root: document.getElementById('nerdStageInfo'),
       ms: document.getElementById('nerdMsInfo'),
       bar: document.getElementById('nerdBarInfo'),
       live: document.getElementById('nerdLiveInfo'),
+      live2: document.getElementById('nerdLiveInfo2'),
     },
   },
+  nerdStageTotal: document.getElementById('nerdStageTotal'),
   header: document.querySelector('header'),
   main: document.querySelector('main'),
   footer: document.querySelector('footer'),
@@ -248,39 +271,59 @@ function pushSparkSample(ms) {
 }
 
 /**
- * Paint the trace. Bars are scaled against the current frame budget, so the
- * dashed rule across the middle is always "one frame's worth of time" whatever
- * cap the Field Lab is set to.
+ * Paint the trace.
+ *
+ * The vertical range follows the observed peak rather than the frame budget.
+ * Fixing it to the budget was honest and useless: the renderer uses about 1% of
+ * a 33 ms frame, so every bar rounded to one pixel and the trace showed a flat
+ * line whatever the field was doing. Autoscaling shows the *shape* of the work —
+ * which is what a trace is for — and the budget rule is drawn whenever it falls
+ * inside the range, so the absolute scale is never lost.
+ *
+ * @returns {number} the peak sample in the window, for the caption
  */
 function drawSpark(budgetMs) {
   const canvas = els.nerdSpark;
-  if (!canvas) return;
+  if (!canvas) return 0;
   if (!sparkCtx) sparkCtx = canvas.getContext('2d');
   const ctx = sparkCtx;
-  if (!ctx) return;
+  if (!ctx) return 0;
 
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  const barW = w / SPARK_SAMPLES;
-  const scale = h / Math.max(budgetMs, 1);
+  let peak = 0;
+  for (let i = 0; i < sparkFilled; i++) {
+    if (sparkHistory[i] > peak) peak = sparkHistory[i];
+  }
 
-  // Budget rule at 50% of the visible range, i.e. half a frame of work.
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = sparkColors.grid;
-  ctx.fillRect(0, h - Math.min(h - 1, budgetMs * 0.5 * scale), w, 1);
+  const barW = w / SPARK_SAMPLES;
+  // Never scale to less than a tenth of a millisecond, or measurement noise on
+  // an idle field fills the whole trace with meaningless spikes.
+  const range = Math.max(peak * 1.35, 0.1);
+  const scale = h / range;
+
+  // Half a frame of work, when that lands inside the range.
+  const ruleValue = budgetMs * 0.5;
+  if (ruleValue < range) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = sparkColors.grid;
+    ctx.fillRect(0, h - Math.min(h - 1, ruleValue * scale), w, 1);
+  }
 
   for (let i = 0; i < sparkFilled; i++) {
     // Oldest sample first, so the trace reads left to right in time.
     const idx = (sparkWrite - sparkFilled + i + SPARK_SAMPLES * 2) % SPARK_SAMPLES;
     const value = sparkHistory[idx];
     const barH = Math.max(1, Math.min(h, value * scale));
-    ctx.globalAlpha = value > budgetMs * 0.5 ? 0.95 : 0.6;
-    ctx.fillStyle = value > budgetMs * 0.5 ? sparkColors.warn : sparkColors.accent;
+    const hot = value > ruleValue;
+    ctx.globalAlpha = hot ? 0.95 : 0.6;
+    ctx.fillStyle = hot ? sparkColors.warn : sparkColors.accent;
     ctx.fillRect(Math.round(i * barW), h - barH, Math.max(1, barW - 1), barH);
   }
   ctx.globalAlpha = 1;
+  return peak;
 }
 
 /** mm:ss, or h:mm:ss once it runs past an hour. */
@@ -294,13 +337,49 @@ function formatUptime(ms) {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+/**
+ * Which view the panel is showing and whether it is folded.
+ *
+ * Cached from the last render so the tick can skip the two views nobody is
+ * looking at. Writing text into a hidden subtree still costs a style
+ * recalculation, and there are now three views' worth of it.
+ */
+let nerdVisibleView = 'live';
+let nerdIsFolded = false;
+
 /** Pull the current numbers and paint them into the readout. */
 function updateNerdHud() {
   const stats = stillField.getStillFieldStats();
+  const budgetMs = 1000 / stats.fpsCap;
+
+  // Health is the one thing the folded header still shows, so it is computed
+  // before the early return. Scaled to the chosen cap rather than to a fixed
+  // 30 fps, so choosing 60 does not read as "strained" the moment it is picked.
+  //
+  // Renderer work leads and the frame rate only moderates it. A cap is honoured
+  // by *waiting*, so the delivered rate wobbles a frame either side of it on any
+  // machine — reading that wobble as strain while the renderer is using 1% of
+  // its budget is the readout lying about its own measurements.
+  const load = stats.frameMs / budgetMs;
+  const rate = stats.fps / stats.fpsCap;
+  const health = stats.fps <= 0 ? 'sampling'
+    : load < 0.4 && rate >= 0.8 ? 'nominal'
+      : load < 0.75 && rate >= 0.6 ? 'loaded' : 'strained';
+  if (els.nerdHud) els.nerdHud.dataset.health = health;
+  setText(els.nerdHealth, health);
+
+  // Folded, the body is display:none. Painting into it is pure cost.
+  if (nerdIsFolded) return;
+
+  if (nerdVisibleView === 'live') updateLiveView(stats, budgetMs);
+  else if (nerdVisibleView === 'math') updateMathView(stats);
+  else updateCodeView(stats, budgetMs);
+}
+
+function updateLiveView(stats, budgetMs) {
   const metrics = stillField.getStillAudioMetrics();
   const audioState = audio.getState();
   const ctx = audio.getAudioContext();
-  const budgetMs = 1000 / stats.fpsCap;
 
   setText(els.nerdFps, stats.fps > 0
     ? `${stats.fps.toFixed(1)} / ${stats.fpsCap} fps${stats.reducedMotion ? ' · reduced' : ''}`
@@ -308,22 +387,50 @@ function updateNerdHud() {
   setText(els.nerdWork, stats.frameMs > 0
     ? `${stats.frameMs.toFixed(2)} ms · ${Math.round(stats.frameMs / budgetMs * 100)}% budget`
     : 'idle');
+  setText(els.nerdBudget, stats.frameMs > 0
+    ? `${budgetMs.toFixed(1)} ms · ${Math.max(0, Math.round((1 - stats.frameMs / budgetMs) * 100))}% headroom`
+    : `${budgetMs.toFixed(1)} ms`);
+
   setText(els.nerdNodes, `${stats.nodes} · ${stats.densityScale.toFixed(2)}×`);
-  setText(els.nerdLinks, String(stats.edges));
+  // Painted edges *and* how many paths carried them: the batching ratio is the
+  // difference between a claim about efficiency and a measurement of it.
+  setText(els.nerdLinks, stats.batches > 0
+    ? `${stats.edges} · ${stats.batches} paths · ${(stats.edges / stats.batches).toFixed(1)}×`
+    : String(stats.edges));
   // The interesting number is not how many pairs we tested but how many we did
   // not have to: the grid is the whole reason the node count is a control.
   setText(els.nerdPairs, stats.bruteTests > 0
     ? `${stats.pairTests} / ${stats.bruteTests} · ${(stats.bruteTests / Math.max(1, stats.pairTests)).toFixed(1)}× saved`
     : '—');
   setText(els.nerdGrid, `${stats.gridCells} cells · r ${Math.round(stats.linkRadius)} u`);
+  setText(els.nerdOccupancy, `${stats.occupancy.toFixed(2)} /cell · ${Math.round(stats.gridCell)} u`);
+  setText(els.nerdDegree, `x̄ ${stats.meanDegree.toFixed(2)} · max ${stats.maxDegree}`);
+  setText(els.nerdDensity, `${(stats.density * 100).toFixed(1)}%`);
   setText(els.nerdTurnover, stats.turnover > 0
     ? `${stats.turnover.toFixed(1)}/min · life ${stats.meanLifeS.toFixed(0)} s`
     : 'settling');
-  setText(els.nerdDegree, stats.meanDegree.toFixed(2));
-  setText(els.nerdDensity, `${(stats.density * 100).toFixed(1)}%`);
-  setText(els.nerdLabels, `${stats.labels}/${stats.labelCapacity} nodes · ${stats.edgeLabels} edges`);
-  setText(els.nerdMode, `${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s left`);
+
+  setText(els.nerdLabels, stats.calloutsOn
+    ? `${stats.labels} of ${stats.labelCapacity} placed`
+    : 'off');
+  setText(els.nerdMode, stats.calloutsOn
+    ? `${stats.labelMode} · ${stats.modesOnScreen}/${stats.modeCount} · ${stats.modeRemaining.toFixed(1)} s`
+    : `${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s`);
+  setText(els.nerdDims, stats.edgesOn
+    ? `${stats.edgeLabels} shown · ${stats.edgeSlots} slots held`
+    : 'off');
+  setText(els.nerdOverlays, describeOverlays(stats));
+
   setText(els.nerdWave, `${stats.wavePhase.toFixed(0)}° · ∠${stats.waveAngle.toFixed(1)}° · λ ${Math.round(stats.waveLength)} u`);
+  setText(els.nerdWorld, `${Math.round(stats.worldW)} × ${Math.round(stats.worldH)} u · s ${stats.minScale.toFixed(2)}`);
+  setText(els.nerdViewport, `${stats.viewportW} × ${stats.viewportH} · dpr ${stats.dpr}`);
+  setText(els.nerdTrail, `τ ${(1 / stats.trail).toFixed(2)} s · ${stats.trail.toFixed(1)}/s`);
+  setText(els.nerdGlow, `${stats.glowNodes} of ${stats.glowCap}${stats.reducedMotion ? ' · suppressed' : ''}`);
+  setText(els.nerdClock, `drift ${Math.round(stats.clock)} s · real ${Math.round(stats.realClock)} s`);
+  // The allocation figure is a claim the renderer is written to keep, so it is
+  // stated where it can be argued with rather than only in a comment.
+  setText(els.nerdBuffers, `${(stats.linkBytes / 1024).toFixed(1)} KiB · 0 alloc/frame`);
+
   setText(els.nerdEnergy, stats.energy.toFixed(3));
   setText(els.nerdLow, metrics.low.toFixed(3));
   setText(els.nerdMid, metrics.mid.toFixed(3));
@@ -344,19 +451,18 @@ function updateNerdHud() {
     : '—');
 
   pushSparkSample(stats.frameMs);
-  drawSpark(budgetMs);
-  setText(els.nerdSparkCaption, `frame work · ${budgetMs.toFixed(1)} ms budget · ${stats.stage} heaviest`);
+  const peak = drawSpark(budgetMs);
+  setText(els.nerdSparkCaption,
+    `17 s · peak ${peak.toFixed(2)} ms · ${budgetMs.toFixed(1)} ms budget · ${stats.stage} heaviest`);
+}
 
-  updateMathView(stats);
-  updateCodeView(stats);
-
-  // Health is scaled to the chosen cap rather than to a fixed 30 fps, so
-  // choosing 60 does not read as "strained" the moment it is selected.
-  const health = stats.fps <= 0 ? 'sampling'
-    : stats.fps >= stats.fpsCap * 0.9 && stats.frameMs < budgetMs * 0.35 ? 'nominal'
-      : stats.fps >= stats.fpsCap * 0.72 && stats.frameMs < budgetMs * 0.7 ? 'loaded' : 'strained';
-  if (els.nerdHud) els.nerdHud.dataset.health = health;
-  setText(els.nerdHealth, health);
+/** "callouts · dimensions · source", with whatever is off struck out as "—". */
+function describeOverlays(stats) {
+  const on = [];
+  if (stats.calloutsOn) on.push('callouts');
+  if (stats.edgesOn) on.push('dimensions');
+  if (stats.codeOverlay) on.push(stats.codeFolded ? 'source (folded)' : 'source');
+  return on.length ? on.join(' · ') : 'none';
 }
 
 /**
@@ -374,6 +480,23 @@ function updateMathView(stats) {
   setText(e.wave, `ω 0.55 · ψ ${stats.wavePhase.toFixed(0)}° · λ ${Math.round(stats.waveLength)} u`);
   setText(e.schedule, `D ${stats.dwell} s · ${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s left`);
   setText(e.grid, `${stats.pairTests} of ${stats.bruteTests} pairs · ${stats.gridCells} cells`);
+  setText(e.life, `f_in 0.10 · f_out 0.16 · x̄ life ${stats.meanLifeS.toFixed(0)} s`);
+  setText(e.spawn, `1/g 0.7549 · 1/g² 0.5698 · ${stats.turnover.toFixed(1)} spawns/min`);
+  setText(e.trail, `r ${stats.trail.toFixed(1)}/s · Δt ${stats.dt.toFixed(4)} → α ${(1 - Math.exp(-stats.trail * stats.dt)).toFixed(3)}`);
+  // The expectation is what the link radius is *derived* from, so printing it
+  // next to the measured mean degree is a check on the derivation, not trivia.
+  setText(e.neighbours, `r ${Math.round(stats.linkRadius)} u → E[deg] ${expectedDegree(stats).toFixed(2)} · x̄ ${stats.meanDegree.toFixed(2)}`);
+  setText(e.detail, `M ${stats.modeCount} · base ${stats.labelMode} · ${stats.modesOnScreen} distinct on screen`);
+}
+
+/**
+ * Neighbours a node should expect inside the link radius, from the mean spacing
+ * the world plane implies: `π(r / spacing)² − 1`.
+ */
+function expectedDegree(stats) {
+  if (!stats.nodes || !stats.worldW || !stats.worldH) return 0;
+  const spacing = Math.sqrt((stats.worldW * stats.worldH) / stats.nodes);
+  return Math.max(0, Math.PI * (stats.linkRadius / spacing) ** 2 - 1);
 }
 
 /**
@@ -381,25 +504,33 @@ function updateMathView(stats) {
  * the values their statements are producing. `data-hot` marks whichever stage
  * currently dominates, which is the same signal that paces the on-canvas ticker.
  */
-function updateCodeView(stats) {
+function updateCodeView(stats, budgetMs) {
   const total = stats.msUpdate + stats.msLinks + stats.msNodes + stats.msInfo;
   const s = els.nerdStage;
   paintStage(s.update, stats.msUpdate, total, stats.stage === 'update',
-    `n ${stats.nodes} · dt ${(stats.dt * 1000).toFixed(1)} ms`);
+    `n ${stats.nodes} · dt ${(stats.dt * 1000).toFixed(1)} ms`,
+    `z ${stats.probeZ.toFixed(3)} → s ${stats.probeScale.toFixed(3)} · ${stats.turnover.toFixed(1)} spawns/min`);
   paintStage(s.links, stats.msLinks, total, stats.stage === 'links',
-    `${stats.pairTests} pairs · ${stats.edges} edges · ${stats.batches} paths`);
+    `${stats.pairTests} pairs · ${stats.edges} edges · ${stats.batches} paths`,
+    `x̄ deg ${stats.meanDegree.toFixed(2)} · max ${stats.maxDegree} · ${stats.gridCells} cells`);
   paintStage(s.nodes, stats.msNodes, total, stats.stage === 'nodes',
-    `${stats.nodes} arcs · E ${stats.probeEnergy.toFixed(2)}`);
+    `${stats.nodes} arcs · E ${stats.probeEnergy.toFixed(2)}`,
+    `${stats.glowNodes} of ${stats.glowCap} glow · shadowBlur rationed`);
   paintStage(s.info, stats.msInfo, total, stats.stage === 'info',
-    `${stats.labels} callouts · ${stats.edgeLabels} dimensions`);
+    `${stats.labels} callouts · ${stats.edgeLabels} dimensions`,
+    `${stats.modesOnScreen} of ${stats.modeCount} modes · ${describeOverlays(stats)}`);
+  setText(els.nerdStageTotal, total > 0
+    ? `${total.toFixed(2)} ms of ${budgetMs.toFixed(1)} ms · ${Math.round(total / budgetMs * 100)}%`
+    : '—');
 }
 
-function paintStage(stage, ms, total, hot, live) {
+function paintStage(stage, ms, total, hot, live, live2) {
   if (!stage || !stage.root) return;
   const share = total > 0 ? ms / total : 0;
   setText(stage.ms, total > 0 ? `${ms.toFixed(2)} ms · ${Math.round(share * 100)}%` : '—');
   setMeter(stage.bar, share);
   setText(stage.live, live);
+  setText(stage.live2, live2);
   const flag = hot ? 'true' : 'false';
   if (stage.root.dataset.hot !== flag) stage.root.dataset.hot = flag;
 }
@@ -411,6 +542,13 @@ function paintStage(stage, ms, total, hot, live) {
  */
 function syncNerdHud(state) {
   const on = Boolean(state.nerd && state.enabled);
+
+  // Cached so the tick can skip the views nobody is looking at. A view that has
+  // just been revealed is repainted immediately rather than showing whatever it
+  // last held for up to a quarter of a second.
+  const revealed = state.nerdView !== nerdVisibleView || Boolean(state.nerdFolded) !== nerdIsFolded;
+  nerdVisibleView = state.nerdView;
+  nerdIsFolded = Boolean(state.nerdFolded);
 
   if (els.nerdHud) {
     els.nerdHud.hidden = !on;
@@ -431,6 +569,8 @@ function syncNerdHud(state) {
   if (shouldRun && nerdHudTimerId === null) {
     updateNerdHud();
     nerdHudTimerId = setInterval(updateNerdHud, NERD_HUD_INTERVAL_MS);
+  } else if (shouldRun && revealed) {
+    updateNerdHud();
   } else if (!shouldRun && nerdHudTimerId !== null) {
     clearInterval(nerdHudTimerId);
     nerdHudTimerId = null;
@@ -613,12 +753,23 @@ function renderFieldLab(state) {
     btn.disabled = off;
   });
 
-  if (els.fieldCodeToggle) {
-    els.fieldCodeToggle.setAttribute('aria-checked', state.code ? 'true' : 'false');
-    // The overlay is drawn by the info layer, so it needs both switches on.
-    els.fieldCodeToggle.disabled = off || !state.nerd;
-  }
+  // Overlay chips. All three are painted by the info layer, so they are dead
+  // whenever the field or Stats is off — the same reasoning as the sliders.
+  const overlaysOff = off || !state.nerd;
+  setChip(els.fieldCalloutToggle, state.callouts, overlaysOff);
+  setChip(els.fieldEdgeToggle, state.edges, overlaysOff);
+  setChip(els.fieldCodeToggle, state.code, overlaysOff);
+  const overlaysOn = (state.callouts ? 1 : 0) + (state.edges ? 1 : 0) + (state.code ? 1 : 0);
+  setText(els.fieldOverlayValue, `${overlaysOn} of 3`);
+
   if (els.fieldLabReset) els.fieldLabReset.disabled = off;
+}
+
+/** Set an overlay chip's pressed and disabled state. */
+function setChip(el, on, disabled) {
+  if (!el) return;
+  el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  el.disabled = disabled;
 }
 
 /** Set a range's position, its spoken value and its disabled state in one go. */
@@ -834,9 +985,22 @@ function bindEvents() {
   els.fpsSegs.forEach(btn => {
     btn.addEventListener('click', () => stillField.setStillFieldFps(Number(btn.dataset.fps)));
   });
-  bindSwitch(els.fieldCodeToggle, () => {
-    stillField.setStillFieldCode(!stillField.getStillFieldCode());
-  });
+  // Overlay chips are toggle buttons, so Enter and Space both come free.
+  if (els.fieldCodeToggle) {
+    els.fieldCodeToggle.addEventListener('click', () => {
+      stillField.setStillFieldCode(!stillField.getStillFieldCode());
+    });
+  }
+  if (els.fieldCalloutToggle) {
+    els.fieldCalloutToggle.addEventListener('click', () => {
+      stillField.setStillFieldCallouts(!stillField.getStillFieldCallouts());
+    });
+  }
+  if (els.fieldEdgeToggle) {
+    els.fieldEdgeToggle.addEventListener('click', () => {
+      stillField.setStillFieldEdges(!stillField.getStillFieldEdges());
+    });
+  }
   if (els.fieldLabReset) {
     els.fieldLabReset.addEventListener('click', () => {
       stillField.setStillFieldDensity(DEFAULTS.stillFieldDensity);
@@ -846,8 +1010,20 @@ function bindEvents() {
       stillField.setStillFieldDwell(DEFAULTS.stillFieldDwell);
       stillField.setStillFieldFps(DEFAULTS.stillFieldFps);
       stillField.setStillFieldCode(DEFAULTS.stillFieldCode);
+      stillField.setStillFieldCallouts(DEFAULTS.stillFieldCallouts);
+      stillField.setStillFieldEdges(DEFAULTS.stillFieldEdges);
+      stillField.setCodeFolded(false);
     });
   }
+
+  // The source listing is painted on the canvas, so it cannot be a button — but
+  // a listing you can only fold from a panel two scrolls away is a listing
+  // people leave switched off. The canvas sits behind the page, so the press
+  // arrives on the body; anything that lands on a real control is not ours.
+  document.addEventListener('pointerdown', e => {
+    if (e.target !== document.body && e.target !== document.documentElement) return;
+    if (stillField.handleOverlayPointer(e.clientX, e.clientY)) e.preventDefault();
+  });
 
   // Theme segmented control — each side sets the theme directly
   els.themeSegs.forEach(btn => {

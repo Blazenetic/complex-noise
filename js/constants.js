@@ -47,6 +47,10 @@ export const DEFAULTS = {
   stillFieldDwell: 14,
   stillFieldFps: 30,
   stillFieldCode: true,
+  // The three on-canvas overlays, each independently switchable. All on, so a
+  // first-run session looks exactly as it did when they were one setting.
+  stillFieldCallouts: true,
+  stillFieldEdges: true,
 };
 
 /** EQ gain range in dB — must match the slider min/max in index.html */
@@ -114,6 +118,8 @@ export const STORAGE_KEYS = {
   stillFieldDwell: 'complexNoise_stillFieldDwell',
   stillFieldFps: 'complexNoise_stillFieldFps',
   stillFieldCode: 'complexNoise_stillFieldCode',
+  stillFieldCallouts: 'complexNoise_stillFieldCallouts',
+  stillFieldEdges: 'complexNoise_stillFieldEdges',
   stillGlassTransparent: 'complexNoise_stillGlassTransparent',
   uiChromeHidden: 'complexNoise_uiChromeHidden',
 };

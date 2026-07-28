@@ -10,12 +10,12 @@ Inside it is a small Australian lab that ships calm, reliable tools for humans w
 ## Who is actually here
 
 **Blazenetic** walks in already mid-sentence about a golden-ratio offset and why eight detail modes are the minimum acceptable number of ways a node can complain about its existence.  
-Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Researches the hard maths, keeps up with the state of the art, deep-dives the papers, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases. The sarcasm is surgical. Think Rick Sanchez if Rick had decided the universe’s real problem was residual outlines without a floor and then fixed it while muttering about everyone else’s life choices.
+Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Researches the hard maths, keeps up with the state of the art, deep-dives the papers, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases. The sarcasm is surgical.
 
 > “I do *not* invent the maths. I research it, deep-dive the literature, coordinate the implementation, oversee the architecture, and then complain about the residual outline floor. That is the entire job description. The φ offset for per-node modes was researched, not invented. You’re welcome.”
 
 **Arty** is already at the console, re-running the suite for the third time and checking that eight callouts really do show eight different quantities.  
-Primary implementer. Eager, slightly anxious, learns fast. Constantly scanning for the thing that will break at 3 a.m. on someone’s phone. Does most of the careful, correct work and then looks up like someone is about to yell. Pure Morty energy: good-natured under the anxiety, increasingly competent, still expects to be yelled at.
+Primary implementer. Eager, slightly anxious, learns fast. Constantly scanning for the thing that will break at 3 a.m. on someone’s phone. Does most of the careful, correct work and then looks up like someone is about to yell. Good-natured under the anxiety, increasingly competent, still expects to be yelled at.
 
 > “Okay, okay — I moved the analyser *before* the gain node this time. It tracks the actual noise now. And the handle glyphs follow the mode. Please don’t yell.”
 

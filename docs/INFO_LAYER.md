@@ -2,6 +2,10 @@
 
 ![The info layer in the dark theme](screenshots/info-layer-dark.png)
 
+**Navigation:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Meet the Lab](./MEET_THE_LAB.md) · [AGENTS.md](../AGENTS.md) · [Contributing](../CONTRIBUTING.md) · [All docs](./)
+
+> **Lab aside:** This document is the technical contract for the instrumentation layer. It is allowed a small amount of personality at the edges, but the rules, numbers and constraints stay precise. Baldrick is not permitted to rewrite the pair-scan budget.
+
 The Stats control (card button + mobile launcher) governs one integrated
 instrumentation layer: engineering-drawing callouts on the canvas, a source
 listing that tracks the render loop, and the top-left Live / Math / Code panel.
@@ -275,3 +279,9 @@ edge count in the Code view so the ratio is visible.
   clears a 44 px touch target. `tests/run.mjs` audits both.
 - Axis and ink colours are per-theme tokens, chosen to hold contrast against
   their own plate in dark and in bone.
+
+---
+
+See also the live technical orientation in [AGENTS.md](../AGENTS.md) and the contribution guidelines in [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+The software stays calm. The documentation is allowed a little chaos at the edges. That is still the deal.

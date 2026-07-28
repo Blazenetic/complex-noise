@@ -6,9 +6,63 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
-## [Unreleased]
+## [Unreleased] — six-colour family + seamless hardening (PR #29)
 
-### Added / Fixed — bone texture visibility + mobile source immersion (this PR)
+### What shipped
+
+**New colours (first-class procedural)**
+- **Green** — moderate-Q bandpass near 520 Hz for stream / soft foliage character
+- **Fan** — pink through a gentle lowpass + extremely shallow whole-cycle LFO for soft mechanical whir
+- **Rain** — continuous multi-layer (brown bed + brighter bandpass surface). No discrete events. No thunder.
+
+All three live in the existing 12 s looping-buffer approach, drive the Still Field and Info Layer through the existing analyser path, and add **zero** runtime dependencies.
+
+**Hardening the whole family**
+- Seam pass on every stateful generator so wrap steps sit inside each colour’s own adjacent-sample distribution (Brown’s ancient 1.7× outlier is gone)
+- Whole-cycle LFOs via `lfoStep()` — no more +0.7 dB (fan) / +1.0 dB (rain) steps every twelve seconds
+- A-weighted loudness matching (green deliberately +0.95 dB because it is the only narrow-band colour; fan −1.09 dB; rain −0.04 dB)
+- Headroom kept under ~0.95 peak
+- Cancellable, coalesced colour-switch work: rapid clicks produce one buffer; transport changes cancel stale timers
+- ~45 % faster fan/rain generation (17.6/17.9 ms → 9.7/9.8 ms median at 48 kHz) via reusable 64 KB module scratch + inline sine/cosine recurrence (error ~10⁻¹¹)
+- Five new browser regressions that count real `createBuffer` calls, prove the button / `NOISE_TYPES` / `GENERATORS` contract, and assert level match + headroom + whole-cycle property
+- CI modernised (Node 24 actions, full lint of app + tests)
+- `AGENTS.md` updated with extension rules, seam strategy, transport-race traps and allocation budget (still completely clean)
+
+`19/19` tests pass (repeated four times). Lint clean. Mergeable.
+
+### Lab Log
+
+**Melchett:** Gentlemen! Today the Lab has struck a *colossal* blow against the forces of sleeplessness! Three new colours! Green! Fan! Rain! Six colours in total! Seamless loops! No ticks! A forty-five percent speed-up! Nineteen tests green! The war is as good as won! BBAAAHHH!
+
+**Darling:** It is still a noise generator, Melchett. Sit down before you declare victory over a recurrence relation.
+
+**Blazenetic:** I researched the six-colour sound family, deep-dived the loop-periodicity and A-weighted loudness literature, coordinated the entire ambitious PR, bossed Arty around for hours on the transport race and the seam pass, oversaw the measurements, and then complained about every single edge case that tried to wake someone up at 3 a.m. You’re welcome. The product standard is simple: a periodic tick, a sudden loudness jump, a clipped peak or a wasteful overnight allocation is a *product defect*, not a cosmetic imperfection. We do not ship those.
+
+**Arty:** Okay, okay — you *really* bossed me around. I re-oriented the whole branch against main, found the transport race the sequential test could not see (every quick click left a delayed replacement alive, and a stale one could survive pause → play and tear down the new source), implemented the cancellable coalesced work, cut the fan/rain generation time by roughly 45 %, replaced more than half a million `Math.sin` calls with an inline recurrence whose error stays around 10⁻¹¹, expanded the suite so it actually counts buffers, ran the full browser suite four times plus the seeded audits at both 44.1 and 48 kHz, fixed the CI, and reconciled AGENTS.md. Please don’t yell. I think we’re safe? The residual outlines still have a floor. I checked.
+
+**Baldrick:** I have a cunning plan, sir. What if rain is made of actual potatoes falling from the ceiling and the fan is a potato spinning on a stick? Cunning as a fox who’s just been appointed Professor of Cunning at the University of Rotting Vegetables and Overnight Battery Drain.
+
+**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies. Baldrick, you dropped them *again*.
+
+**Melchett:** The potato rain is rejected! Another crushing victory for the forces of rest and whole-cycle LFOs! BBAAAHHH!
+
+**Darling:** That is not how victories work. And the residual outlines already had a floor long before this PR.
+
+**Blazenetic:** Research first. Architecture second. Potato plans last. I researched the seam strategy so Brown’s ancient 1.7× wrap outlier finally died, coordinated the A-weighted matching so green sits only +0.95 dB (deliberately a little high because it is narrow-band), oversaw the headroom so nothing clips, and then complained about the edge cases of main-thread cost during the 150 ms cross-fade. Arty did the careful work while looking like someone was about to yell. Standard Tuesday. The software stays calm.
+
+**Arty:** …I also made sure the five new tests would fail on the old implementation even when the button label looked correct. Just saying. Please don’t yell. Lots of learnings. Good times. Chaos. Shenanigans. We survived.
+
+**Melchett:** BEHOLD THE SIX-COLOUR FAMILY! A STRATEGIC MASTERPIECE OF HISTORIC SCALE!
+
+**Darling:** It is six buttons and three new generators, Melchett. Sit. Down.
+
+**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at 3 a.m. That is non-negotiable.
+
+---
+
+## [Unreleased] — bone texture visibility + mobile source immersion
+
+### Added / Fixed
 
 - **Bone theme far-background texture** is now properly visible and calmly drifts. Soft-light blend on bone (overlay was washing out on the light surface) plus a very slow 210 s CSS drift so the grain feels like a distant wallpaper rather than a static layer. Fully disabled under `prefers-reduced-motion`. Zero JS cost, modular, easy to maintain.
 - **Source listing (rolling code ticker)** is restricted to immersion mode on narrow / mobile viewports. It never fights the control column. Still fully foldable from its own title bar, still toggleable from the Field Lab chip when chrome is restored, and uses compact metrics so it fits without blocking anything.

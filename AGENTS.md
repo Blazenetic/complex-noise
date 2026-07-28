@@ -146,7 +146,7 @@ once; `tests/run.mjs` now guards against it.
 - **Background texture** — controllable procedural overlay (default on). Independent of the field, so it stays available with the field off. Toggle in the Still Field card.
 - **Field Lab** (`#labPanel`, under the equaliser, open by default) — node
   density, link reach, trail persistence, perspective, callout dwell, frame cap
-  (30/45/60) and the source overlay, plus a reset. Every range must match the
+  (30/45/60) and the three canvas-overlay chips, plus a reset. Every range must match the
   matching `STILL_*_MIN` / `STILL_*_MAX` pair in `constants.js` and every default
   the matching `DEFAULTS` entry; `tests/run.mjs` asserts the defaults.
 - Nodes keep a soft residual stroke-circle outline so a low-energy node stays
@@ -167,6 +167,8 @@ New localStorage keys:
 - `complexNoise_stillFieldDwell`
 - `complexNoise_stillFieldFps`
 - `complexNoise_stillFieldCode`
+- `complexNoise_stillFieldCallouts`
+- `complexNoise_stillFieldEdges`
 
 ## Common tasks
 
@@ -190,6 +192,17 @@ axes on `<html>` (`data-still-theme` and `data-glass`).
 `--still-field-spark` and `--still-field-glow` once per theme change and
 pre-builds a quantised ramp from them. Alpha on the node and edge tokens sets
 the field's baseline opacity; mid and spark supply hue only.
+
+**Add a node detail mode** — add the name to `LABEL_MODE_NAMES` and a glyph to
+`MODE_HANDLE` in `js/still-field.js` (both arrays must stay the same length),
+then add the branch to `refreshNodeCallout()`. `MODE_WEIGHTS` re-derives itself,
+and the per-node offset spreads the new mode across the field automatically. Up
+to four key/value rows; only the first three can be axis-coloured.
+
+**Add an edge dimension kind** — add an `EDGE_KIND_*` index, raise
+`EDGE_KIND_COUNT`, add the branch in `drawEdgeAnnotations()`, and add any new
+quantised string table next to `DISTANCE_TEXT`. Whatever the kind reads must be
+derivable from values the link pass already has.
 
 **Add a persisted setting** — add the key to `STORAGE_KEYS` in
 `js/constants.js` and read/write it through `js/storage.js`. Never call
@@ -268,10 +281,24 @@ noise rather than the listening volume.
   for the labels to go, so none are drawn; minimise the interface and they
   appear. The stats panel carries the numbers in the meantime.
 - **Richer callouts still need a hard allocation budget.** Node detail strings
-  are cached on the node and refreshed once a second; edge distance/angle text
-  comes from quantised lookup tables. Candidate and collision coordinates live
-  in pre-sized typed arrays. Do not turn those paths back into template-string,
-  object, or array creation at 30 fps.
+  are cached on the node and refreshed once a second; every edge dimension
+  string, across all four kinds, comes from a quantised lookup table. Candidate
+  and collision coordinates live in pre-sized typed arrays. Do not turn those
+  paths back into template-string, object, or array creation at 30 fps — that
+  includes innocent-looking array literals inside a draw helper.
+- **An overlay slot that cannot draw must not keep its slot.** Edge dimensions
+  have five slots. A pair whose midpoint lands under the source listing is
+  unpaintable, and the listing changes corner when the interface is minimised —
+  so pairs that were fine a second ago become permanently undrawable while still
+  linked. `drawEdgeAnnotations()` folds "blocked" into the liveness test for
+  exactly this reason: five slots held with one dimension on screen was the
+  normal state in immersion mode before it did.
+- **The on-canvas fold is a hit test, not a control.** `#stillFieldInfo` is
+  `pointer-events: none` behind a `z-index: 1` body, so presses arrive on the
+  body; `app.js` forwards only those whose target *is* the body to
+  `handleOverlayPointer()`. It cannot be focused or labelled, so the Field Lab
+  chip stays the real control and the fold is session-only. Do not make it the
+  only way to reach a setting.
 - **Graph telemetry belongs inside `drawLinks()`.** Pair checks, painted edges
   and the deterministic edge sample reuse values already computed by the
   renderer. A second O(n²) scan, sorting by strength, or building an edge list

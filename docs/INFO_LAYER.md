@@ -34,14 +34,27 @@ glyph edges intact; a halo is blur by definition.
 ## Controls
 
 - **Still Field card** — distinctive Stats button (bar-chart icon + label).
+  This is the master switch for the whole layer.
 - **Mobile (≤520 px)** — top-left Stats launcher when the panel is off.
 - **HUD fold** — chevron in the panel head collapses the body to a compact
   header (session-only; defaults folded on narrow viewports).
+- **Canvas overlays** — a bank of three chips in the Field Lab, one per thing
+  that gets painted over the field: **Callouts**, **Dimensions**, **Source**.
+  They are separate settings because they cost different amounts and suit
+  different moods; one switch for all three meant wanting quiet edges cost you
+  the callouts too. The row carries a live `n of 3` readout.
+- **Source overlay fold** — press the listing’s own title bar on the field. It
+  collapses to a header bar carrying the file name, the line count and a
+  chevron. The listing is canvas, so this is a hit test rather than a button
+  (`handleOverlayPointer()`); the chip stays the keyboard-reachable, persisted
+  control and the fold is session-only.
 - **Field Lab** — the disclosure panel under the equaliser, covering node
   density, link reach, trail persistence, perspective, callout dwell, frame cap
-  and the source overlay. See [the Field Lab section](#field-lab).
+  and the three overlays. See [the Field Lab section](#field-lab).
 
-On/off is persisted (`complexNoise_stillFieldNerd`). Fold is session-only.
+On/off is persisted (`complexNoise_stillFieldNerd`), as is each overlay
+(`complexNoise_stillFieldCallouts`, `…Edges`, `…Code`). Both folds are
+session-only.
 
 ## Node callouts
 
@@ -51,8 +64,10 @@ slot.
 
 A callout is an engineering annotation, not a floating caption:
 
-- an **open square handle** on the node itself, so it is obvious which of a
-  dozen nodes the block belongs to;
+- an **open handle** on the node itself, so it is obvious which of a dozen nodes
+  the block belongs to. The glyph follows the detail mode — circle for a scalar,
+  square for a transform, diamond for a phase, crosshair for a vector — so the
+  family of quantity is legible before the text is;
 - a **leader line** — one diagonal run out of the handle, then a short
   horizontal shelf into the block. Two straight runs read as a drawing
   annotation; a curve reads as a speech bubble;
@@ -67,13 +82,33 @@ instead of `xyz 124, -33, 0.42`, which asks the reader to count commas.
 
 ![Transform-mode callouts with axis-coloured rows](screenshots/info-layer-transform.png)
 
-| Mode | Rows | Gauge |
-|---|---|---|
-| `energy` | `E`, `φ` | energy |
-| `position` | `X`, `Y`, `Z` in axis colours | — |
-| `velocity` | `|v|`, `θ` | — |
-| `projection` | `scale`, `depth`, `life` | lifecycle |
-| `wave` | `ψ`, `k·p` | local wave |
+| Mode | Rows | Gauge | Handle |
+|---|---|---|---|
+| `energy` | `E`, `b`, `w`, `a` — the sum and its three layers | energy | circle |
+| `transform` | `X`, `Y`, `Z` in axis colours | nearness | square |
+| `velocity` | `|v|`, `θ`, `ω` | — | crosshair |
+| `projection` | `scale`, `depth`, `near`, `px` | nearness | square |
+| `wave` | `ψ`, `k·p`, `sin ψ` | local wave | diamond |
+| `links` | `deg`, `κ`, `near`, `r` | degree / 8 | crosshair |
+| `lifecycle` | `life`, `fade`, `τ`, `T` | lifecycle envelope | circle |
+| `seed` | `i`, `u`, `v`, `z₀±` — its term of the R2 sequence | — | diamond |
+
+### Every callout says something different
+
+The rotation is global, but the mode a *given* node shows is that base index
+offset by the node’s own `modeOffset`, derived from its lifetime ID through the
+golden ratio:
+
+```text
+mode = (base + ⌊frac(id · φ) · M⌋) mod M
+```
+
+Consecutive IDs land far apart under φ, so eight callouts on a wide screen
+reliably read eight different quantities, and each of them still walks the whole
+set over a few dwells. One global mode meant every callout on screen was a copy
+of its neighbour — a lot of pixels spent saying one thing. The Live view reports
+how many distinct modes are actually placed, which is the honest measure of
+whether the variety is working; `tests/run.mjs` asserts it.
 
 The blocks are placed up and to the right of their node, mirroring left when the
 right edge is close, and are rejected outright if they would land on another
@@ -90,19 +125,41 @@ ticks bounding the annotated span. Reading a length off a diagram works because
 the number is parallel to the thing it describes; a horizontal caption floating
 near a diagonal line makes the reader do the association themselves.
 
-Each dimension shows the true three-dimensional distance in world units, the
-projected screen angle `θ`, and the depth separation `Δz`.
+What a dimension measures depends on the pair, not on the slot. The kind falls
+out of `frac(idA + idB · φ)`, so it is stable for as long as the pair exists — a
+dimension never mutates into a different quantity while you are reading it — and
+neighbouring edges reliably disagree.
+
+| Kind | Above the line | Below the line |
+|---|---|---|
+| `span` | true 3-D distance `d u` | screen angle `θ`, depth separation `Δz` |
+| `coupling` | envelope strength `κ` | link target `t`, `Δz` |
+| `reach` | `d/r`, the fraction of the link radius used | radius `r`, `θ` |
+| `energy` | mean endpoint energy `E`, in accent ink | `ΔE`, summed endpoint `deg` |
+
+Every string comes out of a table indexed by the quantised measurement, so a
+dimension that changes every frame still allocates nothing.
 
 Samples are collected inside the existing link pass, which already has each
 pair's distance and endpoints. There is no second graph scan, no sorting and no
-edge list.
+edge list. The same pass accumulates each node's `degree`, `coupling` and
+nearest-neighbour distance for the `links` callout mode — four increments and
+two comparisons on numbers the renderer had already computed.
+
+**A slot has to be able to draw.** A pair whose midpoint sits under the source
+listing used to keep its slot for a full dwell while being unpaintable, and the
+listing changes corner when the interface is minimised — so five slots held and
+one dimension on screen was the *normal* state in immersion mode. Undrawable is
+now treated as dead: the slot fades out and frees itself, and candidates that
+are too short, off screen, or over the listing are rejected before they can
+claim one.
 
 ## Timing is part of the simulation
 
 Callouts used to vanish before you could read them. Three mechanisms fixed that,
 and all three are procedural rather than a fixed interval.
 
-**Quasi-periodic mode schedule.** Each of the five detail modes holds for
+**Quasi-periodic mode schedule.** Each of the eight detail modes holds for
 `D · (0.72 + 0.56 · frac(kφ))` seconds, where `D` is the Field Lab's dwell
 setting and `φ` is the golden ratio. The weights average 1, so `D` remains the
 mean seconds per mode, but every mode gets a different, irrationally-related
@@ -138,42 +195,105 @@ The counter is not decorative timing. Each stage’s share of the sweep is its
 lingers where the time actually goes; raise the node density and watch the link
 pass take over the listing.
 
+### Heat, not a highlight
+
+The counter used to paint a full-width purple bar behind one line and jump it
+every 70 ms. On a screen you are falling asleep to that is a strobe with a
+monospace font on it.
+
+Each line now carries a **heat** value. The counter sets the line it reaches to
+1, every line cools at 3.2 per second, and the heat drives a very faint row wash
+(peak alpha 0.085), a short caret in the gutter, and an accent over-print of the
+glyphs at the heat's own alpha — so warmth *tints* the text rather than
+switching its colour. The sweep itself slowed from 1.4 s to 2.8 s. What you see
+is a soft comet moving down the listing. The decay is a rate per second like
+every other decay here, so the tail is the same length at 30, 45 and 60 fps.
+
+### Around the listing
+
+- **Header** — the file name, the frame cost, and a chevron. Press it to fold.
+- **Gutter rails** — one bar per contiguous run of lines belonging to a pipeline
+  stage, its opacity that stage's measured share, so the shape of the frame is
+  legible from the margin without reading a number.
+- **Footer** — a stacked bar of the four stage shares and the raw milliseconds.
+
 The listing picks a free corner from four candidates rather than sitting in a
 fixed one — in immersion mode the floating play cluster owns the bottom right,
 and a single fixed position would mean the overlay silently never appeared for
 exactly the people most likely to want it. Whichever corner it takes becomes a
-keep-out for callouts and dimensions.
+keep-out for callouts and dimensions; folded, that keep-out shrinks to the
+header bar.
 
-Toggle it in the Field Lab (`complexNoise_stillFieldCode`). It follows the Stats
-toggle too — it is part of the info layer.
+Toggle it with the **Source** chip in the Field Lab
+(`complexNoise_stillFieldCode`). It follows the Stats toggle too — it is part of
+the info layer.
 
 ## Live view
 
+Grouped into five sections, because the reader is usually after one of five
+questions and a flat list of twenty-five rows answers none of them quickly.
+
+**Frame**
+
 | Metric | Definition |
 |---|---|
-| Frame | Smoothed reciprocal of the accepted render timestep, against the cap |
+| Rate | Smoothed reciprocal of the accepted render timestep, against the cap |
 | Work | Smoothed wall time for one `update()` + `draw()` cycle, as a share of the frame budget |
+| Budget | Milliseconds the current cap allows, and the headroom left |
+
+**Graph**
+
+| Metric | Definition |
+|---|---|
 | Nodes | Node population and the density multiplier that produced it |
-| Edges | Link envelopes that were strong enough to paint |
+| Edges | Link envelopes strong enough to paint, the paths that carried them, and the batching ratio |
 | Pair tests | Pairs the grid actually visited, against `n(n − 1)/2`, and the ratio saved |
 | Grid | Live cell count and the link radius in world units |
-| Turnover | Observed node births per minute, and the implied mean lifetime |
-| Mean degree | `2 · paintedEdges / nodes` |
+| Occupancy | Nodes per cell and the cell size |
+| Degree | Mean `2 · paintedEdges / nodes`, and the highest any single node reached |
 | Density | `paintedEdges / n(n − 1)/2` |
-| Callouts | Painted node callouts versus the viewport cap, plus edge dimensions |
-| Mode | Current detail mode and the seconds left in its slice |
+| Turnover | Observed node births per minute, and the implied mean lifetime |
+
+**Instrumentation**
+
+| Metric | Definition |
+|---|---|
+| Callouts | Placed node callouts against the viewport cap |
+| Detail | Base detail mode, distinct modes actually on screen, seconds left in the slice |
+| Dimensions | Edge dimensions drawn, and slots currently held by a pair |
+| Overlays | Which of the three canvas overlays are on, and whether the listing is folded |
+
+**Field**
+
+| Metric | Definition |
+|---|---|
 | Wave | Travelling-wave phase, vector angle and wavelength |
-| Low / Mid / High | Normalised Web Audio analyser band means |
-| Field | Smoothed analyser energy mirrored to `--still-energy` |
+| World | World-plane size in units and the far-plane scale |
+| Viewport | CSS pixels and the device pixel ratio the canvases are sized to |
+| Trail | Tail time constant and the decay rate it came from |
+| Glow | Nodes that reached the glow pass, against its hard cap |
+| Clock | The speed-scaled drift clock and the real diagnostics clock |
+| Buffers | Link-state bytes, and the renderer's per-frame allocation claim |
 
-Below the table is a rolling **frame-time trace**: 68 samples at four a second,
-so about seventeen seconds of history, with a rule at half the frame budget.
-It is sampled on the readout’s own tick, never from the render loop.
+**Audio** — source and sample rate, drift multiplier and intensity, playback
+uptime, then the analyser band meters and the smoothed field energy mirrored to
+`--still-energy`.
 
-Health is **nominal**, **loaded** or **strained**, derived from measured frame
-rate and renderer work *relative to the chosen cap* — selecting 60 fps does not
-make the field read as strained the moment it is selected. It is feedback about
-the current browser and device, not a benchmark score.
+Under the Frame group is a rolling **frame-time trace**: 68 samples at four a
+second, so about seventeen seconds of history. It autoscales to the observed
+peak rather than to the frame budget — fixed to the budget it was honest and
+useless, because the renderer uses about 1% of a 33 ms frame and every bar
+rounded to one pixel. The half-budget rule is still drawn whenever it falls
+inside the range, so the absolute scale is never lost, and the caption carries
+the peak in milliseconds. It is sampled on the readout’s own tick, never from
+the render loop.
+
+Health is **nominal**, **loaded** or **strained**. Renderer work leads and the
+delivered frame rate only moderates it: a cap is honoured by *waiting*, so the
+rate wobbles a frame either side of it on any machine, and reading that wobble
+as strain while the renderer is using 1% of its budget is the readout disputing
+its own measurements. It is feedback about the current browser and device, not a
+benchmark score.
 
 ## Math view
 
@@ -198,7 +318,17 @@ ENVELOPE    s ← s + (t − s)(1 − e^(−λΔt))
 WAVE        ψ = ωt − k · p
 SCHEDULE    T_k = D(0.72 + 0.56 · frac(kφ))
 GRID        pairs ≈ n · ρ · 5c² << n(n−1)/2
+LIFECYCLE   f = S(l / f_in) · S((1 − l) / f_out)
+SPAWN       p_i = frac(½ + i / gᵏ), g ≈ 1.3247
+TRAIL       α_clear = 1 − e^(−rΔt)
+NEIGHBOURS  E[deg] = π(r / spacing)² − 1
+DETAIL      m = (base + ⌊frac(idφ)·M⌋) mod M
 ```
+
+`NEIGHBOURS` is worth a look: the link radius is *derived* from the mean spacing
+so that a phone and a desktop both land near three connections per node, and the
+row prints the expectation next to the measured mean. It is a check on the
+derivation, not trivia.
 
 The travelling-wave vector uses `WAVE_KY = WAVE_KX · φ`, giving an angle of
 about `58.28°`. The irrational slope avoids a short visible repeat against the
@@ -209,9 +339,10 @@ low-discrepancy placement sequence.
 ![The Code view with per-stage timings](screenshots/info-layer-code.png)
 
 Four pipeline stages, each with its measured milliseconds and percentage, a
-share bar, the statements it runs, and the values those statements are
-producing. `data-hot` marks whichever stage currently dominates — the same
-signal that paces the on-canvas program counter.
+share bar, the statements it runs, and two lines of the values those statements
+are producing. `data-hot` marks whichever stage currently dominates — the same
+signal that paces the on-canvas program counter. A whole-frame total sits under
+the four, against the budget the current cap allows.
 
 ## Field Lab
 
@@ -225,7 +356,9 @@ signal that paces the on-canvas program counter.
 | Perspective | 0.3–1.6 | 0.75 | Depth strength; also re-derives the world plane |
 | Callout dwell | 4–26 s | 14 s | Mean seconds per detail mode |
 | Frame rate | 30 / 45 / 60 | 30 | Render cap |
-| Source overlay | on / off | on | The on-canvas source listing |
+| Callouts | on / off | on | Node callouts on the canvas |
+| Dimensions | on / off | on | Edge dimensions on the canvas |
+| Source | on / off | on | The on-canvas source listing |
 
 The density default deserves a note: the multiplier applies to the *clamped*
 26–44 window, not to the raw viewport area. Applying it to the raw figure would
@@ -254,6 +387,16 @@ arrays: no maps, no arrays of arrays, no allocation. A node that wraps across
 the world boundary clears its links, because a pair that stops being visited
 would otherwise freeze its envelope at whatever strength it held.
 
+Glow is rationed, and the ration is now walked rather than searched. `shadowBlur`
+is the most expensive thing on this canvas, so only the few highest-energy nodes
+get it; pass 0 records which nodes it deferred, and pass 1 iterates that queue
+instead of the whole population a second time — ten iterations rather than a
+hundred and fifty at the Lab's top density.
+
+The readout paints only the view that is on screen, and nothing at all while the
+panel is folded. Writing text into a hidden subtree still costs a style
+recalculation, and there are three views' worth of it four times a second.
+
 Consecutive edge segments that quantise to the same colour, alpha and width
 accumulate into one path. Alpha varies almost continuously with depth and
 strength, so this collapses runs rather than whole frames — a real saving when
@@ -273,6 +416,10 @@ edge count in the Code view so the ratio is visible.
 - Keep Live / Math / Code as the only interactive elements in the panel body.
   Values are ordinary text, not `<output>` elements or live regions, so a screen
   reader is not interrupted four times a second.
+- Every canvas affordance must have a real control behind it. The source
+  listing's on-canvas fold is a convenience on top of the Field Lab chip, never
+  the only way to reach the setting — a hit test on a canvas cannot be focused,
+  labelled or reached from a keyboard.
 - Tabs use the standard tab pattern with `aria-selected`, associated panels,
   roving focus and Left/Right Arrow navigation.
 - Every Field Lab control is labelled, carries an `aria-valuetext` in words, and

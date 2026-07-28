@@ -159,17 +159,36 @@ test('callout detail modes rotate on a dwell that the Lab controls', async page 
 
 test('callouts on screen read different quantities from each other', async page => {
   // One global detail mode meant every callout on screen was a copy of its
-  // neighbour. Each node now offsets the rotation by its own lifetime ID, so
-  // what has to hold is that several distinct modes are placed at once.
+  // neighbour. Each node now offsets the rotation by its own lifetime ID.
+  //
+  // Sampled over several seconds and judged on the best observation, because
+  // how many callouts are placed at any one instant depends on the energy gate
+  // and the placement contest — three callouts cannot show five modes, and that
+  // is not the thing under test.
   await page.setViewportSize({ width: 1400, height: 950 });
   await page.click('#uiChromeMinimise');
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(2500);
 
-  const s = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
-  assert(s.labels >= 3, `expected several callouts on a wide viewport, got ${s.labels}`);
-  assert(s.modeCount >= 8, `expected at least eight detail modes, got ${s.modeCount}`);
-  assert(s.modesOnScreen >= 3,
-    `expected several distinct modes among ${s.labels} callouts, got ${s.modesOnScreen}`);
+  let bestModes = 0;
+  let bestLabels = 0;
+  let modeCount = 0;
+  for (let i = 0; i < 8; i++) {
+    const s = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+    modeCount = s.modeCount;
+    if (s.labels > bestLabels) bestLabels = s.labels;
+    if (s.modesOnScreen > bestModes) bestModes = s.modesOnScreen;
+    // A moment with several callouts must never show only one quantity.
+    if (s.labels >= 4) {
+      assert(s.modesOnScreen >= 2,
+        `${s.labels} callouts showed only ${s.modesOnScreen} distinct mode`);
+    }
+    await page.waitForTimeout(700);
+  }
+
+  assertEqual(modeCount, 8, 'there should be eight detail modes');
+  assert(bestLabels >= 4, `expected several callouts on a wide viewport, best was ${bestLabels}`);
+  assert(bestModes >= 3,
+    `expected several distinct modes at once, best was ${bestModes} of ${bestLabels} callouts`);
 });
 
 test('the three canvas overlays toggle independently and persist', async page => {

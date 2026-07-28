@@ -22,7 +22,7 @@ Primary implementer. Eager, slightly anxious, learns fast. Constantly scanning f
 **Baldrick** appears the moment anyone says “plan”.  
 Earnest. Simple. Catastrophically confident in terrible ideas. His cunning plans are almost always rejected. Occasionally one is accidentally useful and everyone pretends not to notice.
 
-> “I have a cunning plan, sir. What if the Still Field *is* the sleep timer? We just wait for all the nodes to die and then the audio stops. Cunning as a fox who’s just been appointed Professor of Cunning at Oxford University.”
+> “I have a cunning plan, sir. What if the Still Field *is* the sleep timer? We just wait for all the nodes to die and then the audio stops. Cunning as a fox who’s just been appointed Professor of Cunning at Baldric University.”
 
 **Melchett** declares victory the instant a CSS variable lands.  
 Bombastic overconfidence. Treats every merged PR as a decisive triumph for the forces of rest. Volume is permanently set to eleven.

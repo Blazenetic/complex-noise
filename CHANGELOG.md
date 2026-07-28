@@ -33,9 +33,8 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 All of the above respects the existing constraints: zero allocations in the render loop, no second graph scan, time-based envelopes (`1 - Math.exp(-rate * dt)`), telemetry gathered only inside the existing link pass, eight detail modes + φ offsets + pair-identity edge kinds unchanged.
 
-### Documentation & learning surfaces (same pass)
+### Documentation surfaces (same pass)
 
-- PR #31 description expanded into a map of eight concrete ways Lab Voice integrates with serious engineering work (CHANGELOG Lab Log as theatre, occupied-room vignettes, Blame as feature, Teachings as curriculum, meta-voice, teaching quotes, the wall, the repo as learning experience).
 - New [docs/TEACHINGS_AND_LEARNINGS.md](docs/TEACHINGS_AND_LEARNINGS.md) opened with this calm pass as its headline feature.
 - New [docs/BLAME.md](docs/BLAME.md) opened with the same work and the usual affectionate roasting.
 - docs/README.md index updated so both pages are discoverable.
@@ -50,9 +49,9 @@ All of the above respects the existing constraints: zero allocations in the rend
 
 **Arty:** Okay, okay — the previous session hit the size limit *hard*. There were stack traces. Many stack traces. More stack traces than a poorly-damped oscillator. Baldrick’s cunning plan was literally “just paste the whole file”. I re-oriented, applied the slower attack and the longer hold, raised the edge slots, staggered the secondary baselines, and made the preferred side sticky. The eight modes still disagree. The φ offset still spreads them. The pair-identity kinds are untouched. Please don’t yell. I think we’re safe?
 
-**Baldrick:** I have a cunning plan, sir. What if the callouts themselves are potatoes? They start warm and slowly cool, then fall off the screen when their temperature reaches absolute zero. Also the sandbox should be made of potatoes so large files fit better. And the left-right bounce could be solved by attaching a potato to each leader line as a counterweight. Cunning as a fox who has just been appointed Professor of Cunning at the University of File-Size Overflows, Overnight Battery Drain, and Accidental Fourth-Wall Leaks.
+**Baldrick:** I have a cunning plan, sir. What if the callouts themselves are potatoes? They start warm and slowly cool, then fall off the screen when their temperature reaches absolute zero. Also the sandbox should be made of potatoes so large files fit better. And the left-right bounce could be solved by attaching a potato to each leader line as a counterweight. Cunning as a fox who has just been appointed Professor of Cunning at the University of File-Size Overflows and Overnight Battery Drain.
 
-**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies, sandbox substitutes, or counterweights. Baldrick, you dropped them *again*, and this time you also managed to leak the existence of the documentation process itself. That was supposed to stay in the cabinet. The residual outlines already had a floor. The wall still holds. Sit down.
+**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies, sandbox substitutes, or counterweights. Baldrick, you dropped them *again*. The residual outlines already had a floor. The wall still holds. Sit down.
 
 **Melchett:** THE POTATO COUNTERWEIGHT IS REJECTED! Another crushing victory for hysteresis and pre-allocated typed arrays! BBAAAHHH!
 
@@ -78,7 +77,7 @@ All of the above respects the existing constraints: zero allocations in the rend
 
 **Darling:** No.
 
-**Blazenetic:** We also opened the Teachings & Learnings page and the Blame page with this exact work as the opening chapter. The repository itself is now a learning experience. You’re welcome.
+**Blazenetic:** We also opened the Teachings & Learnings page and the Blame page with this exact work as the opening chapter. You’re welcome.
 
 **Arty:** I added the links. Please don’t yell.
 

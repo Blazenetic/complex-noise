@@ -86,7 +86,7 @@ Point your AI coding agent at `AGENTS.md` first. That is the intended entry poin
 
 **Darling:** It is a markdown file, Melchett.
 
-**Blazenetic:** I researched how other calm tools handle security reports, then wrote the short version and complained about the edge cases. You’re welcome.
+**Blazenetic:** I researched how other calm tools handle security reports and contribution patterns, coordinated the short version, and then complained about the edge cases of people trying to put Lab Voice into AGENTS.md. You’re welcome.
 
 **Arty:** I double-checked that AGENTS.md is still completely clean. The wall is intact. I think we’re safe?
 
@@ -94,15 +94,16 @@ Point your AI coding agent at `AGENTS.md` first. That is the intended entry poin
 
 **Darling:** No. Put the potato down. Arty, keep the tests green. Blazenetic, stop encouraging him.
 
-**Melchett:** BBAAAHHH!
+**Melchett:** The potato is rejected! Another victory! BBAAAHHH!
+
+**Darling:** That is not how victories work.
 
 ---
 
-The software stays calm.  
-The documentation (and the contribution guidelines) get to be chaotic.  
-That is the deal.
+Research first. Architecture second. Potato plans last.
 
 If something is broken or unclear, open an issue, open a PR, or message the Lab.  
 We are listening.
 
-Fork it. Improve it. Sleep well. (Or don’t. We’re still not your parents.)
+The wall holds. AGENTS.md remains sterile.  
+Fork it. Improve it. See you in the Field Lab. Or don’t. We’re not your parents.

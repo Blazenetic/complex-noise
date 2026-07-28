@@ -16,8 +16,10 @@
  *   per second rather than a per-frame alpha.
  * - **The loop stops when the page is hidden.** Requesting frames the browser
  *   will only throttle still wakes the compositor; not asking is free.
- * - **Almost nothing allocates.** No object literals, no arrays, and every
- *   changing string comes from a table quantised at module load.
+ * - **Nothing allocates.** No object literals, no arrays, no template strings —
+ *   every changing string comes from a table quantised at module load, and the
+ *   trail's alpha rides `globalAlpha` rather than an `rgba()` string for
+ *   exactly this reason.
  * - **The timestep is capped** at `MAX_STEP_S`. After a stall or a hidden tab,
  *   integrating the true elapsed time in one go would teleport the field.
  * - **Instrumentation is opt-in.** `performance.now()` between stages, graph
@@ -40,6 +42,12 @@ import { layoutCodeTicker, drawCodeTicker, isCodeVisible } from './code-ticker.j
 
 /** Longest timestep we will integrate in one go, after a stall or a hidden tab. */
 const MAX_STEP_S = 0.1;
+
+/**
+ * The trail's fill. Opaque black, and constant — see the note in `draw()` for
+ * why the decay is carried on `globalAlpha` instead of on this colour.
+ */
+const TRAIL_FILL = '#000';
 
 let rafId = null;
 let lastFrameMs = 0;
@@ -130,9 +138,14 @@ function draw(adt, dt, instrumented, tAfterUpdate, smoothK) {
   // The decay is a rate per second, not a per-frame constant: the frame cap is
   // a user setting, and a fixed per-frame alpha would quietly halve every trail
   // the moment somebody moved it from 30 to 60.
+  //
+  // The decay rides `globalAlpha` rather than the fill colour. `destination-out`
+  // computes `Da' = Da · (1 − Sa)` and `Sa` is the fill's own alpha multiplied
+  // by `globalAlpha`, so the two are arithmetically identical — but a constant
+  // fill string is not built, parsed and thrown away thirty times a second.
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = `rgba(0,0,0,${(1 - Math.exp(-settings.trail * dt)).toFixed(4)})`;
+  ctx.globalAlpha = 1 - Math.exp(-settings.trail * dt);
+  ctx.fillStyle = TRAIL_FILL;
   ctx.fillRect(0, 0, view.w, view.h);
   ctx.globalCompositeOperation = 'source-over';
 

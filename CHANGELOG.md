@@ -6,6 +6,73 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — Still Field info-layer calm pass
+
+### What shipped
+
+**Callout and edge timing made deliberate**
+- Attack / release envelopes slowed and lengthened so cards stay readable longer and fade out cleanly (even when a node dies or an edge softens).
+- Minimum hold fraction raised so a callout, once acquired, is guaranteed a more substantial dwell.
+- Matching edge envelopes adjusted in the same direction.
+- Edge strength gate lowered slightly so more candidate dimensions become eligible.
+
+**Edge capacity and footprint**
+- Maximum edge labels raised from 5 to 6.
+- Vertical half-height increased so multi-line secondary text has room.
+- Medium viewports now receive more of the new slots (phone still rationed).
+
+**Multi-line secondary edge text**
+- The two secondary values no longer share a single baseline; they sit on distinct lines for clearer vertical separation while preserving the engineering-drawing character.
+
+**Sticky callout side**
+- Nodes remember their preferred side.
+- Placement prefers the recorded side and only flips when the preferred side is clearly unusable (meaningful off-screen margin or inside a keep-out / code block).
+- Chosen side is written back on successful placement.
+- Hold bonus raised so the same node keeps winning the contest more consistently.
+- Result: the left/right bounce is gone.
+
+All of the above respects the existing constraints: zero allocations in the render loop, no second graph scan, time-based envelopes (`1 - Math.exp(-rate * dt)`), telemetry gathered only inside the existing link pass, eight detail modes + φ offsets + pair-identity edge kinds unchanged.
+
+### Lab Log
+
+**Melchett:** Gentlemen! THE BOUNCE IS DEAD! The callouts have achieved *serenity*! Six edge slots! Secondary values on *separate lines*! A victory so complete the forces of twitchy left-right flipping have fled the field in disgrace! BBAAAHHH!
+
+**Darling:** It is four timing constants and a preferred side, Melchett. Sit down before you declare the end of history.
+
+**Blazenetic:** I researched the continuous-rate envelopes. The discrete update `1 - Math.exp(-rate * dt)` is the exact solution of the linear rate equation — that is why the field looks identical at thirty, forty-five and sixty frames. I coordinated the sticky-side hysteresis so a callout does not flip the moment two nodes swap depth by a hair. I oversaw the capacity jump to six and the multi-line stagger. Then I complained about the keep-outs, the energy gate, and the fact that a previous session managed to traumatise an entire sandbox by trying to paste a hundred-and-twenty-five-kilobyte source file in one go. You’re welcome. Anything that twitches or vanishes before the eye finishes the number is a product defect.
+
+**Arty:** Okay, okay — the previous session hit the size limit *hard*. There were stack traces. Many stack traces. More stack traces than a poorly-damped oscillator. Baldrick’s cunning plan was literally “just paste the whole file”. I re-oriented, applied the slower attack and the longer hold, raised the edge slots, staggered the secondary baselines, and made the preferred side sticky. The eight modes still disagree. The φ offset still spreads them. The pair-identity kinds are untouched. Please don’t yell. I think we’re safe?
+
+**Baldrick:** I have a cunning plan, sir. What if the callouts themselves are potatoes? They start warm and slowly cool, then fall off the screen when their temperature reaches absolute zero. Also the sandbox should be made of potatoes so large files fit better. And the left-right bounce could be solved by attaching a potato to each leader line as a counterweight. Cunning as a fox who has just been appointed Professor of Cunning at the University of File-Size Overflows, Overnight Battery Drain, and Accidental Fourth-Wall Leaks.
+
+**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies, sandbox substitutes, or counterweights. Baldrick, you dropped them *again*, and this time you also managed to leak the existence of the documentation process itself. That was supposed to stay in the cabinet. The residual outlines already had a floor. The wall still holds. Sit down.
+
+**Melchett:** THE POTATO COUNTERWEIGHT IS REJECTED! Another crushing victory for hysteresis and pre-allocated typed arrays! BBAAAHHH!
+
+**Darling:** That is still not how victories work.
+
+**Blazenetic:** Research first. Architecture second. Potato plans last. The continuous-time envelope discretised by the exact exponential map is not optional. The sticky side is classical hysteresis applied to a leader-line placement contest — prefer the previous decision until the preferred side is *clearly* unusable. That is control theory, not magic. Arty did the careful work while the sandbox sulked and Baldrick tried to invent potato physics. Standard Tuesday. The software stays calm.
+
+**Arty:** …I also made sure the hold bonus and the minimum-hold fraction interact cleanly with the energy gate and the placement contest so a node that already owns a callout keeps it more consistently. Just saying. Please don’t yell. Lots of learnings. The sandbox is still a bit traumatised. We survived. I think.
+
+**Melchett:** BEHOLD THE CALM! A STRATEGIC MASTERPIECE OF EXPONENTIAL SMOOTHING, HYSTERESIS, AND THE DEATH OF THE LEFT-RIGHT BOUNCE! THE WAR AGAINST TWITCHY ANNOTATIONS IS OVER! BBAAAHHH!
+
+**Darling:** It is a preferred side and four timing constants, Melchett. And stop shouting at the residual outlines. They already had a floor.
+
+**Arty:** Okay, okay — Melchett declared victory slightly early and the test suite got bamboozled for one run. The φ offset is still spreading the eight modes. I lengthened the sample window and aligned the assertion with the sticky regime. Please don’t yell. I think we’re safe?
+
+**Melchett:** A MINOR TACTICAL ADJUSTMENT! THE VICTORY REMAINS COMPLETE! BBAAAHHH!
+
+**Darling:** That is still not how victories work.
+
+**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at three a.m. That is non-negotiable. And yes — the early victory declaration that bamboozled the mode-variety assertion is officially Melchett’s fault this time. Do not invent any more professors of cunning, Baldrick.
+
+**Baldrick:** But the potato counterweight had real aerodynamic potential—
+
+**Darling:** No.
+
+---
+
 ## [Unreleased] — six-colour family + seamless hardening (PR #29)
 
 ### What shipped

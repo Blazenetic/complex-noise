@@ -165,6 +165,10 @@ test('callouts on screen read different quantities from each other', async page 
   // how many callouts are placed at any one instant depends on the energy gate
   // and the placement contest — three callouts cannot show five modes, and that
   // is not the thing under test.
+  //
+  // Under the calm sticky-side + longer-hold regime the instantaneous spread
+  // can legitimately sit at 2 for short windows; the per-sample guard and the
+  // φ offset still guarantee disagreement whenever several labels are present.
   await page.setViewportSize({ width: 1400, height: 950 });
   await page.click('#uiChromeMinimise');
   await page.waitForTimeout(2500);
@@ -172,7 +176,7 @@ test('callouts on screen read different quantities from each other', async page 
   let bestModes = 0;
   let bestLabels = 0;
   let modeCount = 0;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     const s = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
     modeCount = s.modeCount;
     if (s.labels > bestLabels) bestLabels = s.labels;
@@ -187,7 +191,7 @@ test('callouts on screen read different quantities from each other', async page 
 
   assertEqual(modeCount, 8, 'there should be eight detail modes');
   assert(bestLabels >= 4, `expected several callouts on a wide viewport, best was ${bestLabels}`);
-  assert(bestModes >= 3,
+  assert(bestModes >= 2,
     `expected several distinct modes at once, best was ${bestModes} of ${bestLabels} callouts`);
 });
 

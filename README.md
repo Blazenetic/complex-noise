@@ -225,7 +225,7 @@ Short version:
 - **AudioWorklet generation** — move the generators into an `AudioWorkletProcessor` for continuous, non-buffered synthesis and zero main-thread cost.
 - **Stereo width** — independent left/right buffers via `ChannelMergerNode`.
 - **More noise colours** and optional nature layers mixed in as extra sources.
-- Carefully measured Easter eggs (console greeting from the Lab, hidden Info-panel lines, the occasional Baldrick quote triggered by something suitably ridiculous). We will not apologise for these. Melchett has already declared them a strategic necessity.
+- Carefully measured things that are Baldrick’s fault (console greeting from the Lab, hidden Info-panel lines, the occasional Baldrick quote triggered by something suitably ridiculous). We will not apologise for these. Melchett has already declared them a strategic necessity.
 
 > **Baldrick:** I have a cunning plan for the service worker. We just tell people to keep the tab open forever.  
 > **Darling:** That is not a plan. That is a lifestyle.  

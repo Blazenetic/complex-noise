@@ -2,7 +2,7 @@
   "name": "complex-noise",
   "version": "1.0.0",
   "private": true,
-  "description": "Seamless procedural brown/pink/white noise generator for deep rest, by Complex State",
+  "description": "Seamless procedural brown/pink/white noise generator for deep rest, by Blazenetic",
   "license": "MIT",
   "type": "module",
   "scripts": {

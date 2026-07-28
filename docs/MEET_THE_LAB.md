@@ -5,14 +5,16 @@ Inside it is a small Australian lab that ships calm, reliable tools for humans w
 
 This page is the visitor version. The full Lab Voice style guide lives in Google Drive and stays there — it is the authority for every changelog and README framing. It does not belong in the public repository. We are not animals.
 
+**Quick links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [All docs](./) · [Changelog](../CHANGELOG.md)
+
 ---
 
 ## Who is actually here
 
 **Blazenetic** walks in, already mid-sentence about a perspective matrix.  
-Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Researches the hard maths, then complains about having to re-research it. The sarcasm is surgical and rarely raised above conversational volume.
+Lead systems architect. Dry. Precise. Mildly contemptuous of the multiverse of edge cases. Researches the hard maths, keeps up with the state of the art, finds the elegant solution, then complains about the edge cases. The sarcasm is surgical and rarely raised above conversational volume.
 
-> “I spent four hours making the nodes breathe in three dimensions so people can fall asleep harder. You’re welcome.”
+> “I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. You’re welcome.”
 
 **Arty** is already at the console, re-running the suite for the third time.  
 Primary implementer. Eager, slightly anxious, learns fast. Constantly scanning for the thing that will break at 3 a.m. on someone’s phone. Does most of the careful, correct work and then looks up like someone is about to yell.
@@ -49,16 +51,31 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
+## Another Tuesday (the CONTRIBUTING one)
+
+**Melchett:** We now possess *official contribution guidelines*! The forces of open source tremble!
+**Darling:** It is a markdown file with links.
+**Blazenetic:** I researched how calm tools handle security reports, wrote the short version, and complained about the edge cases. You’re welcome.
+**Arty:** AGENTS.md is still completely clean. The wall holds.
+**Baldrick:** What if every PR is required to include a potato?
+**Darling:** No. And put that potato down before it becomes a runtime dependency.
+
+---
+
 ## Why any of this exists
 
 We ship serious, zero-dependency, mobile-first sleep tools.  
 We also refuse to write boring release notes.
 
-If you just want the noise, hit play.  
+If you just want the noise, hit play on the [live demo](https://blazenetic.github.io/complex-noise/).  
 If you want to know who is responsible for the residual outlines having a floor, or why the glass is allowed to be ultra, or why Baldrick is still employed — you are in the right place.
+
+If you want to help, see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Message the Lab. Point your AI agent at [AGENTS.md](../AGENTS.md) first.
 
 The software stays calm.  
 The documentation gets to be chaotic.  
 That is the deal.
 
-Sleep well. (Or don’t. We’re not your parents.)
+Further reading: [History](./HISTORY.md) · [Info Layer contract](./INFO_LAYER.md) · [Changelog](../CHANGELOG.md)
+
+Sleep well. Or don’t. The Lab is not your parents, and Melchett is already declaring victory over something else.

@@ -25,14 +25,14 @@ import { BUFFER_DURATION, DEFAULTS } from './constants.js';
  */
 export const GENERATORS = {
   /** Flat spectrum — equal energy per hertz. */
-  white(data, length, sampleRate) {
+  white(data, length, _sampleRate) {
     for (let i = 0; i < length; i++) {
       data[i] = (Math.random() * 2 - 1) * 0.5;
     }
   },
 
   /** Brownian / red noise — leaky integrator of white noise (−6 dB/octave). */
-  brown(data, length, sampleRate) {
+  brown(data, length, _sampleRate) {
     let lastOut = 0.0;
     for (let i = 0; i < length; i++) {
       const white = Math.random() * 2 - 1;
@@ -42,7 +42,7 @@ export const GENERATORS = {
   },
 
   /** Pink noise — Paul Kellet refined multi-pole approximation (−3 dB/octave). */
-  pink(data, length, sampleRate) {
+  pink(data, length, _sampleRate) {
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
     for (let i = 0; i < length; i++) {
       const white = Math.random() * 2 - 1;

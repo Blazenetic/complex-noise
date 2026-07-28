@@ -166,9 +166,12 @@ test('callouts on screen read different quantities from each other', async page 
   // and the placement contest — three callouts cannot show five modes, and that
   // is not the thing under test.
   //
-  // Under the calm sticky-side + longer-hold regime the instantaneous spread
-  // can legitimately sit at 2 for short windows; the per-sample guard and the
-  // φ offset still guarantee disagreement whenever several labels are present.
+  // The sampling window is long rather than the bar low. The sticky side and
+  // the longer hold make a given instant calmer, not less varied — φ still
+  // spreads the offsets across all eight modes — so the right response to a
+  // quiet frame is to keep watching, not to accept a field that reads two
+  // quantities. Weakening this to 2 is what let a release ship claiming a
+  // regime whose code was never merged.
   await page.setViewportSize({ width: 1400, height: 950 });
   await page.click('#uiChromeMinimise');
   await page.waitForTimeout(2500);
@@ -191,8 +194,34 @@ test('callouts on screen read different quantities from each other', async page 
 
   assertEqual(modeCount, 8, 'there should be eight detail modes');
   assert(bestLabels >= 4, `expected several callouts on a wide viewport, best was ${bestLabels}`);
-  assert(bestModes >= 2,
+  assert(bestModes >= 3,
     `expected several distinct modes at once, best was ${bestModes} of ${bestLabels} callouts`);
+});
+
+test('a visible callout settles on one side of its node', async page => {
+  // Which side a block sits on is remembered and only mirrored when the
+  // preferred side is genuinely unusable, so a node drifting around the right
+  // margin cannot throw a 132px plate back and forth across its own leader
+  // line. Only blocks already faded in are counted — a side chosen at zero
+  // opacity is not something anybody saw move — and a real flip is allowed, so
+  // this bounds the rate rather than the count.
+  //
+  // Honest limitation: the pre-sticky placement also scores zero here, because
+  // reproducing the bounce needs a node to sit on the margin threshold for
+  // seconds and the harness cannot make one do that. This guards the invariant
+  // going forward; it is not evidence about the code it replaced.
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await page.click('#uiChromeMinimise');
+  await page.waitForTimeout(3000);
+
+  const before = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+  assert(before.labels >= 1, `expected callouts to be drawing, saw ${before.labels}`);
+  await page.waitForTimeout(6000);
+  const after = await page.evaluate(() => window.complexNoiseStill.getFieldStats());
+
+  const flips = after.calloutFlips - before.calloutFlips;
+  assert(flips <= 4,
+    `visible callouts changed side ${flips} times in six seconds — the bounce is back`);
 });
 
 test('the three canvas overlays toggle independently and persist', async page => {

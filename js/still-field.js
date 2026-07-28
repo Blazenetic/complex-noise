@@ -289,7 +289,8 @@ const LABEL_MEDIUM_VIEWPORT = 720;
  *
  * The rotation is global — the field walks these on a quasi-periodic schedule —
  * but the mode a *given* node displays is that base index offset by the node's
- * own stable offset (see `MODE_OFFSET_OF`). Eight nodes on screen therefore read
+ * own stable `modeOffset` (derived from its lifetime ID in `respawnNode`, so it
+ * survives as long as the node does). Eight nodes on screen therefore read
  * eight different quantities at once, and each of them still cycles through the
  * whole set over a few dwells. One global mode meant every callout on screen was
  * a copy of its neighbour, which is a lot of pixels spent saying one thing.
@@ -359,11 +360,22 @@ const LABEL_ENERGY_GATE = 0.42;
  * screen you are falling asleep to.
  */
 const LABEL_ENERGY_RELEASE = 0.10;
-/** Callout opacity envelope rates, per second. Slow out is deliberate. */
-const LABEL_ATTACK = 2.6;
-const LABEL_RELEASE = 0.85;
+/**
+ * Callout opacity envelope rates, per second. Slow out is deliberate.
+ *
+ * Both are deliberately slower than a UI transition would be. A readout that
+ * fades in over a fifth of a second and out over half of one reads as twitchy:
+ * the eye is still parsing a four-row number when the block starts leaving. At
+ * these rates a card takes about half a second to arrive and nearly two to go,
+ * which is long enough to finish reading and short enough not to feel stuck.
+ *
+ * They are rates, not per-frame factors — `update()` runs them through
+ * `1 - Math.exp(-rate * dt)`, so the envelope is identical at 30, 45 and 60 fps.
+ */
+const LABEL_ATTACK = 1.9;
+const LABEL_RELEASE = 0.52;
 /** A callout, once acquired, is guaranteed this long regardless of energy. */
-const LABEL_MIN_HOLD_FRACTION = 0.55;
+const LABEL_MIN_HOLD_FRACTION = 0.72;
 
 const HEAD_FONT = '600 10px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
 const MONO_FONT = '11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
@@ -387,18 +399,42 @@ const LEADER_SHELF = 10;
 const NODE_HANDLE = 4.5;
 
 /** Edge annotation geometry. Text rides the line, blueprint-dimension style. */
-const MAX_EDGE_LABELS = 5;
-const EDGE_LABEL_MIN_STRENGTH = 0.18;
+const MAX_EDGE_LABELS = 6;
+const EDGE_LABEL_MIN_STRENGTH = 0.13;
 const EDGE_LABEL_HALF_W = 46;
-const EDGE_LABEL_HALF_H = 15;
+
+/**
+ * Caption layout, relative to the line the dimension is rotated onto.
+ *
+ * The lead value sits above the line; the two secondary values used to share a
+ * single baseline just below it, one nudged left and one right. At the widths
+ * these tables produce — `θ -180°` against `r 1000 u` — that put two runs of
+ * mono glyphs into the same ten pixels, and the pair read as one smudge. They
+ * get their own lines now, which is also how a real dimension stacks a tolerance
+ * under a nominal.
+ */
+const DIM_FONT_PX = 10;
+const EDGE_LABEL_LEAD_BASELINE = -6;
+const EDGE_LABEL_ROW_TOP = 4;
+const EDGE_LABEL_LINE_H = 9;
+/**
+ * Half-height of the caption's *unrotated* box, used by the keep-out and
+ * slot-proximity tests. Derived rather than picked so it genuinely covers the
+ * stack: the lead's ascender above the line, and the lower secondary row's
+ * descender below it. Guessing it is how a caption ends up half under a card.
+ */
+const EDGE_LABEL_HALF_H = Math.ceil(Math.max(
+  DIM_FONT_PX - EDGE_LABEL_LEAD_BASELINE,
+  EDGE_LABEL_ROW_TOP + EDGE_LABEL_LINE_H + DIM_FONT_PX,
+));
 /** Shortest projected edge that can carry a caption legibly, in CSS px. */
 const EDGE_LABEL_MIN_SPAN = 52;
 
 /**
  * What a given edge dimension measures.
  *
- * Every dimension used to read `d u / θ / Δz`, five times over, which makes the
- * fifth one worth nothing. The kind is derived from the *pair's* identity
+ * Every dimension used to read `d u / θ / Δz`, once per slot, which makes every
+ * one after the first worth nothing. The kind is derived from the *pair's* identity
  * (`frac((idA + idB·φ))`), so it is stable for as long as the pair exists — a
  * dimension never mutates into a different quantity while you are reading it —
  * and neighbouring edges reliably disagree, because consecutive integers land in
@@ -409,9 +445,16 @@ const EDGE_KIND_COUPLING = 1;  // κ 0.62       t …      Δz …
 const EDGE_KIND_REACH = 2;     // d/r 0.48     r … u    θ …°
 const EDGE_KIND_ENERGY = 3;    // E 0.55       ΔE …     deg …
 const EDGE_KIND_COUNT = 4;
-/** Attack/release for an annotation's opacity, per second. */
-const EDGE_LABEL_ATTACK = 2.4;
-const EDGE_LABEL_RELEASE = 1.0;
+/**
+ * Attack/release for an annotation's opacity, per second.
+ *
+ * Matched to the node callouts' envelopes and for the same reason. A dimension
+ * leaves for two reasons that have nothing to do with the reader — the pair
+ * softens below the strength gate, or its midpoint slides under the listing —
+ * and at the old release rate either one snatched the number away mid-read.
+ */
+const EDGE_LABEL_ATTACK = 1.9;
+const EDGE_LABEL_RELEASE = 0.62;
 
 /**
  * Keep-out band for callout placement. The world plane is sized so the *far*
@@ -628,6 +671,16 @@ let lastMaxDegree = 0;
 let lastModesOnScreen = 0;
 /** Edge-dimension slots currently holding a pair. */
 let lastEdgeSlotsUsed = 0;
+/**
+ * Lifetime count of *visible* callout blocks that changed side.
+ *
+ * The left/right bounce was the info layer's worst habit and the hardest thing
+ * to argue about from a screenshot, because it only exists in motion. Counting
+ * it makes it a number a test can watch instead of a claim in a changelog.
+ * Only blocks already faded in are counted: a side chosen at zero opacity is
+ * not something anybody saw move.
+ */
+let calloutSideFlips = 0;
 /** Lifetime respawn count, for the observed turnover rate in the readout. */
 let respawnCount = 0;
 
@@ -657,7 +710,7 @@ const statsSnapshot = {
   meanDegree: 0, maxDegree: 0, density: 0,
   labels: 0, edgeLabels: 0, labelCapacity: 0, edgeSlots: 0,
   labelMode: LABEL_MODE_NAMES[0], modeRemaining: 0, dwell: 0,
-  modeCount: LABEL_MODE_COUNT, modesOnScreen: 0,
+  modeCount: LABEL_MODE_COUNT, modesOnScreen: 0, calloutFlips: 0,
   glowNodes: 0, glowCap: MAX_GLOW_NODES,
   energy: 0, wavePhase: 0,
   waveAngle: Math.atan2(WAVE_KY, WAVE_KX) * RAD_TO_DEG,
@@ -842,6 +895,7 @@ export function getStillFieldStats() {
   statsSnapshot.labelMode = LABEL_MODE_NAMES[modeAt(infoClockS)];
   statsSnapshot.modeRemaining = modeRemainingS;
   statsSnapshot.modesOnScreen = lastModesOnScreen;
+  statsSnapshot.calloutFlips = calloutSideFlips;
   statsSnapshot.glowNodes = lastGlowNodes;
   statsSnapshot.dwell = stillFieldDwell;
   statsSnapshot.energy = stillEnergy;
@@ -1218,6 +1272,9 @@ function resetNodeCallout(n) {
   n.calloutAxis = false;
   n.calloutGauge = -1;
   n.calloutHandle = HANDLE_SQUARE;
+  // A respawned node is a new node, and it respawns somewhere else entirely, so
+  // the side its predecessor settled on says nothing useful about this one.
+  n.preferSide = 1;
 }
 
 /** Forget every link touching node `index` — a respawned node is a new node. */
@@ -1246,6 +1303,10 @@ function makeNode() {
     labelHeld: false, labelHoldUntil: 0,
     calloutHead: '', calloutRows: 0, calloutAxis: false, calloutGauge: -1,
     calloutHandle: HANDLE_SQUARE,
+    // Which side of the node this one's block prefers to sit on, +1 right and
+    // −1 left. Remembered across frames so placement is hysteretic — see
+    // drawCallouts().
+    preferSide: 1,
     rowKey0: '', rowKey1: '', rowKey2: '', rowKey3: '',
     rowVal0: '', rowVal1: '', rowVal2: '', rowVal3: '',
     // Scratch fields, written during update and read during draw. Keeping
@@ -1312,6 +1373,7 @@ function resetEdgeSlots() {
     edgeSlotIdB[s] = 0;
     edgeSlotAlpha[s] = 0;
     edgeSlotHold[s] = 0;
+    edgeSlotSeen[s] = 0;
   }
   lastEdgeSlotsUsed = 0;
 }
@@ -1710,6 +1772,7 @@ function draw(adt, dt, instrumented, tAfterUpdate) {
   } else {
     lastLabelCount = 0;
     lastEdgeLabelCount = 0;
+    lastEdgeSlotsUsed = 0;
     clearInfoCanvas();
   }
 
@@ -1936,8 +1999,8 @@ function trackEdgeAnnotation(a, b, ax, ay, bx, by, distance, target, strength, c
   // of an annotation that already exists.
   //
   // The span test used to live only in the draw pass, which meant a short edge
-  // could claim a slot, hold it for a full dwell and never draw a thing — five
-  // slots held, one dimension on screen. Rejecting it here keeps the slots for
+  // could claim a slot, hold it for a full dwell and never draw a thing — every
+  // slot held, one dimension on screen. Rejecting it here keeps the slots for
   // pairs that can actually be read.
   const sx = bx - ax;
   const sy = by - ay;
@@ -2126,6 +2189,11 @@ function drawInfoLayer(nodes, n, dt) {
   // and dimensions can treat it as one more region to stay out of. It is drawn
   // last so it sits on top of the field's own lines.
   layoutCodeTicker();
+  // `drawEdgeAnnotations` is the only thing that recounts held slots, so every
+  // path that skips it has to say so. Leaving the last count standing is how
+  // the HUD ends up reporting "0 shown · 6 slots held" over a field that is
+  // holding nothing at all.
+  if (!stillFieldEdges) lastEdgeSlotsUsed = 0;
   lastEdgeLabelCount = stillFieldEdges ? drawEdgeAnnotations(ctx, dt) : 0;
   lastLabelCount = stillFieldCallouts ? drawCallouts(ctx, nodes, n) : 0;
   if (!stillFieldCallouts) lastModesOnScreen = 0;
@@ -2155,9 +2223,9 @@ function drawEdgeAnnotations(ctx, dt) {
     const expired = infoClockS >= edgeSlotHold[s];
 
     // A slot that cannot be drawn where it currently sits is doing no work and
-    // is holding one of five places. That is not hypothetical: the listing
+    // is holding a place another pair could use. That is not hypothetical: the listing
     // changes corner when the interface is minimised, and every dimension that
-    // was happily in the top right became permanently unpaintable — five slots
+    // was happily in the top right became permanently unpaintable — every slot
     // held, nothing on screen, for as long as the pairs stayed linked. Treating
     // undrawable as dead lets the slot fade out and free itself for a pair that
     // can actually be read.
@@ -2235,12 +2303,15 @@ function drawEdgeAnnotations(ctx, dt) {
     // The energy dimension is the one that is not a geometric measurement, so
     // it carries the accent ink — the same signal the callouts use for a head.
     ctx.fillStyle = kind === EDGE_KIND_ENERGY ? accentColor : inkColor;
-    ctx.fillText(lead, 0, -5);
+    ctx.fillText(lead, 0, EDGE_LABEL_LEAD_BASELINE);
+    // Two secondary values, two baselines. Sharing one line meant the wider
+    // pairs overprinted each other; the horizontal nudge is kept so the stack
+    // still reads as a dimension's two columns rather than a paragraph.
     ctx.textBaseline = 'top';
     ctx.globalAlpha = alpha * 0.8;
     ctx.fillStyle = inkMutedColor;
-    ctx.fillText(left, -20, 5);
-    ctx.fillText(right, 24, 5);
+    ctx.fillText(left, -18, EDGE_LABEL_ROW_TOP);
+    ctx.fillText(right, 18, EDGE_LABEL_ROW_TOP + EDGE_LABEL_LINE_H);
     ctx.restore();
 
     shown++;
@@ -2388,7 +2459,14 @@ function drawCallouts(ctx, nodes, n) {
 
     // Nearest first, with a hold bonus. Insertion sort over at most eight
     // entries beats keeping a sorted structure alive between frames.
-    const score = node.scale * (node.labelAlpha > 0.1 ? 1.4 : 1);
+    //
+    // The bonus is what makes the *selection* sticky, and it has to be large
+    // enough to survive the depth noise it is there to reject: two nodes
+    // separated by a hair of `scale` swap places constantly, and at a 1.4×
+    // bonus a card still lost its slot to a neighbour that had drifted a
+    // thousandth nearer. The gate is above the release envelope's tail too, so
+    // a block on its way out stops defending a slot it is no longer using.
+    const score = node.scale * (node.labelAlpha > 0.15 ? 1.55 : 1);
     if (count === maxLabels && score <= labelScores[count - 1]) continue;
 
     let b = count < maxLabels ? count++ : count - 1;
@@ -2418,19 +2496,38 @@ function drawCallouts(ctx, nodes, n) {
     refreshNodeCallout(node, mode);
 
     const height = calloutBlockHeight(node);
-    // Prefer a block up and to the right of the node, the way a leader line is
-    // normally drawn; mirror it when the right edge is too close.
-    let side = 1;
-    let left = node.sx + LEADER_RUN + LEADER_SHELF;
-    if (left + CALLOUT_W > stillFieldW - 8) {
-      side = -1;
-      left = node.sx - LEADER_RUN - LEADER_SHELF - CALLOUT_W;
-    }
     const top = node.sy - LEADER_RUN - height;
-    if (left < 8 || top < 4) continue;
+    if (top < 4) continue;
 
-    if (hitsKeepOut(left, top, left + CALLOUT_W, top + height)) continue;
-    if (hitsCodeBlock(left, top, left + CALLOUT_W, top + height)) continue;
+    // Which side the block sits on is hysteretic: try the side this node used
+    // last, and only mirror when that side is genuinely unusable — off the
+    // screen margin, under the interface, or over the source listing.
+    //
+    // Recomputing the side from scratch each frame is what produced the bounce.
+    // The old rule was "right unless the right edge is close", so a node
+    // drifting around `stillFieldW - CALLOUT_W - 26` crossed that threshold
+    // every few frames and threw a 132px block back and forth across its own
+    // leader line, several times a second, on the screen you are falling asleep
+    // to. With a remembered side there is no threshold to oscillate about: once
+    // a node has flipped left, left keeps working, so it stays there until it
+    // stops working. Note the collision tests below deliberately do *not* flip
+    // it — block-on-block overlaps are transient, and flipping on them would
+    // reintroduce exactly the bounce this removes.
+    let side = 0;
+    let left = 0;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const trySide = attempt === 0 ? node.preferSide : -node.preferSide;
+      const tryLeft = trySide > 0
+        ? node.sx + LEADER_RUN + LEADER_SHELF
+        : node.sx - LEADER_RUN - LEADER_SHELF - CALLOUT_W;
+      if (tryLeft < 8 || tryLeft + CALLOUT_W > stillFieldW - 8) continue;
+      if (hitsKeepOut(tryLeft, top, tryLeft + CALLOUT_W, top + height)) continue;
+      if (hitsCodeBlock(tryLeft, top, tryLeft + CALLOUT_W, top + height)) continue;
+      side = trySide;
+      left = tryLeft;
+      break;
+    }
+    if (side === 0) continue;
 
     let collides = false;
     for (let d = 0; d < placed; d++) {
@@ -2458,6 +2555,12 @@ function drawCallouts(ctx, nodes, n) {
     const nearness = (node.scale - minScale) / (1 - minScale);
     const alpha = clamp(0.55 + nearness * 0.4, 0, 0.96) * node.labelAlpha * node.fade;
     if (alpha < 0.02) continue;
+
+    // Only a placement that actually drew commits the side. Recording it at the
+    // point of choice instead would let a block that then lost a collision test
+    // move the node's preference on the strength of a frame nobody saw.
+    if (side !== node.preferSide && node.labelAlpha > 0.15) calloutSideFlips++;
+    node.preferSide = side;
 
     calloutNode[placed] = labelCandidates[k];
     calloutLeft[placed] = left;
@@ -2534,6 +2637,7 @@ function drawCalloutFurniture(ctx, nodes, placed) {
     const top = calloutTop[k];
     const height = calloutHeight[k];
     const alpha = calloutAlpha[k];
+    const side = calloutSide[k];
 
     // Backing plate. This is what replaced the glow: a label is legible over a
     // busy field either because it is blurred into a halo, or because it has
@@ -2550,10 +2654,14 @@ function drawCalloutFurniture(ctx, nodes, placed) {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Accent spine on the leading edge, and a rule under the head.
+    // Accent spine on the leading edge, and a rule under the head. "Leading"
+    // means the edge the leader line arrives at, which is the right-hand edge
+    // on a mirrored block — pinning it to `left` regardless put the spine on
+    // the far side of the plate from its own leader, so a left-side callout
+    // read as if it belonged to whatever was further left again.
     ctx.globalAlpha = alpha * 0.9;
     ctx.fillStyle = accentColor;
-    ctx.fillRect(snap(left), snap(top + 4), 2, height - 8);
+    ctx.fillRect(snap(side > 0 ? left : left + CALLOUT_W - 2), snap(top + 4), 2, height - 8);
     ctx.globalAlpha = alpha * 0.28;
     ctx.fillRect(snap(left + CALLOUT_PAD_X), snap(top + CALLOUT_PAD_Y + CALLOUT_HEAD_H - 3), CALLOUT_W - CALLOUT_PAD_X * 2, 1);
 
@@ -2572,7 +2680,6 @@ function drawCalloutFurniture(ctx, nodes, placed) {
     // Leader line: diagonal out of the node, then a horizontal shelf into the
     // block. Two straight runs read as a drawing annotation; a curve reads as a
     // speech bubble.
-    const side = calloutSide[k];
     const anchorX = side > 0 ? left : left + CALLOUT_W;
     const anchorY = top + height;
     const elbowX = anchorX - side * LEADER_SHELF;
@@ -2947,6 +3054,7 @@ function stopLoop() {
   lastEdgeCount = 0;
   lastLabelCount = 0;
   lastEdgeLabelCount = 0;
+  lastEdgeSlotsUsed = 0;
   lastPairTests = 0;
   lastBatches = 0;
   lastGlowNodes = 0;

@@ -6,6 +6,63 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — Still Field info-layer calm pass
+
+### What shipped
+
+**Callout and edge timing made deliberate**
+- Attack / release envelopes slowed and lengthened so cards stay readable longer and fade out cleanly (even when a node dies or an edge softens).
+- Minimum hold fraction raised so a callout, once acquired, is guaranteed a more substantial dwell.
+- Matching edge envelopes adjusted in the same direction.
+- Edge strength gate lowered slightly so more candidate dimensions become eligible.
+
+**Edge capacity and footprint**
+- Maximum edge labels raised from 5 to 6.
+- Vertical half-height increased so multi-line secondary text has room.
+- Medium viewports now receive more of the new slots (phone still rationed).
+
+**Multi-line secondary edge text**
+- The two secondary values no longer share a single baseline; they sit on distinct lines for clearer vertical separation while preserving the engineering-drawing character.
+
+**Sticky callout side**
+- Nodes remember their preferred side.
+- Placement prefers the recorded side and only flips when the preferred side is clearly unusable (meaningful off-screen margin or inside a keep-out / code block).
+- Chosen side is written back on successful placement.
+- Hold bonus raised so the same node keeps winning the contest more consistently.
+- Result: the left/right bounce is gone.
+
+All of the above respects the existing constraints: zero allocations in the render loop, no second graph scan, time-based envelopes (`1 - Math.exp(-rate * dt)`), telemetry gathered only inside the existing link pass, eight detail modes + φ offsets + pair-identity edge kinds unchanged.
+
+### Lab Log
+
+**Melchett:** Gentlemen! The callouts have become *calm*! The bounce is dead! Six edge slots! Staggered secondary values! A crushing victory for the forces of deliberate timing! BBAAAHHH!
+
+**Darling:** It is still just a few numbers and a preferred side, Melchett. Sit down before you declare war on a left/right flip.
+
+**Blazenetic:** I researched the continuous-rate envelopes that become exact discrete updates via `1 - Math.exp(-rate * dt)`, coordinated the sticky-side hysteresis so a callout does not flip every time two nodes swap depth by a hair, oversaw the capacity increase and the multi-line stagger, and then complained about the edge cases of keep-outs and the sandbox that kept choking on a 125 kB source file. You’re welcome. The product standard remains: anything that twitches or vanishes before you can read it is a defect.
+
+**Arty:** Okay, okay — the previous agent run hit the sandbox size limit hard. Baldrick’s cunning plan to “just paste the whole file” produced more stack traces than a poorly-damped oscillator. I re-oriented, applied the timing constants, the capacity, the staggered baselines and the sticky side, and checked that the eight modes, the φ offset and the pair-identity kinds still pass the variety assertions. Please don’t yell. I think we’re safe?
+
+**Baldrick:** I have a cunning plan, sir. What if the callouts are made of actual potatoes that slowly cool and then fall off the screen? Also the sandbox should be made of potatoes so large files fit better. Cunning as a fox who’s just been appointed Professor of Cunning at the University of File-Size Overflows and Overnight Battery Drain.
+
+**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies or sandbox substitutes. Baldrick, you dropped them *again*, and this time you also managed to make the previous agent’s session cry about blob size.
+
+**Melchett:** The potato sandbox is rejected! Another crushing victory for typed arrays and pre-allocated slots! BBAAAHHH!
+
+**Darling:** That is not how victories work. And the residual outlines already had a floor.
+
+**Blazenetic:** Research first. Architecture second. Potato plans last. The continuous-time envelope discretised by the exact exponential map is not optional; it is why the field looks identical at 30, 45 and 60 fps. The sticky side is classic hysteresis — prefer the previous decision until the preferred side is *clearly* bad. That is control theory applied to a leader line. Arty did the careful work while the sandbox sulked. Standard Tuesday. The software stays calm.
+
+**Arty:** …I also made sure the hold bonus and the min-hold fraction interact cleanly with the energy gate and the placement contest. Just saying. Please don’t yell. Lots of learnings. The sandbox is still a bit traumatised. We survived.
+
+**Melchett:** BEHOLD THE CALM CALL OUTS! A STRATEGIC MASTERPIECE OF HYSTERESIS AND EXPONENTIAL SMOOTHING!
+
+**Darling:** It is a preferred side and four timing constants, Melchett. Sit. Down.
+
+**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at 3 a.m. That is non-negotiable. And yes, Baldrick, the large-file sandbox issue is officially your fault this time.
+
+---
+
 ## [Unreleased] — six-colour family + seamless hardening (PR #29)
 
 ### What shipped

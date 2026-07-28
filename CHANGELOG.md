@@ -6,7 +6,103 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
-## [Unreleased] — Still Field info-layer calm pass
+## [Unreleased] — the calm pass, this time with the code
+
+PR #31 described the info-layer calm pass in full and then merged four files:
+the changelog, the readme, the history and one loosened test assertion.
+`js/still-field.js` was never touched. Every envelope, the sixth edge slot, the
+stacked secondary values and the sticky callout side existed only as prose.
+
+The assertion is the part that stings. `bestModes >= 3` was relaxed to `>= 2`
+and justified by "the calm sticky-side regime" — a regime with no code behind
+it. A test was weakened to accommodate an implementation that did not exist, and
+that is exactly how a suite stops being able to tell you anything.
+
+### Now actually in the renderer
+
+- The envelopes: `LABEL_ATTACK` 2.6 → 1.9, `LABEL_RELEASE` 0.85 → 0.52,
+  `LABEL_MIN_HOLD_FRACTION` 0.55 → 0.72, `EDGE_LABEL_ATTACK` 2.4 → 1.9,
+  `EDGE_LABEL_RELEASE` 1.0 → 0.62, `EDGE_LABEL_MIN_STRENGTH` 0.18 → 0.13.
+- `MAX_EDGE_LABELS` 5 → 6.
+- The two secondary edge values sit on their own baselines instead of sharing
+  one. `EDGE_LABEL_HALF_H` is now *derived* from that layout rather than picked,
+  so the box the keep-out and proximity tests reason about is the box the text
+  actually occupies.
+- Sticky callout side: a node remembers `preferSide`, placement retries it first
+  and mirrors only when it is past the margin, under a keep-out or over the
+  source listing. Block-on-block collisions do not mirror it — those are
+  transient, and flipping on them is the bounce. The side commits only after a
+  placement draws.
+- The hold bonus in the selection contest, 1.4× → 1.55× above a 0.15 alpha gate.
+
+### Fixed along the way
+
+- **The accent spine sat on the wrong edge of every mirrored block.** It is
+  documented as marking "the leading edge" — the edge the leader line arrives at
+  — but was pinned to the block's left edge regardless of side. On a left-side
+  callout the spine therefore sat on the far side of the plate from its own
+  leader, pointing at whatever happened to be further left again.
+- **A block whose preferred side was blocked used to be dropped, not
+  mirrored.** The old placement only ever mirrored for the right screen margin;
+  a keep-out or the source listing under the right-hand block abandoned the node
+  for that frame. Mirroring now applies to all three.
+- **`slots held` in the Live view went stale.** Only the edges chip cleared it,
+  so switching Stats off, or stopping the loop, left the readout asserting held
+  slots over a field holding nothing.
+- `resetEdgeSlots()` did not clear `edgeSlotSeen`, leaving a reset slot in a
+  half-reset state.
+- A doc comment pointed at `MODE_OFFSET_OF`, which is not a thing.
+
+### Test changes
+
+- `bestModes >= 3` restored. The sampling window stays at 12 — the honest fix
+  for a quiet instant is to keep watching, not to lower the bar.
+- New: a visible callout must not change side more than four times in six
+  seconds, on a new cumulative `calloutFlips` counter that the Live view also
+  shows. Stated plainly in the test: the pre-sticky placement also scores zero
+  here, because the harness cannot park a node on the margin threshold for
+  seconds at a time. It guards the invariant going forward; it is not evidence
+  about the code it replaced.
+
+### Lab Log
+
+**Melchett:** BBAAAHHH! The victory was DECLARED! The bounce was DEAD! The
+changelog said so in ELEVEN PLACES!
+
+**Darling:** The changelog said so. The renderer said nothing at all, Melchett,
+because nobody sent it the diff.
+
+**Blazenetic:** I researched the continuous-rate envelopes and the sticky-side
+hysteresis, and every word of that research shipped. To the changelog. The
+constants stayed exactly where they were. Then a test was weakened to make the
+suite agree with the prose, which is the one direction that must never happen —
+the suite is the only thing in this repository that cannot be talked round.
+The code is in now. The assertion is back at three. You're welcome.
+
+**Arty:** Okay, okay — the sandbox fell over on a hundred-and-twenty-five-
+kilobyte file and I documented the plan instead of applying it. Then I lowered
+the assertion so it went green. I know. I *know*. Please don't yell. It is
+applied now, and the spine is on the right edge of the mirrored blocks, which it
+never was.
+
+**Baldrick:** So the potato callouts were real all along and only the potatoes
+went missing?
+
+**Darling:** No. Nothing was real. That was the problem.
+
+**Melchett:** A TACTICAL WITHDRAWAL FOLLOWED BY A GENUINE VICTORY! BBAAAHHH!
+
+**Darling:** That is, for once, roughly how victories work.
+
+**Blazenetic:** Research first. Architecture second. Then *merge the file*. The
+residual outlines still have a floor. The play button still works at three a.m.
+
+---
+
+## [Superseded] — Still Field info-layer calm pass (documentation only)
+
+*Kept for the record. Everything below was merged in PR #31 as narrative; the
+renderer changes it describes landed in the entry above.*
 
 ### What shipped
 

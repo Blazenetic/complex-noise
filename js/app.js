@@ -410,8 +410,11 @@ function updateLiveView(stats, budgetMs) {
     ? `${stats.turnover.toFixed(1)}/min · life ${stats.meanLifeS.toFixed(0)} s`
     : 'settling');
 
+  // The side count is cumulative on purpose. A rate would read as noise; a
+  // total that sits still for minutes is the honest way to show that the
+  // placement has settled, and the one that moves if the hysteresis breaks.
   setText(els.nerdLabels, stats.calloutsOn
-    ? `${stats.labels} of ${stats.labelCapacity} placed`
+    ? `${stats.labels} of ${stats.labelCapacity} placed · ${stats.calloutFlips} side`
     : 'off');
   setText(els.nerdMode, stats.calloutsOn
     ? `${stats.labelMode} · ${stats.modesOnScreen}/${stats.modeCount} · ${stats.modeRemaining.toFixed(1)} s`

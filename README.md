@@ -12,11 +12,11 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
 
-A pure client-side procedural noise generator (Brown, Pink, White) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
+A pure client-side procedural noise generator (Brown, Pink, White, Green, Fan, Rain) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
-> **Melchett:** A mighty instrument in the war against sleeplessness!  
+> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks!  
 > **Darling:** It is a noise generator, Melchett.  
-> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, and then complained about the edge cases. You’re welcome.
+> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, oversaw the seam passes and the A-weighted matching, and then complained about the edge cases. You’re welcome.
 
 ---
 
@@ -51,10 +51,13 @@ This is the part where most READMEs list bullet points like a product manager wr
 - **Brown** (default) — deep, heavy, the colour you want when the brain needs to stop arguing with itself. Classic leaky-integrator Brownian motion.
 - **Pink** — the middle ground. Present but polite.
 - **White** — bright, full-spectrum, useful when you want the field to light up cyan and remind you that the universe is mostly static.
+- **Green** — moderate-Q bandpass near 520 Hz. Stream / soft foliage character.
+- **Fan** — pink through a gentle lowpass plus an extremely shallow whole-cycle LFO. Soft mechanical whir.
+- **Rain** — continuous multi-layer (brown bed + brighter bandpass surface). No discrete drops. No thunder.
 
-All of it is synthesised on the device. No samples. No loops that click. No network after the first load. The buffers are long enough that the seam is effectively inaudible for these stochastic signals. Continuous internal state inside each buffer means the generators do not restart from zero every twelve seconds like an amateur.
+All of it is synthesised on the device. No samples. No loops that click. No network after the first load. The buffers are long enough that the seam is effectively inaudible for these stochastic signals; every generator now runs a seam pass so the wrap step sits inside its own adjacent-sample distribution. Continuous internal state inside each buffer means the generators do not restart from zero every twelve seconds like an amateur. Amplitude LFOs (where used) complete a whole number of cycles per buffer so there is no level jump at the loop point.
 
-> **Arty:** I checked the spectral tilt three times. Brown is actually brown.  
+> **Arty:** I checked the spectral tilt, the A-weighted levels, the headroom and the wrap steps three times. Brown is actually brown. Green sits deliberately a little high because it is narrow-band. Please don’t yell.  
 > **Blazenetic:** Good. Last time someone claimed “brown noise” and shipped pink with a low shelf I nearly left the industry. I research these things.
 
 ### Transport & comfort
@@ -62,6 +65,7 @@ All of it is synthesised on the device. No samples. No loops that click. No netw
 - Continuous sleep-timer slider (0–10 h, 0.5 h steps) with a gentle fade-out. Not a select box. A real slider. Because someone once said “select boxes are fine for sleep timers” and we refused to live in that world.
 - Settings remembered in localStorage (with full Private Browsing throw guards, because Safari likes to punish the optimistic).
 - Wake Lock support so the screen does not fall asleep while the noise is working.
+- Colour switches are cancellable and coalesced: rapid clicks produce one buffer; pause → play cancels stale work so nothing tears down the newly resumed source at 3 a.m.
 
 ### Still Theme
 Premium brushed-titanium dark (the default, because night is dark) plus a bone-white calm theme with a procedural SVG texture that actually moves a little. Theme is persisted. `theme-color` and `color-scheme` update live. It is not a toggle that forgets you exist.
@@ -132,7 +136,7 @@ complex-noise/
 ├── js/
 │   ├── constants.js        # Durations, defaults, valid ranges, icon SVGs, storage keys
 │   ├── storage.js          # Safe, typed localStorage access
-│   ├── noise.js            # generateNoiseBuffer() — white / brown / pink
+│   ├── noise.js            # generateNoiseBuffer() — white / brown / pink / green / fan / rain
 │   ├── audio.js            # AudioContext, EQ chain, play/stop, volume, timer, wake lock
 │   ├── still-field.js      # Canvas 3D nodes+edges visualisation driven by analyser
 │   ├── theme.js            # Still Theme (dark ↔ bone) + glass mode + meta updates
@@ -163,8 +167,11 @@ All noise is synthesised in `js/noise.js` → `generateNoiseBuffer(audioCtx, typ
 - White: pure uniform random
 - Brown (Brownian / red): leaky integrator of white noise (classic noisehack formula)
 - Pink: multi-pole IIR filter approximation (Paul Kellet refined method)
+- Green: moderate-Q bandpass near 520 Hz
+- Fan: pink + gentle lowpass + whole-cycle shallow LFO
+- Rain: brown bed + brighter bandpass surface, continuous, no events
 
-Buffers are long enough that the loop point is effectively inaudible. State (last sample / filter coefficients) is continuous *within* each buffer.
+Buffers are long enough that the loop point is effectively inaudible. State (last sample / filter coefficients) is continuous *within* each buffer; a seam pass re-filters the head carrying the ending state so the wrap is continuous too. Amplitude LFOs (fan, rain) are derived from `lfoStep()` so they complete whole cycles per buffer.
 
 **Still Field visualisation**  
 Two full-viewport Canvas 2D layers behind the UI. No WebGL. No library. The depth is real perspective maths researched and applied carefully — not a 3D engine cosplaying as calm.
@@ -181,7 +188,7 @@ See [Info Layer](./docs/INFO_LAYER.md) for the full instrumentation contract —
 Transparency is a second axis alongside the theme (`data-glass="standard|ultra"`). Both combine freely with either theme. Text, the play button and the active noise type keep their contrast in all four combinations. Ultra is not a gimmick; it is for people who want the field to be the only thing left.
 
 **Key extension points**
-- `js/noise.js` → add a generator + a `data-type` button; `app.js` wires it automatically
+- `js/noise.js` → add a generator + a `data-type` button; `app.js` wires it automatically. New colours must match A-weighted loudness, leave headroom, and be periodic over the buffer (use the seam pass and `lfoStep()`).
 - `css/styles.css` → CSS custom properties — rebrand colours and the Still Field palette in one place
 - `js/audio.js` — insert additional nodes in `ensureAudio()`
 - `js/still-field.js` — swap the rendering model while keeping the same enable / intensity / analyser hooks
@@ -201,7 +208,7 @@ npm test        # headless browser suite, ~30s
 npm test -- --headed
 ```
 
-`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer, persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, and basic accessibility (labels + 44 px targets). Three new cases cover mode variety, independent overlay toggles, and the fold.
+`tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer, persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, level matching, headroom, whole-cycle LFOs, rapid-switch races that count real buffers, and basic accessibility (labels + 44 px targets). Newer cases cover mode variety, independent overlay toggles, and the fold.
 
 Several tests exist because a plausible-looking refactor broke playback in a way that only shows up minutes later. The sleep-timer test in particular is the result of lived experience.
 
@@ -233,7 +240,7 @@ Short version:
 - **Service worker** for true cold-start offline / airplane-mode use. The app makes no network calls at runtime, but a first load still needs the network. We know this is the most requested missing piece.
 - **AudioWorklet generation** — move the generators into an `AudioWorkletProcessor` for continuous, non-buffered synthesis and zero main-thread cost.
 - **Stereo width** — independent left/right buffers via `ChannelMergerNode`.
-- **More noise colours** and optional nature layers mixed in as extra sources.
+- Optional nature layers mixed in as extra sources.
 - Carefully measured things that are Baldrick’s fault (console greeting from the Lab, hidden Info-panel lines, the occasional Baldrick quote triggered by something suitably ridiculous). We will not apologise for these. Melchett has already declared them a strategic necessity.
 
 > **Baldrick:** I have a cunning plan for the service worker. We just tell people to keep the tab open forever.  
@@ -272,7 +279,7 @@ Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of inc
 See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list and [History](docs/HISTORY.md) for how we got here.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. You’re welcome.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  

@@ -101,7 +101,8 @@ js/
   storage.js        safe typed localStorage access
   noise.js          the noise generators
   audio.js          Web Audio graph, transport, EQ, sleep timer, wake lock
-  still-field.js    the two canvases (+ live stats for the info layer)
+  still-field.js    the two canvases — front door only; see below
+  still-field/      the renderer, one module per concern (20 files)
   theme.js          dark ↔ bone theme, and standard ↔ ultra glass
   ui-chrome.js      immersion hide/show of the main controls
   app.js            DOM wiring — the only module that touches the app's DOM
@@ -138,6 +139,58 @@ This is not style preference. Playback stops on its own when the sleep timer
 fires, and updating the button inside its click handler is exactly how it ends
 up frozen on "pause" over silent audio at 3 a.m. That bug has already happened
 once; `tests/run.mjs` now guards against it.
+
+## Inside the Still Field
+
+The renderer is a directory. `js/still-field.js` is the **front door**: it owns
+the public API and nothing else, and it is what `app.js` imports. The work is
+in `js/still-field/`:
+
+```
+settings.js      what the user chose, and the snapshot the UI renders
+view.js          the two canvases, the viewport, the device
+world.js         the world plane, the projection, the link radius
+grid.js          a uniform spatial grid over a rectangle
+math.js          φ, τ, smoothstep
+clock.js         the drift clock and the diagnostics clock
+palette.js       theme colours, pre-quantised into ramps
+energy.js        the three energy layers and the CSS mirror
+keep-outs.js     screen rectangles the info layer must avoid
+telemetry.js     counters the renderer writes and the HUD reads
+audio-metrics.js frequency-band energy from the analyser
+nodes.js         the population: model, lifecycle, one simulation step
+link-pass.js     the lattice, its envelopes, batching and telemetry
+node-pass.js     the nodes, flat then glowing
+modes.js         the callout detail modes and their rotation
+callouts.js      node callouts: selection, placement, paint
+edge-labels.js   edge dimensions: slots, quantised text, paint
+code-ticker.js   the on-canvas source listing
+loop.js          one frame, and the loop control around it
+stats.js         the public statistics snapshot
+```
+
+Three rules hold it together. [docs/STILL_FIELD_ARCHITECTURE.md](docs/STILL_FIELD_ARCHITECTURE.md)
+has the reasoning and the worked examples; these are the rules themselves:
+
+- **Shared state lives on an exported object with exactly one writer.** An
+  imported binding is read-only in ES modules, so `export let` cannot be
+  assigned from another file. `settings`, `view`, `world`, `grid`, `clock`,
+  `telemetry`, `population` and `paint` are each a plain object owned by one
+  module and read by many. Do not add a second writer; add a function to the
+  owner instead. In a hot loop, destructure what you need into locals at the
+  top of the function — the passes already do.
+- **Imports point one way.** The graph is a DAG and must stay one: leaves
+  (`math`, `clock`, `telemetry`, `grid`, `keep-outs`, `palette`, `view`) import
+  nothing from the field, `stats.js` is allowed to know about everything and is
+  imported only by the front door. If a change would need a cycle, the shared
+  thing wants its own module — `modes.js` exists for exactly that reason.
+- **Side effects compose in `js/still-field.js`.** A setter in `settings.js`
+  clamps and persists, full stop. Knowing that a depth change also means
+  remeasuring the world *and then* re-counting the nodes lives in the front
+  door, where it reads as a list rather than as a call chain.
+
+`tests/run.mjs` names the front door's whole export surface. Move code freely
+between these modules; that test is what tells you the door still opens.
 
 ## UI chrome & immersion
 
@@ -178,7 +231,7 @@ once; `tests/run.mjs` now guards against it.
     *derived* from that layout rather than picked, so changing the stack means
     changing the constants it is derived from, not the half-height directly.
   - Per-node `degree`, `coupling` and `nearest` for the `links` mode, zeroed at
-    the top of `update()` and accumulated inside `drawLinks()` on values the
+    the top of the node step and accumulated inside `drawLinks()` on values the
     renderer had already computed. This is the only acceptable way to add graph
     telemetry.
   - One top-left panel (`#nerdHud`) with keyboard-navigable **Live**, **Math**
@@ -207,7 +260,7 @@ once; `tests/run.mjs` now guards against it.
   legible instead of sinking into the background. The outline is scaled by the
   lifecycle envelope, so it still eases in at birth and out at death — the floor
   is against dimness, never against the lifecycle. Do not reintroduce a floor
-  that ignores `node.fade`: nodes would pop on and off, because `update()`
+  that ignores `node.fade`: nodes would pop on and off, because the step
   respawns a node the instant its life reaches 1, so `life` is never out of
   range by the time `draw()` runs.
 
@@ -258,15 +311,18 @@ pre-builds a quantised ramp from them. Alpha on the node and edge tokens sets
 the field's baseline opacity; mid and spark supply hue only.
 
 **Add a node detail mode** — add the name to `LABEL_MODE_NAMES` and a glyph to
-`MODE_HANDLE` in `js/still-field.js` (both arrays must stay the same length),
-then add the branch to `refreshNodeCallout()`. `MODE_WEIGHTS` re-derives itself,
-and the per-node offset spreads the new mode across the field automatically. Up
-to four key/value rows; only the first three can be axis-coloured.
+`MODE_HANDLE` in `js/still-field/modes.js` (both arrays must stay the same
+length — `tests/run.mjs` asserts it), then add the branch to
+`refreshNodeCallout()` in `js/still-field/callouts.js`. `MODE_WEIGHTS`
+re-derives itself, and the per-node offset spreads the new mode across the
+field automatically. Up to four key/value rows; only the first three can be
+axis-coloured.
 
-**Add an edge dimension kind** — add an `EDGE_KIND_*` index, raise
-`EDGE_KIND_COUNT`, add the branch in `drawEdgeAnnotations()`, and add any new
-quantised string table next to `DISTANCE_TEXT`. Whatever the kind reads must be
-derivable from values the link pass already has.
+**Add an edge dimension kind** — all in `js/still-field/edge-labels.js`: add an
+`EDGE_KIND_*` index, raise `EDGE_KIND_COUNT`, add the branch in
+`drawEdgeAnnotations()`, and add any new quantised string table next to
+`DISTANCE_TEXT`. Whatever the kind reads must be derivable from values the link
+pass already has.
 
 **Add a persisted setting** — add the key to `STORAGE_KEYS` in
 `js/constants.js` and read/write it through `js/storage.js`. Never call
@@ -303,7 +359,7 @@ noise rather than the listening volume.
   from a real click.
 - **This runs for eight hours straight on a phone**, and the Still Field is now
   on by default, so every per-frame cost is an overnight battery cost. Before
-  touching `still-field.js`, read its header comment: it defaults to 30 fps,
+  touching the renderer, read `js/still-field/loop.js`: it defaults to 30 fps,
   stops the loop outright when the page is hidden, allocates nothing
   per frame, and rations `shadowBlur`. `getComputedStyle` and writing CSS custom
   properties both force style recalculation — it caches the former and throttles
@@ -321,9 +377,10 @@ noise rather than the listening volume.
   device pixels. Legibility comes from a plate behind the text, not a glow.
 - **Linking is a spatial grid, and that has a sharp edge.** Only pairs inside
   the 5-cell half-neighbourhood are visited, so a pair that stops being visited
-  freezes its envelope at whatever strength it held. `update()` calls
+  freezes its envelope at whatever strength it held. `stepNodes()` calls
   `clearLinksFor()` on world wrap for exactly this reason, alongside the
-  existing call on respawn. If you add another way for a node to move
+  existing call on respawn, and `resizeField()` drops the whole array when a
+  rescale changes the world's shape. If you add another way for a node to move
   discontinuously, clear its links too.
 - **Callout timing is procedural, not an interval.** Mode dwell is
   `D · (0.72 + 0.56 · frac(kφ))`, acquisition and release use different energy
@@ -351,7 +408,7 @@ noise rather than the listening volume.
   see — and at a phone viewport, where the control column spans the screen, that
   was every single one of them. `app.js` measures the chrome and pushes
   rectangles to `setLabelKeepOuts()` on resize, scroll, panel toggle and
-  minimise/restore; `still-field.js` never measures the document itself, because
+  minimise/restore; the renderer never measures the document itself, because
   a `getBoundingClientRect` per frame forces layout just like `getComputedStyle`.
   The first measurement is synchronous in `boot()` — scheduling it on an
   animation frame lets the loop's first frames paint under the controls. The

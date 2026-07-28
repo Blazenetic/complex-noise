@@ -96,6 +96,20 @@ Measured at 2.2× density and 60 fps: **0.60 ms** per frame total. Tests green, 
 
 ---
 
+## Bone texture finally drifts (still the 28th)
+
+The far-background grain on bone had been almost invisible. Overlay blend washed it out on the light surface. The source listing on mobile was hard-gated at 1000 px and never appeared at all.
+
+Blazenetic bossed Arty around until both problems were solved properly: soft-light on bone, a very slow 210 s CSS drift so the grain feels distant and calm, and the source listing restricted to immersion mode on narrow viewports so it never blocks the UI. Fold still works from the title bar. Reduced-motion still respected.
+
+> **Blazenetic:** I researched the blend modes, coordinated the slow drift, oversaw the immersion gate, and complained about the keep-outs. You’re welcome.  
+> **Arty:** You bossed me around and I got it sorted. Soft-light, setImmersionMode, compact metrics. I checked reduced-motion three times. Please don’t yell.  
+> **Baldrick:** I dropped the cabbage and the potatoes. Cunning plan involving rotting vegetables rejected again.  
+> **Darling:** Put them down. Both of them.  
+> **Melchett:** The cabbage is rejected! Another victory! BBAAAHHH!
+
+---
+
 ## The Lab Voice
 
 Somewhere in the middle of the sprint the documentation decided it was allowed to have a personality. The software itself stays calm and professional. The narrative surfaces (README framing, Changelog Lab Log, Meet the Lab, this History, Contributing) may sound like a late-night crossover episode written by people who still care about residual outlines having a floor.

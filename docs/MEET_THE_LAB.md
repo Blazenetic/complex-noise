@@ -1,7 +1,7 @@
 # Meet the Lab
 
 You found the door that says “research”.  
-Inside it is a small Australian lab that ships calm, reliable sleep tools while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep.
+Inside it is a small Australian lab that ships calm, reliable tools for humans while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep.
 
 This page is the visitor version. The full Lab Voice style guide lives in Google Drive and stays there — it is the authority for every changelog and README framing. It does not belong in the public repository. We are not animals.
 

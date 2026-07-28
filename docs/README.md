@@ -8,7 +8,7 @@ The Lab ships serious sleep tools. The documentation is allowed to have a little
 
 | File | Purpose |
 |------|---------|
-| [HISTORY.md](./HISTORY.md) | Readable overview of the origin and the intensive 26–28 July 2026 sprint |
+| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint |
 | [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts, equations, accessibility and performance contract |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work |
@@ -48,7 +48,7 @@ reduced-motion support) has not been done.
 
 A fuller work report covering the intensive 26–28 July development lives in the
 project Google Drive. The public changelog is derived from it and lives at the
-repo root. A concise public history overview is now available in [HISTORY.md](./HISTORY.md).
+repo root. A concise public history overview (including the real origin story) is now available in [HISTORY.md](./HISTORY.md).
 
 ---
 

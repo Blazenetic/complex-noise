@@ -33,6 +33,13 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 All of the above respects the existing constraints: zero allocations in the render loop, no second graph scan, time-based envelopes (`1 - Math.exp(-rate * dt)`), telemetry gathered only inside the existing link pass, eight detail modes + φ offsets + pair-identity edge kinds unchanged.
 
+### Documentation & learning surfaces (same pass)
+
+- PR #31 description expanded into a map of eight concrete ways Lab Voice integrates with serious engineering work (CHANGELOG Lab Log as theatre, occupied-room vignettes, Blame as feature, Teachings as curriculum, meta-voice, teaching quotes, the wall, the repo as learning experience).
+- New [docs/TEACHINGS_AND_LEARNINGS.md](docs/TEACHINGS_AND_LEARNINGS.md) opened with this calm pass as its headline feature.
+- New [docs/BLAME.md](docs/BLAME.md) opened with the same work and the usual affectionate roasting.
+- docs/README.md index updated so both pages are discoverable.
+
 ### Lab Log
 
 **Melchett:** Gentlemen! THE BOUNCE IS DEAD! The callouts have achieved *serenity*! Six edge slots! Secondary values on *separate lines*! A victory so complete the forces of twitchy left-right flipping have fled the field in disgrace! BBAAAHHH!
@@ -70,6 +77,12 @@ All of the above respects the existing constraints: zero allocations in the rend
 **Baldrick:** But the potato counterweight had real aerodynamic potential—
 
 **Darling:** No.
+
+**Blazenetic:** We also opened the Teachings & Learnings page and the Blame page with this exact work as the opening chapter. The repository itself is now a learning experience. You’re welcome.
+
+**Arty:** I added the links. Please don’t yell.
+
+**Darling:** Still markdown, Melchett. But the curriculum is useful.
 
 ---
 
@@ -173,7 +186,7 @@ All three live in the existing 12 s looping-buffer approach, drive the Still Fie
 ### Changed
 - **Program counter is a heat trail**, not a highlight. Heat rises as the counter reaches a line and decays at 3.2/s; sweep slowed to 2.8 s. The full-width purple strobe is gone.
 - **Frame-time trace autoscales** to the observed peak (previously fixed to the budget and therefore useless at ~1 % utilisation).
-- **Health thresholds** lead on renderer work rather than delivered frame rate (a cap is honoured by waiting, so the rate always wobbles).
+- **Health thresholds** lead on work, not on the wobble of a capped frame rate.
 
 ### Fixed
 - **Edge dimensions could hold every slot and draw nothing.** Undrawable slots (midpoint under the source listing, especially after minimise) now free themselves. Measured before: 1 shown / 5 held. After: 3–5 shown / 5 held.

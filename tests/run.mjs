@@ -744,6 +744,46 @@ test('unit: theme colours parse and ramp', async page => {
     `the ramp must cross its midpoint colour between steps ${Math.floor(half)} and ${Math.ceil(half)}`);
 });
 
+test('unit: source listing values match their transcript slots', async page => {
+  const r = await page.evaluate(async () => {
+    const code = await import('/js/still-field/code-lines.js');
+    const values = Object.fromEntries(
+      code.CODE_VALUE_KEYS.map((key, index) => [key, `value-${index}`]),
+    );
+    const lineSlots = code.CODE_LINES
+      .map(line => line[code.CODE_SLOT])
+      .filter(slot => slot >= 0);
+
+    const mapError = candidate => {
+      try {
+        code.defineCodeValueMap(candidate);
+        return '';
+      } catch (error) {
+        return error.message;
+      }
+    };
+
+    return {
+      count: code.CODE_VALUE_COUNT,
+      summary: code.CODE_SUMMARY_SLOT,
+      namedSummary: code.CODE_VALUE_SLOT.summary,
+      ordered: code.defineCodeValueMap(values),
+      lineSlots,
+      missing: mapError(Object.fromEntries(Object.entries(values).slice(1))),
+      extra: mapError({ ...values, retired: 'stale' }),
+    };
+  });
+
+  assertEqual(r.count, 22, 'the source listing has twenty-one line values and one footer summary');
+  assertEqual(r.summary, r.namedSummary, 'the footer summary must use the named slot contract');
+  assertEqual(r.ordered[0], 'value-0', 'a named producer must land in its declared integer slot');
+  assertEqual(r.ordered[r.summary], `value-${r.summary}`, 'the summary producer must remain in the contract');
+  assertEqual(new Set(r.lineSlots).size, r.lineSlots.length, 'no two transcript lines may share one live slot');
+  assertEqual(r.lineSlots.length, r.count - 1, 'every live slot except the footer summary must reach one line');
+  assert(r.missing.includes('missing dt'), 'a missing source value producer must fail at boot');
+  assert(r.extra.includes('extra retired'), 'a retired source value producer must fail at boot');
+});
+
 test('unit: the stats panel formats what the renderer measured', async page => {
   const r = await page.evaluate(async () => {
     const hud = await import('/js/hud.js');

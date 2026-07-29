@@ -564,6 +564,13 @@ noise rather than the listening volume.
   If you add another scratch surface, give it the same two halves — and report
   it in `stats.js`, because a Buffers row that omits the largest buffer is worse
   than no Buffers row.
+- **Source-listing values are named before they are numbered.** The overlay's
+  paint path uses integer slots because it runs for every visible frame, but
+  `CODE_VALUE_SLOT` is the shared vocabulary between the transcript and its
+  once-per-second producers. Add a name, use it on exactly one transcript line,
+  and add its builder through `defineCodeValueMap()` in the same change. Do not
+  restore parallel lists of numeric indices: they can print the wrong live
+  number beside the right source statement without throwing.
 - **Node density multiplies the clamped 26–44 window, not the raw viewport
   area.** Applying it to the raw figure opens a 1440×900 display on 132 nodes at
   the *default* setting, which is a redesign for every user who never touches

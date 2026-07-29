@@ -325,10 +325,11 @@ growth allocates on nearly every one of them. The band is what makes a drag
 inside it free. It costs 12 KiB of headroom.
 
 The eager string tables in `edge-labels.js` now build on first draw:
-**5,034 strings, ~0.3 ms**, previously built at boot for every visitor whether or
-not the info layer was ever switched on. That number is small and the comment in
-that file says so. The argument for moving it is not the 0.3 ms, it is that the
-cost is now conditional and it was on the boot path before.
+**5,034 strings, ~0.3 ms**, previously built at module import for every visitor.
+A persisted Stats-off or dimensions-off session now avoids them; the default
+session still builds them on its first info frame. That number is small and the
+comment in that file says so. The argument for moving it is not the 0.3 ms, it
+is that the cost is now conditional.
 
 ### What phase 2 deliberately did not change
 

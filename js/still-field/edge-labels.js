@@ -133,17 +133,17 @@ const edgeSlotDegrees2 = new Uint8Array(MAX_EDGE_LABELS); // summed endpoint deg
  * ## Why they are built on first draw rather than at module load
  *
  * They used to be built when this file was imported — which is at boot, for
- * every visitor, whether or not Stats is on and whether or not edge dimensions
- * are one of the three overlays they left enabled. Measured on a desktop
+ * every visitor. A session with Stats or edge dimensions disabled never reaches
+ * the first draw; the default session still does. Measured on a desktop
  * Chromium: **5,034 strings, ~0.3 ms** of construction (0.1–3.9 ms across runs,
  * the spread being when the collector notices).
  *
  * That is not a large number and this note is not going to pretend it is. The
  * argument for moving it is that it is 0.3 ms and five thousand live objects on
- * the *boot path* of a page whose first job is to start playing audio, spent on
- * an overlay the user may never switch on. What it costs instead is one boolean
- * test per frame in `drawEdgeAnnotations()`, which is unmeasurable. Where a cost
- * is small either way, put it where it is conditional.
+ * the import path of a page whose first job is to start playing audio, even when
+ * the overlay is disabled. What it costs instead is one boolean test per frame
+ * in `drawEdgeAnnotations()`, which is unmeasurable. Where a cost is small either
+ * way, put it where it is conditional.
  *
  * The lengths are constants rather than `TABLE.length` because `writeEdgeSlot()`
  * clamps against them on every tracked pair, every frame, and it must not depend

@@ -34,7 +34,7 @@ The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries
 
 ---
 
-## Current status (as of 28 July 2026)
+## Current status (as of 29 July 2026)
 
 The original Still Theme, Still Field and Still EQ features have been fully merged and substantially evolved on `main`:
 
@@ -49,7 +49,7 @@ The original Still Theme, Still Field and Still EQ features have been fully merg
 - **Six first-class procedural colours** (Brown, Pink, White, Green, Fan, Rain) with seam passes, A-weighted loudness matching, headroom, whole-cycle LFOs where used, and cancellable coalesced colour-switch work.
 - **Night-shift reliability (PR #33):** stranded wake-lock race closed, sleep timer no longer trusts `setTimeout`, slider writes throttled, suite parallelised and de-flaked, CI gate that lets documentation PRs merge.
 - **The renderer is a directory (PR #34, phase 1):** `js/still-field.js` went from 3,327 lines to a 377-line front door over twenty modules, with no behaviour change; the trail stopped building a string every frame and a resize now drops link state.
-- **The split finished, and the allocations counted (PR #34, phase 2):** callout content separated from callout placement, the source transcript from the ticker that draws it, and the stats panel out of `app.js` into a pure `js/hud.js`. A density drag went from ~550 KB of garbage to none after the first sweep; the info layer's 5,034 quantised strings are built on first draw instead of at boot. First unit tests: three grouped module-level tests that run in under a second.
+- **The split finished, and the allocations counted (PR #35, phase 2):** callout content separated from callout placement, the source transcript from the ticker that draws it, and the stats panel out of `app.js` into a pure `js/hud.js`. A density drag went from ~550 KB of garbage to none after the first sweep; the info layer's 5,034 quantised strings are built on first draw instead of at module import. First unit tests: three grouped module-level tests that run in under a second.
 
 Accessibility is partially addressed — controls are labelled and all touch targets clear 44 px — but a full audit (screen-reader walkthrough, contrast check beyond the current reduced-motion support) has not been done.
 
@@ -64,7 +64,7 @@ A fuller work report covering the intensive 26–28 July development lives in th
 3. Keep the wall: narrative surfaces may be chaotic; agent surfaces stay sterile.
 4. If you find a security issue, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-> **Arty:** I added extra links, the pair-test numbers, the Teachings page and the Blame page so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. The bounce is dead. The clocks we control are the ones we trust. The renderer is twenty-two files and the panel is strings. Every number in the phase-2 entry was measured twice, before and after. I checked.  
+> **Arty:** I added extra links, the pair-test numbers, the Teachings page and the Blame page so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. The bounce is dead. The clocks we control are the ones we trust. The renderer is twenty-two files and the panel is strings. Every number in the phase-2 entry was measured twice, before and after. I checked.
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 

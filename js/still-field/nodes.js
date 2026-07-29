@@ -126,7 +126,7 @@ function makeNode() {
     degree: 0, coupling: 0, nearest: 0,
     // Callout state. Rows are key/value pairs so the block can right-align its
     // numbers the way a transform panel does, rather than printing one string.
-    // The meaning of these lives in callouts.js; the shape lives here.
+    // The meaning of these lives in callout-content.js; the shape lives here.
     labelMode: -1, labelNextUpdate: 0, labelAlpha: 0,
     labelHeld: false, labelHoldUntil: 0,
     calloutHead: '', calloutRows: 0, calloutAxis: false, calloutGauge: -1,

@@ -5,9 +5,9 @@ This folder holds product requirements, implementation context, visitor-facing L
 The Lab ships serious sleep tools.  
 The documentation is allowed to have a little more personality. Sometimes a *lot* more.
 
-> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics, eight detail modes, six colours, a Blame page, a living curriculum, and now the night-shift reliability work!  
+> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics, eight detail modes, six colours, a Blame page, a living curriculum, the night-shift reliability work, and the Great Modularisation!  
 > **Darling:** It is a table of links, Melchett.  
-> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History that includes the pair-test numbers, the later instrumentation maturity, the six-colour hardening, the calm pass, and the night-shift clocks, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
+> **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History rewritten as a proper chronological campaign narrative, a Changelog free of Unreleased placeholders, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
 
 ---
 
@@ -15,7 +15,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 | File | Purpose |
 |------|---------|
-| [HISTORY.md](./HISTORY.md) | Readable overview of the origin (why we built it) and the intensive 26–28 July 2026 sprint, now with quantitative notes, instrumentation growth, the six-colour chaos Tuesday, the calm pass, and the night-shift reliability work |
+| [HISTORY.md](./HISTORY.md) | Chronological narrative of the origin, the 26–28 July sprint, instrumentation, six-colour hardening, the Calm Pass, the Night Shift, and the Great Modularisation (five phases). Clear chapter structure for easy future appends. |
 | [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room |
 | [TEACHINGS_AND_LEARNINGS.md](./TEACHINGS_AND_LEARNINGS.md) | **Living curriculum.** Headline feature: the night-shift reliability work (PR #33) — clocks you do not control, measuring the right thing, wake-lock races, wall-clock deadlines. Previous chapter: the calm info-layer pass (PR #32). Future sessions will add more. |
 | [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Who researched, who implemented under firm direction, who proposed the potato plans, who declared victory early, who restored order. Opens with the night-shift work. Grows over time. |
@@ -28,7 +28,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |
 | [../AGENTS.md](../AGENTS.md) | Technical orientation for humans and AI agents — clean, professional, zero banter |
-| [../CHANGELOG.md](../CHANGELOG.md) | What shipped + Lab Log reactions |
+| [../CHANGELOG.md](../CHANGELOG.md) | What shipped + Lab Log reactions — reverse-chronological, named campaigns, no Unreleased placeholders |
 | [../README.md](../README.md) | The main product page (narrative framing + technical overview) |
 
 The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications. The live technical contract is [AGENTS.md](../AGENTS.md).
@@ -50,12 +50,8 @@ The original Still Theme, Still Field and Still EQ features have been fully merg
 - Immersion path: dedicated Minimise interface button + floating restore cluster (play + status + Show controls). Escape restores.
 - Continuous sleep-timer slider (0–10 h) with absolute wall-clock deadline and visibility re-check; Still Equaliser open by default; theme as a two-sided Dark | Bone pill; Blazenetic branding throughout.
 - **Six first-class procedural colours** (Brown, Pink, White, Green, Fan, Rain) with seam passes, A-weighted loudness matching, headroom, whole-cycle LFOs where used, and cancellable coalesced colour-switch work.
-- **Night-shift reliability (PR #33):** stranded wake-lock race closed, sleep timer no longer trusts `setTimeout`, slider writes throttled, suite parallelised and de-flaked, CI gate that lets documentation PRs merge.
-- **The renderer is a directory (PR #34, phase 1):** `js/still-field.js` went from 3,327 lines to a 377-line front door over twenty modules, with no behaviour change; the trail stopped building a string every frame and a resize now drops link state.
-- **The split finished, and the allocations counted (PR #35, phase 2):** callout content separated from callout placement, the source transcript from the ticker that draws it, and the stats panel out of `app.js` into a pure `js/hud.js`. A density drag went from ~550 KB of garbage to none after the first sweep; the info layer's 5,034 quantised strings are built on first draw instead of at module import. First unit tests: three grouped module-level tests that run in under a second.
-- **The measured bottleneck moved less work (PR #36, phase 3):** a repeatable fixed-seed desktop/mobile profiling harness identified the wide-screen source ticker—not node objects—as the dominant focused info cost. Its stable 24-line transcript now comes from a lazy scratch bitmap while heat and stage data stay live: source-only info paint fell 23.7% at the median and 26.3% at p95 in the matched 150-node, 4×-throttled case. The mobile control was unchanged because it never builds the wide-screen cache.
-- **The review pass over all three (phase 4):** every substantial function was diffed against the pre-refactor file — no arithmetic changed meaning in the move. Three self-claims the code was not keeping were fixed: the 1.7 MiB transcript raster was allocated conditionally and released never (a locked phone held it all night), the fold hit-target outlived the listing it belonged to, and the Buffers row counted the link buffer while ignoring the grid and the raster. What was deliberately *not* changed, and why, is written down rather than left to be rediscovered.
-- **The HUD contract closes in both directions (phase 5):** Live, meter, Math and Code-stage builders now share exact key sets with `app.js`; a missing element or a retired mapped element fails at boot with the mismatched keys instead of leaving a plausible `—` behind.
+- **Night-shift reliability:** stranded wake-lock race closed, sleep timer no longer trusts `setTimeout`, slider writes throttled, suite parallelised and de-flaked, CI gate that lets documentation PRs merge.
+- **The Great Modularisation (five phases):** renderer became a directory of twenty-two modules with no behaviour change; density-drag allocations eliminated after the first sweep; source listing rasterised once; three self-claims brought into line with reality (including the 1.7 MiB bitmap that was never released); HUD key-set contract now fails in both directions at boot.
 
 Accessibility is partially addressed — controls are labelled and all touch targets clear 44 px — but a full audit (screen-reader walkthrough, contrast check beyond the current reduced-motion support) has not been done.
 

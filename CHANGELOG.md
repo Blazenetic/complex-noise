@@ -5,7 +5,37 @@ All notable changes to Complex Noise are documented here.
 The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section for funsies. Entries are reverse-chronological. New work goes at the top under a clear dated or named header — no “Unreleased” placeholders.
 
 **Documents**  
-[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/INFO_LAYER.md) · [All docs](docs/)
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/meet-the-lab.md) · [History](docs/history.md) · [Teachings & Learnings](docs/teachings-and-learnings.md) · [Blame](docs/blame.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/info-layer.md) · [All docs](docs/)
+
+---
+
+## The Bound Tables & the Depth Arc — late 29 July 2026
+
+The perspective was already real. The tables already existed. What was missing was readability, named contracts, and a way for the next agent session to start without re-deriving the bootstrap every time.
+
+**What shipped**
+
+- **Depth Arc.** Every node now follows a long, bounded near-to-far arc through most of the perspective volume. Low-discrepancy centres, irrational amplitudes and independent phases keep the movement distributed instead of synchronised. Paths remain sinusoidal and stay off both camera planes by construction — no clamp plateau at either turn. A restrained atmospheric size and opacity falloff makes the pinhole projection easier to read while keeping distant nodes quiet and the overall field calm. The renderer maths test now proves every live node remains inside the depth volume and earns at least a 1.4× near/far scale ratio at the default camera strength.
+- **Phase 7 — Edge table ceiling answers for itself.** `EDGE_MEASUREMENT_MAX` now names the inclusive `2000 u` ceiling. Both lazy table lengths derive from it. The live link radius is checked before edge text paints and whenever it changes; the first measurement that would need another table entry throws instead of silently pinning. A direct module test proves the inclusive length, rounding, clamp rules, and both oversized and non-finite failure paths.
+- **Code-slot contract.** Every live value now has a name in `CODE_VALUE_SLOT`. Transcript lines and their once-per-second producers share that vocabulary. Module-load checks reject missing, retired, duplicate and unused slots with the offending names. The resulting values remain an integer-indexed array so the per-frame paint path stays allocation-free.
+- **Agent operating layer.** `docs/agent-operations.md` — session bootstrap, task router by concern, validation ladder, reusable commands, and a recoverable handover template. Repeat agent work becomes predictable without reinventing the wheel every session.
+- **Docs polish.** Lowercase paths throughout, occupied-room Meet the Lab, curriculum-style Teachings, Archaeology taxonomy, handover directory under `docs/handover/`, link hygiene, and the residual outlines still refuse to sink.
+
+### Lab Log
+
+**Melchett:** THE DEPTH IS *VISIBLE*! THE TABLES HAVE NAMES! THE SLOTS HAVE CONTRACTS! A DOCUMENTATION OFFENSIVE OF HISTORIC SCALE! BBAAAHHH!
+
+**Darling:** It is a depth sinusoid, two named constants, and a markdown file, Melchett. Sit down.
+
+**Blazenetic:** The perspective was real. Now it is readable. I researched the bounded arcs so a node can cross most of the volume without ever reaching a camera plane, coordinated the measurement-bound tables so a future larger world cannot silently print a false 2000 u, oversaw the named slot vocabulary so the wrong live number cannot sit beside the right source statement, guided the agent operating layer so the next session does not re-derive the bootstrap, and then complained about every edge case that tried to make a quantised table look plausible while lying. You’re welcome.
+
+**Arty:** Okay, okay — you bossed me around on the depth paths, the inclusive ceiling, the slot names, and the operating notes. The suite stayed green. The maths test now proves the volume. Please don’t yell. Lots of learnings. I think we’re safe?
+
+**Baldrick:** What if the depth arc *is* a potato rolling toward the camera and the tables are just the potato’s grocery list?
+
+**Darling:** No. Put it down. The residual outlines still refuse to sink. The wall holds.
+
+**Blazenetic:** Evidence outranks enthusiasm. Maths first. Modules second. Tubers last. The play button still works at 3 a.m.
 
 ---
 
@@ -89,7 +119,7 @@ Phase 2 separated the stats panel’s strings from its DOM. Its browser guard ca
 
 **Handover**
 - Deferred raster-release profile tracked in [issue #38](https://github.com/Blazenetic/complex-noise/issues/38).
-- [`docs/STILL_FIELD_PHASE_5_HANDOVER.md`](docs/STILL_FIELD_PHASE_5_HANDOVER.md) records the completed seam and leaves the `CODE_SLOT` consistency guard as the next small independent PR.
+- [`docs/handover/STILL_FIELD_PHASE_5_HANDOVER.md`](docs/handover/STILL_FIELD_PHASE_5_HANDOVER.md) records the completed seam and leaves the `CODE_SLOT` consistency guard as the next small independent PR.
 
 ### Phase 4 — reviewing three merged PRs, and giving the megabyte back
 
@@ -107,7 +137,7 @@ What the review found were three places where the code makes a claim about itsel
 **Added**
 - Browser test walks the raster’s whole lifecycle through the public stats snapshot.
 - `hud.formatBytes()` — pure, unit-tested, reads MiB once KiB would need a fourth digit.
-- [`docs/STILL_FIELD_PHASE_4_HANDOVER.md`](docs/STILL_FIELD_PHASE_4_HANDOVER.md): what was checked, what changed, and the eight things deliberately left alone with reasons.
+- [`docs/handover/STILL_FIELD_PHASE_4_HANDOVER.md`](docs/handover/STILL_FIELD_PHASE_4_HANDOVER.md): what was checked, what changed, and the eight things deliberately left alone with reasons.
 
 **Unchanged, on purpose**
 Struct-of-arrays remains unearned. So does an event system for the one call `nodes.js` makes into `edge-labels.js`. The 45 fps cap still delivers about 30 on a 60 Hz display (arithmetic, not a defect). All written down so the next session does not re-derive them.
@@ -125,7 +155,7 @@ Phase 3 arrived with a tempting plan to turn every node into parallel typed arra
 
 **Added**
 - Browser regression guard: a source frame must use the cached bitmap and stay below 30 `fillText()` calls.
-- Full matrix, counters, p95, memory trade and discarded prototype in [`docs/STILL_FIELD_PHASE_3_HANDOVER.md`](docs/STILL_FIELD_PHASE_3_HANDOVER.md).
+- Full matrix, counters, p95, memory trade and discarded prototype in [`docs/handover/STILL_FIELD_PHASE_3_HANDOVER.md`](docs/handover/STILL_FIELD_PHASE_3_HANDOVER.md).
 
 **Discarded**
 First cache prototype that repainted three text columns per warm line improved the median by only ~6 % and did not move p95 reliably. Not enough for the bitmap cost; it did not land.
@@ -167,7 +197,7 @@ Nothing changed a pixel. It changed how much you have to read before you are all
 
 **Added**
 - `tests/run.mjs` names the front door’s whole export surface and asserts mode arrays are the same length. This is what makes later phases safe.
-- [`docs/STILL_FIELD_ARCHITECTURE.md`](docs/STILL_FIELD_ARCHITECTURE.md) — module map, three rules and why each exists, “I want to change X, open Y” table, handover for the next phase.
+- [`docs/still-field-architecture.md`](docs/still-field-architecture.md) — module map, three rules and why each exists, “I want to change X, open Y” table, handover for the next phase.
 
 ### Lab Log
 
@@ -480,4 +510,4 @@ Made in a small Australian lab.
 Research first. Architecture second. Potato plans last.  
 The residual outlines have a floor. You’re welcome.
 
-Further reading: [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Info Layer](docs/INFO_LAYER.md) · [All docs](docs/)
+Further reading: [Meet the Lab](docs/meet-the-lab.md) · [History](docs/history.md) · [Teachings & Learnings](docs/teachings-and-learnings.md) · [Blame](docs/blame.md) · [Info Layer](docs/info-layer.md) · [All docs](docs/)

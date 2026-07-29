@@ -83,6 +83,18 @@ export function expectedDegree(stats) {
   return Math.max(0, Math.PI * (stats.linkRadius / spacing) ** 2 - 1);
 }
 
+/**
+ * Bytes as KiB, or MiB once the figure would need four digits.
+ *
+ * The renderer's buffers span three orders of magnitude — a 7 KiB link buffer
+ * next to a 1.7 MiB transcript raster — and "1740.8 KiB" is a number nobody
+ * reads as "most of two megabytes".
+ */
+export function formatBytes(bytes) {
+  const kib = bytes / 1024;
+  return kib >= 1024 ? `${(kib / 1024).toFixed(2)} MiB` : `${kib.toFixed(1)} KiB`;
+}
+
 /** mm:ss, or h:mm:ss once it runs past an hour. Negative reads as "not yet". */
 export function formatUptime(ms) {
   if (!(ms >= 0)) return '—';
@@ -159,7 +171,16 @@ export function liveRows(stats, metrics, source, budgetMs, uptimeMs) {
     clock: `drift ${Math.round(stats.clock)} s · real ${Math.round(stats.realClock)} s`,
     // The allocation figure is a claim the renderer is written to keep, so it is
     // stated where it can be argued with rather than only in a comment.
-    buffers: `${(stats.linkBytes / 1024).toFixed(1)} KiB · 0 alloc/frame`,
+    //
+    // The steady figure is the link buffer plus the grid — both high-water-marked,
+    // both there for the life of the session. The transcript raster is called out
+    // separately because it is the only one that comes and goes, it is two orders
+    // of magnitude larger than the other two put together, and watching it
+    // disappear when you fold the listing is how you can tell it is really being
+    // released rather than merely documented as conditional.
+    buffers: stats.rasterBytes > 0
+      ? `${formatBytes(stats.linkBytes + stats.gridBytes)} · ${formatBytes(stats.rasterBytes)} raster · 0 alloc/frame`
+      : `${formatBytes(stats.linkBytes + stats.gridBytes)} · 0 alloc/frame`,
 
     energy: stats.energy.toFixed(3),
     low: metrics.low.toFixed(3),

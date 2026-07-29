@@ -46,7 +46,7 @@ your head* smaller, which is a different and more useful property.
 | `modes.js` | the callout detail modes and their rotation | `math`, `settings` |
 | `audio-metrics.js` | frequency-band energy | `audio.js` |
 | `code-lines.js` | the transcript the source overlay prints | nothing |
-| `code-ticker.js` | the on-canvas source listing | view, settings, clock, palette, keep-outs, telemetry, grid, modes, code-lines |
+| `code-ticker.js` | the on-canvas source listing, and its transcript raster | view, settings, clock, palette, keep-outs, telemetry, grid, modes, code-lines |
 | `edge-labels.js` | edge dimension slots and their text tables | + `world`, `code-ticker` |
 | `callout-content.js` | what a callout *says*: the eight mode branches | `math`, `world`, `clock`, `telemetry`, `energy`, `modes` |
 | `callouts.js` | node callouts: selection, placement, paint | + `edge-labels`, `callout-content` |
@@ -381,6 +381,14 @@ DPR 2 cap. The exact protocol, complete matrix, discarded exact-alpha prototype
 and uncertainty are recorded in
 [`STILL_FIELD_PHASE_3_HANDOVER.md`](./STILL_FIELD_PHASE_3_HANDOVER.md).
 
+The review pass that followed found that sentence was only half true in the
+code: the bitmap was allocated on the first qualifying frame and then never
+released, so folding the listing, switching the overlay off, narrowing below
+1000 px, turning Stats off or locking the phone all left 1.7 MiB resident for an
+overlay nobody could see. `code-ticker.js` now releases it on every one of those
+paths, and `stats.js` reports it — see
+[`STILL_FIELD_PHASE_4_HANDOVER.md`](./STILL_FIELD_PHASE_4_HANDOVER.md).
+
 ## Handover: what a later phase should pick up
 
 Do not proceed directly to struct-of-arrays. Phase 3 measured links as the
@@ -401,3 +409,8 @@ The smaller seams remain:
   The clamp is safe but can silently pin a value if a future world exceeds it.
 - `hud.js` keys must match `app.js` element maps. The test catches a builder key
   with no element, not the inverse.
+
+The post-merge review of phases 1–3 closed the raster-lifetime gap above and
+made the Buffers row count every buffer. Everything it looked at and chose *not*
+to change — with the reasoning — is in
+[`STILL_FIELD_PHASE_4_HANDOVER.md`](./STILL_FIELD_PHASE_4_HANDOVER.md).

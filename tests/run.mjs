@@ -419,6 +419,329 @@ test('the Still Field facade keeps its whole public API', async page => {
   });
   assertEqual(modes.handles, modes.names, 'MODE_HANDLE needs exactly one glyph per detail mode');
   assertEqual(modes.weights, modes.names, 'MODE_WEIGHTS needs exactly one weight per detail mode');
+
+  // `initStillFieldNodes` is reached by no control, so nothing else would notice
+  // if it stopped working. It is on the debug surface precisely so that it has a
+  // user, and this is that user: re-seeding must replace the population with a
+  // fresh generation rather than quietly doing nothing.
+  const reseed = await page.evaluate(async () => {
+    const stats = () => window.complexNoiseStill.getFieldStats();
+    const before = { nodes: stats().nodes, probeId: stats().probeId };
+    window.complexNoiseStill.reseedNodes();
+    return { before, after: { nodes: stats().nodes, probeId: stats().probeId } };
+  });
+  assert(reseed.after.nodes > 0, 're-seeding must leave a populated field');
+  assertEqual(reseed.after.nodes, reseed.before.nodes, 're-seeding must not change the node target');
+});
+
+// ----------------------------------------------------------
+// Unit tests
+//
+// Everything above drives the app. These import a module and call it.
+//
+// The browser suite is excellent at behaviour and slow at arithmetic: proving
+// that `smoothstep` is monotonic by watching a field of nodes fade takes six
+// seconds and tells you almost nothing about which end is wrong. A Playwright
+// test can `await import('/js/still-field/modes.js')` and assert on the module
+// directly, in the same browser, with no DOM and no render loop — which is how
+// the class of bug the smoke tests cannot see cheaply gets caught: an
+// off-by-one in a quantisation table, a mode weight that stops averaging 1, a
+// colour string the regex silently rejects.
+//
+// Keep them grouped. A `test()` costs a BrowserContext, so a dozen one-line
+// tests would cost more in setup than the assertions are worth.
+// ----------------------------------------------------------
+
+test('unit: the field maths — smoothstep, the mode schedule, the node target', async page => {
+  const r = await page.evaluate(async () => {
+    const { smoothstep, PHI, TAU } = await import('/js/still-field/math.js');
+    const modes = await import('/js/still-field/modes.js');
+    const { settings } = await import('/js/still-field/settings.js');
+    const field = await import('/js/still-field.js');
+    const { view } = await import('/js/still-field/view.js');
+    const { world, targetNodeCount, measureWorld } = await import('/js/still-field/world.js');
+
+    // The schedule walks one full cycle of weighted slices. Sample it densely
+    // enough to land in every slice and record which modes came up, in order.
+    const cycleSeconds = settings.dwell * modes.MODE_WEIGHTS.reduce((a, b) => a + b, 0);
+    const visited = [];
+    let remainingAlwaysPositive = true;
+    for (let t = 0; t < cycleSeconds; t += cycleSeconds / 2000) {
+      const m = modes.modeAt(t);
+      if (modes.schedule.remainingS <= 0) remainingAlwaysPositive = false;
+      if (visited[visited.length - 1] !== m) visited.push(m);
+    }
+
+    // The node target is derived from `view` and `world`, so drive it directly
+    // rather than resizing a window. The loop is stopped first: it reads the
+    // same objects every frame and must not be handed a half-written viewport.
+    field.setStillFieldEnabled(false);
+    const restore = { w: view.w, h: view.h, density: settings.density };
+    view.w = 1440;
+    view.h = 900;
+    const at = density => {
+      field.setStillFieldDensity(density);
+      measureWorld(0);
+      return targetNodeCount();
+    };
+    const target = { half: at(0.5), one: at(1), two: at(2), max: at(4) };
+    field.setStillFieldDensity(restore.density);
+    view.w = restore.w;
+    view.h = restore.h;
+    measureWorld(0);
+
+    return {
+      phi: PHI, tau: TAU,
+      step: [smoothstep(-1), smoothstep(0), smoothstep(0.25), smoothstep(0.5), smoothstep(1), smoothstep(2)],
+      weightMean: modes.MODE_WEIGHTS.reduce((a, b) => a + b, 0) / modes.LABEL_MODE_COUNT,
+      weightMin: Math.min(...modes.MODE_WEIGHTS),
+      visitedCount: new Set(visited).size,
+      visitedInOrder: visited.slice(0, modes.LABEL_MODE_COUNT).join(','),
+      modeCount: modes.LABEL_MODE_COUNT,
+      remainingAlwaysPositive,
+      outOfRange: [modes.modeAt(-5), modes.modeAt(1e9)].filter(m => m < 0 || m >= modes.LABEL_MODE_COUNT).length,
+      target,
+      minScale: world.minScale,
+    };
+  });
+
+  assert(Math.abs(r.phi - (1 + Math.sqrt(5)) / 2) < 1e-12, 'PHI is not the golden ratio');
+  assert(Math.abs(r.tau - Math.PI * 2) < 1e-12, 'TAU is not 2π');
+
+  // Clamped at both ends, symmetric about the middle, and gentler than linear
+  // near zero — the three properties every fade in the renderer relies on.
+  assertEqual(r.step[0], 0, 'smoothstep must clamp below 0');
+  assertEqual(r.step[1], 0, 'smoothstep(0) must be 0');
+  assertEqual(r.step[3], 0.5, 'smoothstep(0.5) must be 0.5');
+  assertEqual(r.step[4], 1, 'smoothstep(1) must be 1');
+  assertEqual(r.step[5], 1, 'smoothstep must clamp above 1');
+  assert(r.step[2] < 0.25, 'smoothstep(0.25) should ease below the straight line');
+
+  // The dwell setting is documented as the *mean* seconds per mode, which only
+  // holds while the golden-ratio weights average 1. Add a ninth mode without
+  // checking this and every dwell in the Lab quietly means something else.
+  assert(Math.abs(r.weightMean - 1) < 0.05,
+    `MODE_WEIGHTS must average about 1, got ${r.weightMean.toFixed(4)}`);
+  assert(r.weightMin > 0, 'a mode with a non-positive weight would never be shown');
+
+  // Quasi-periodic, not a modulo: every mode must still get exactly one slice
+  // per cycle, in index order, and the countdown must never read zero mid-slice.
+  assertEqual(r.visitedCount, r.modeCount, 'one cycle must visit every detail mode');
+  assertEqual(r.visitedInOrder, [...Array(r.modeCount).keys()].join(','),
+    'the rotation must walk the modes in order');
+  assert(r.remainingAlwaysPositive, 'schedule.remainingS must stay positive inside a slice');
+  assertEqual(r.outOfRange, 0, 'modeAt must stay in range for any clock value');
+
+  // The bite this guards: density multiplies the clamped 26–44 window, not the
+  // raw viewport area. Applying it to the area figure opened a 1440×900 display
+  // on 132 nodes at the *default* setting.
+  assert(r.target.one <= 44, `default density must stay inside the 26–44 window, got ${r.target.one}`);
+  assert(r.target.one >= 26, `default density must stay inside the 26–44 window, got ${r.target.one}`);
+  assert(r.target.half < r.target.one && r.target.one < r.target.two,
+    'the node target must rise with density');
+  assert(r.target.max <= 150, `the population ceiling must hold, got ${r.target.max}`);
+  assert(Math.abs(r.minScale - 1 / (1 + 0.75)) < 1e-9, 'the far plane should sit at 1/(1+depth)');
+});
+
+test('unit: theme colours parse and ramp', async page => {
+  const r = await page.evaluate(async () => {
+    const { parseColor, buildPalette, COLOR_STEPS } = await import('/js/still-field/palette.js');
+    const ramp = new Array(COLOR_STEPS).fill('');
+    buildPalette(ramp,
+      { r: 0, g: 0, b: 0, a: 1 },
+      { r: 128, g: 128, b: 128, a: 1 },
+      { r: 255, g: 255, b: 255, a: 1 });
+    return {
+      // Every form the theme tokens in css/styles.css actually use.
+      hex6: parseColor('#E0D6C8'),
+      hex3: parseColor('#abc'),
+      rgb: parseColor('rgb(167, 139, 250)'),
+      rgba: parseColor('rgba(12, 12, 18, 0.72)'),
+      slash: parseColor('rgb(167 139 250 / 0.3)'),
+      padded: parseColor('  rgb(1,2,3)  '),
+      bad: [parseColor(''), parseColor(null), parseColor('hsl(200 50% 50%)'), parseColor('#12345')],
+      steps: COLOR_STEPS,
+      rampFirst: ramp[0],
+      rampLast: ramp[COLOR_STEPS - 1],
+      rampFilled: ramp.filter(Boolean).length,
+      // Red channel of every step, to check the ramp rises and bends where the
+      // midpoint says it should. With an even step count no sample lands exactly
+      // on t = 0.5, so the midpoint is asserted as a bracket rather than a hit.
+      rampReds: ramp.map(c => Number(c.slice(4, c.indexOf(',')))),
+    };
+  });
+
+  assertEqual(JSON.stringify(r.hex6), JSON.stringify({ r: 224, g: 214, b: 200, a: 1 }), '#rrggbb should parse');
+  assertEqual(JSON.stringify(r.hex3), JSON.stringify({ r: 170, g: 187, b: 204, a: 1 }), '#rgb should expand');
+  assertEqual(JSON.stringify(r.rgb), JSON.stringify({ r: 167, g: 139, b: 250, a: 1 }), 'rgb() should parse, alpha 1');
+  assertEqual(r.rgba.a, 0.72, 'rgba() alpha carries the field opacity and must survive');
+  assertEqual(r.slash.a, 0.3, 'the space/slash form must parse — it is valid CSS the tokens may use');
+  assertEqual(JSON.stringify(r.padded), JSON.stringify({ r: 1, g: 2, b: 3, a: 1 }), 'getPropertyValue leaves whitespace');
+  assertEqual(r.bad.filter(v => v !== null).length, 0, 'unparseable colours must return null, never NaN');
+
+  // A ramp that never reaches its ends is invisible on a canvas and obvious here.
+  assertEqual(r.rampFilled, r.steps, 'every ramp step must be written');
+  assertEqual(r.rampFirst, 'rgb(0,0,0)', 'the ramp must start on its base colour');
+  assertEqual(r.rampLast, 'rgb(255,255,255)', 'the ramp must reach its spark colour');
+  const rising = r.rampReds.every((v, i) => i === 0 || v >= r.rampReds[i - 1]);
+  assert(rising, `the ramp must rise across its whole range: ${r.rampReds.join(',')}`);
+  const half = (r.steps - 1) / 2;
+  assert(r.rampReds[Math.floor(half)] <= 128 && r.rampReds[Math.ceil(half)] >= 128,
+    `the ramp must cross its midpoint colour between steps ${Math.floor(half)} and ${Math.ceil(half)}`);
+});
+
+test('unit: the stats panel formats what the renderer measured', async page => {
+  const r = await page.evaluate(async () => {
+    const hud = await import('/js/hud.js');
+
+    // A plausible snapshot. Only the fields each assertion reads matter, but it
+    // is written out in full so a reader can see what the panel is fed.
+    const base = {
+      fps: 29.8, fpsCap: 30, frameMs: 0.75, dt: 0.0334, stage: 'info',
+      msUpdate: 0.09, msLinks: 0.11, msNodes: 0.04, msInfo: 0.7,
+      nodes: 44, edges: 59, pairTests: 179, bruteTests: 946, gridCells: 40, batches: 59,
+      turnover: 45.4, meanLifeS: 58, meanDegree: 2.68, maxDegree: 4, density: 0.062,
+      labels: 3, edgeLabels: 5, labelCapacity: 8, edgeSlots: 6,
+      labelMode: 'energy', modeRemaining: 11, dwell: 14, modeCount: 8,
+      modesOnScreen: 2, calloutFlips: 0, glowNodes: 10, glowCap: 10,
+      energy: 0.277, wavePhase: 250, waveAngle: 58.3, waveLength: 786,
+      speed: 2, intensity: 0.7, reducedMotion: false,
+      densityScale: 1, reach: 1, trail: 8.2, depth: 0.75,
+      codeOverlay: true, calloutsOn: true, edgesOn: true, codeFolded: false,
+      linkRadius: 345, zWorld: 330, worldW: 2520, worldH: 1575, minScale: 0.571,
+      gridCell: 345, occupancy: 1.1, viewportW: 1440, viewportH: 900, dpr: 1,
+      linkBytes: 7744, clock: 8, realClock: 4, keepOuts: 3,
+      probeZ: 0.469, probeScale: 0.74, probeEnergy: 0.842,
+      probeBreath: 0.98, probeWave: 0.99, probeAudio: 0.68,
+      sampleDistance: 260, sampleTarget: 0.402, sampleStrength: 0.4, attackK: 0.148,
+    };
+    const metrics = { low: 0.61, mid: 0.418, high: 0.338 };
+    const source = { type: 'brown', sampleRate: 44100 };
+    const rows = hud.liveRows(base, metrics, source, 1000 / 30, 3400);
+
+    return {
+      // Health is scaled to the chosen cap, and tolerates the rate wobbling a
+      // frame under it while the renderer is using 2% of its budget.
+      health: {
+        sampling: hud.healthLevel({ ...base, fps: 0 }, 1000 / 30),
+        nominal30: hud.healthLevel(base, 1000 / 30),
+        nominal60: hud.healthLevel({ ...base, fps: 58, fpsCap: 60 }, 1000 / 60),
+        loaded: hud.healthLevel({ ...base, frameMs: 10, fps: 22 }, 1000 / 30),
+        strained: hud.healthLevel({ ...base, frameMs: 30, fps: 12 }, 1000 / 30),
+      },
+      uptime: [
+        hud.formatUptime(-1), hud.formatUptime(0), hud.formatUptime(59_400),
+        hud.formatUptime(3_600_000), hud.formatUptime(28_921_000),
+      ],
+      overlays: {
+        all: hud.describeOverlays(base),
+        folded: hud.describeOverlays({ ...base, codeFolded: true }),
+        none: hud.describeOverlays({ ...base, calloutsOn: false, edgesOn: false, codeOverlay: false }),
+      },
+      // π(r/spacing)² − 1 on a world where the spacing is exactly 50 and the
+      // radius exactly 50, so the answer is π − 1 and can be checked by hand.
+      degree: {
+        known: hud.expectedDegree({ nodes: 4, worldW: 100, worldH: 100, linkRadius: 50 }),
+        empty: hud.expectedDegree({ nodes: 0, worldW: 100, worldH: 100, linkRadius: 50 }),
+      },
+      rows,
+      idle: hud.liveRows({ ...base, fps: 0, frameMs: 0 }, metrics, { type: 'brown', sampleRate: 0 }, 1000 / 30, -1),
+      off: hud.liveRows({ ...base, calloutsOn: false, edgesOn: false }, metrics, source, 1000 / 30, 0),
+      math: hud.mathRows(base),
+      code: hud.codeStages(base, 1000 / 30),
+      spark: hud.sparkCaption(base, 4.01, 1000 / 30),
+      meters: hud.liveMeters(base, metrics),
+      // Pure: two calls on the same input must agree exactly.
+      stable: JSON.stringify(hud.liveRows(base, metrics, source, 1000 / 30, 3400)) === JSON.stringify(rows),
+    };
+  });
+
+  assertEqual(r.health.sampling, 'sampling', 'no frames yet is not a verdict about load');
+  assertEqual(r.health.nominal30, 'nominal', '2% of budget at the cap is nominal');
+  assertEqual(r.health.nominal60, 'nominal', 'picking 60 fps must not read as strained on its own');
+  assertEqual(r.health.loaded, 'loaded', 'a third of the budget with the rate down is loaded');
+  assertEqual(r.health.strained, 'strained', 'over budget with the rate halved is strained');
+
+  assertEqual(r.uptime.join(' | '), '— | 00:00 | 00:59 | 1:00:00 | 8:02:01',
+    'uptime must roll into hours and read "—" before playback');
+
+  assertEqual(r.overlays.all, 'callouts · dimensions · source', 'all three overlays should be listed');
+  assertEqual(r.overlays.folded, 'callouts · dimensions · source (folded)', 'a folded listing says so');
+  assertEqual(r.overlays.none, 'none', 'no overlays reads "none", not an empty string');
+
+  assert(Math.abs(r.degree.known - (Math.PI - 1)) < 1e-9,
+    `expected degree should be π−1 for r = spacing, got ${r.degree.known}`);
+  assertEqual(r.degree.empty, 0, 'an empty field expects no neighbours, not NaN');
+
+  assertEqual(r.rows.fps, '29.8 / 30 fps', 'the rate row');
+  assertEqual(r.rows.work, '0.75 ms · 2% budget', 'the work row');
+  assertEqual(r.rows.budget, '33.3 ms · 98% headroom', 'the budget row');
+  assertEqual(r.rows.pairs, '179 / 946 · 5.3× saved', 'the grid saving is the point of the grid');
+  assertEqual(r.rows.labels, '3 of 8 placed · 0 side', 'the cumulative side count guards the hysteresis');
+  assertEqual(r.rows.buffers, '7.6 KiB · 0 alloc/frame', 'the allocation claim is stated, not implied');
+  assertEqual(r.rows.uptime, '00:03', 'uptime comes from the elapsed milliseconds app.js measures');
+  assertEqual(r.rows.source, 'Brown · 44.1 kHz', 'the colour is capitalised and the rate is in kHz');
+  assertEqual(r.idle.fps, 'idle', 'a stopped renderer reads idle, not 0.0 fps');
+  assertEqual(r.idle.source, 'Brown · idle', 'no audio context yet is idle, not 0.0 kHz');
+  assertEqual(r.off.labels, 'off', 'callouts off must read off rather than a stale count');
+  assertEqual(r.off.dims, 'off', 'dimensions off must read off rather than a stale count');
+  assert(r.stable, 'the row builders must be pure — same stats in, same strings out');
+
+  assertEqual(Object.keys(r.math).length, 13, 'the Math view has thirteen rows');
+  assertEqual(r.math.neighbours, 'r 345 u → E[deg] 3.15 · x̄ 2.68',
+    'the expected degree sits beside the measured one, as a check on the derivation');
+  assertEqual(r.math.envelope, 'λ 3.2 · Δt 0.0334 → k 0.148 · s 0.400', 'the envelope row carries live operands');
+
+  assertEqual(r.code.stages.info.hot, true, 'the heaviest stage is marked hot');
+  assertEqual(r.code.stages.update.hot, false, 'only the heaviest stage is marked hot');
+  assertEqual(r.code.stages.info.ms, '0.70 ms · 74%', 'each stage shows its measured share');
+  assertEqual(r.code.total, '0.94 ms of 33.3 ms · 3%', 'the total is stated against the budget');
+  const shareSum = Object.values(r.code.stages).reduce((a, s) => a + s.share, 0);
+  assert(Math.abs(shareSum - 1) < 1e-9, `stage shares must sum to 1, got ${shareSum}`);
+
+  assertEqual(r.spark, '17 s · peak 4.01 ms · 33.3 ms budget · info heaviest', 'the trace caption');
+  assertEqual(r.meters.energy, 0.277, 'the energy meter reads the field, not a band');
+});
+
+test('every stats-panel row reaches an element', async page => {
+  // `hud.js` produces an object of strings and `app.js` maps each key to an
+  // element. That indirection has one failure mode the type system cannot see:
+  // a key with no element is *silently dropped*, and the row sits on the "—"
+  // index.html seeded it with, forever, looking like a measurement that happens
+  // to be unavailable. Every row has a real value once the field is running, so
+  // a lingering "—" is exactly that bug.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // The panel boots folded at this suite's phone-sized default viewport, and a
+  // folded panel deliberately paints nothing into a `display: none` body.
+  // Resizing does not unfold it — the fold is a choice, not a layout — so the
+  // test has to make the same click a reader would.
+  if (await page.getAttribute('#nerdFoldBtn', 'aria-expanded') === 'false') {
+    await page.click('#nerdFoldBtn');
+  }
+  await page.click('#playBtn', { force: true });
+
+  const stale = async view => {
+    const id = `nerdView${view[0].toUpperCase()}${view.slice(1)}`;
+    // `until` passes no argument through to the page, so the id is baked into
+    // the expression rather than closed over.
+    await until(page, `!!document.getElementById('${id}') && !document.getElementById('${id}').hidden`,
+      3000, `${view} view never became visible`);
+    // Give the panel's 250 ms tick a few passes, plus the second the on-canvas
+    // values refresh on, before deciding a row is stuck.
+    await page.waitForTimeout(1600);
+    return page.evaluate(v => {
+      const root = document.getElementById(`nerdView${v[0].toUpperCase()}${v.slice(1)}`);
+      return Array.from(root.querySelectorAll('dd[id], em[id], span[id]'))
+        .filter(el => el.textContent.trim() === '—')
+        .map(el => el.id);
+    }, view);
+  };
+
+  assertEqual((await stale('live')).join(', '), '', 'these Live rows never received a value');
+  await page.click('[data-nerd-view="math"]');
+  assertEqual((await stale('math')).join(', '), '', 'these Math rows never received a value');
+  await page.click('[data-nerd-view="code"]');
+  assertEqual((await stale('code')).join(', '), '', 'these Code rows never received a value');
 });
 
 test('theme toggles to bone and uses deep-bone #E0D6C8', async page => {

@@ -23,9 +23,9 @@ Built in a small Australian lab by **Blazenetic** (systems architect who researc
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/meet-the-lab.md) · [History](docs/history.md) · [Teachings & Learnings](docs/teachings-and-learnings.md) · [Blame](docs/blame.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/info-layer.md) · [Still Field Architecture](docs/still-field-architecture.md) · [All docs](docs/)
 
-> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead! The clocks we control are the ones we trust!  
+> **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead! The clocks we control are the ones we trust! The depth is finally *visible*!  
 > **Darling:** It is a noise generator, Melchett.  
-> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, oversaw the seam passes and the A-weighted matching, targeted the overnight failure modes, and then complained about the edge cases. You’re welcome.
+> **Blazenetic:** A *correct* noise generator. I researched the generators, coordinated the graph, oversaw the seam passes and the A-weighted matching, targeted the overnight failure modes, made the perspective readable, and then complained about the edge cases. You’re welcome.
 
 ---
 
@@ -109,7 +109,7 @@ Colour rides a violet → cyan ramp driven by three non-aligning energy layers (
 
 Default **on**. Intensity and speed controls (practical range 0.7–4.8). Battery-conscious 30 fps, stops completely when the page is hidden, respects `prefers-reduced-motion`.
 
-> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. I coordinated the architecture so the state modules own their state. You’re welcome.  
+> **Blazenetic:** I spent a non-trivial amount of research time finding the perspective and lifecycle maths that would let people fall asleep harder. I coordinated the architecture so the state modules own their state. The arcs are finally long enough to read. You’re welcome.  
 > **Baldrick:** My cunning plan was to make the nodes explode when they die.  
 > **Darling:** No.
 
@@ -332,7 +332,7 @@ Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of inc
 See [Meet the Lab](docs/meet-the-lab.md) for the cast list, [History](docs/history.md) for how we got here, [Teachings & Learnings](docs/teachings-and-learnings.md) for the curriculum, and [Blame](docs/blame.md) for the affectionate ledger.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
-**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. The bounce is dead. The clocks we control are the ones we trust. You’re welcome.”  
+**Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. The bounce is dead. The clocks we control are the ones we trust. The depth arcs are finally readable. You’re welcome.”  
 **Darling:** “And somehow the product still helps people sleep.”  
 **Melchett:** “A crushing victory for the forces of rest!”  
 **Baldrick:** “I still think the potato equaliser had merit—”  

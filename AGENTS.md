@@ -102,9 +102,10 @@ js/
   noise.js          the noise generators
   audio.js          Web Audio graph, transport, EQ, sleep timer, wake lock
   still-field.js    the two canvases — front door only; see below
-  still-field/      the renderer, one module per concern (20 files)
+  still-field/      the renderer, one module per concern (22 files)
   theme.js          dark ↔ bone theme, and standard ↔ ultra glass
   ui-chrome.js      immersion hide/show of the main controls
+  hud.js            the stats panel's strings — pure, and owns no DOM
   app.js            DOM wiring — the only module that touches the app's DOM
 tests/run.mjs       browser smoke tests
 docs/               product requirements and historical context
@@ -162,8 +163,10 @@ nodes.js         the population: model, lifecycle, one simulation step
 link-pass.js     the lattice, its envelopes, batching and telemetry
 node-pass.js     the nodes, flat then glowing
 modes.js         the callout detail modes and their rotation
+callout-content.js  what a callout says: the eight detail-mode branches
 callouts.js      node callouts: selection, placement, paint
 edge-labels.js   edge dimensions: slots, quantised text, paint
+code-lines.js    the transcript the source overlay prints
 code-ticker.js   the on-canvas source listing
 loop.js          one frame, and the loop control around it
 stats.js         the public statistics snapshot
@@ -189,8 +192,19 @@ has the reasoning and the worked examples; these are the rules themselves:
   remeasuring the world *and then* re-counting the nodes lives in the front
   door, where it reads as a list rather than as a call chain.
 
+- **The stats panel is strings here, elements in `app.js`.** `js/hud.js` turns a
+  stats snapshot into an object of strings and touches no DOM; `app.js` maps each
+  key to an element. That keeps the one architectural rule intact — a `hud.js`
+  that wrote into `#nerdHud` would be a second module touching the app's DOM, and
+  the exception would then be citable by a third. **A row key with no element is
+  silently dropped**, leaving the row on the `—` `index.html` seeded it with;
+  `tests/run.mjs` fails naming any row still reading `—` with the field running.
+
 `tests/run.mjs` names the front door's whole export surface. Move code freely
-between these modules; that test is what tells you the door still opens.
+between these modules; that test is what tells you the door still opens. It also
+carries three `unit:` tests that import a module and call it directly — no DOM,
+under a second between them. Arithmetic belongs there, not in a six-second test
+that watches a field of nodes and infers the answer.
 
 ## UI chrome & immersion
 
@@ -313,15 +327,18 @@ the field's baseline opacity; mid and spark supply hue only.
 **Add a node detail mode** — add the name to `LABEL_MODE_NAMES` and a glyph to
 `MODE_HANDLE` in `js/still-field/modes.js` (both arrays must stay the same
 length — `tests/run.mjs` asserts it), then add the branch to
-`refreshNodeCallout()` in `js/still-field/callouts.js`. `MODE_WEIGHTS`
+`refreshNodeCallout()` in `js/still-field/callout-content.js` — **not**
+`callouts.js`, which is placement and paint and has no business in the diff for
+a new mode. `MODE_WEIGHTS`
 re-derives itself, and the per-node offset spreads the new mode across the
 field automatically. Up to four key/value rows; only the first three can be
 axis-coloured.
 
 **Add an edge dimension kind** — all in `js/still-field/edge-labels.js`: add an
 `EDGE_KIND_*` index, raise `EDGE_KIND_COUNT`, add the branch in
-`drawEdgeAnnotations()`, and add any new quantised string table next to
-`DISTANCE_TEXT`. Whatever the kind reads must be derivable from values the link
+`drawEdgeAnnotations()`, and add any new quantised string table inside
+`ensureEdgeTables()` (they are built on first draw, not at module load, so a
+visitor who never opens the info layer never pays for them). Whatever the kind reads must be derivable from values the link
 pass already has.
 
 **Add a persisted setting** — add the key to `STORAGE_KEYS` in
@@ -502,6 +519,19 @@ noise rather than the listening volume.
   depth 0.75, dwell 14 s, 30 fps, source overlay on) all reproduce the behaviour
   the field had before the panel existed. Changing a default without updating
   the matching test assertion will fail CI.
+- **The link buffer and the grid arrays only ever grow, and they grow in bands.**
+  Density, reach, depth and intensity are sliders, so they fire `input` at
+  pointer-move rate; sizing those arrays to the exact population meant a
+  full density sweep allocated 35 link buffers and 35 grid arrays, about 550 KB,
+  *per drag*. `ensureLinkCapacity()` in `nodes.js` and `allocateGrid()` in
+  `grid.js` high-water-mark them and round the node count up to the next
+  sixteen, which makes every drag after the first allocate nothing. Growing to
+  the exact figure is not good enough — each rising step needs one more row than
+  the last, so it still allocates on nearly all of them. The consequence to
+  remember: **these arrays are longer than the live count**, so anything that
+  clears one must clear a bounded range (`counts.fill(0, 0, cells)`), and
+  `population.links.byteLength` now reports what is held rather than what is in
+  use.
 - **Node density multiplies the clamped 26–44 window, not the raw viewport
   area.** Applying it to the raw figure opens a 1440×900 display on 132 nodes at
   the *default* setting, which is a redesign for every user who never touches

@@ -1,7 +1,7 @@
 # Complex Noise
 
 **Procedural noise for deep rest.**  
-Free · Zero dependencies · Zero ads · Zero annual fee  
+Free · Zero dependencies · Zero ads · Zero potatoes  
 by **[Blazenetic](https://github.com/Blazenetic)**
 
 [**→ Live demo**](https://blazenetic.github.io/complex-noise/)  

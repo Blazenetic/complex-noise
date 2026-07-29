@@ -9,9 +9,9 @@ traversal shipped by PR #42.
 
 - Repository: `Blazenetic/complex-noise`
 - Role: zero-dependency browser noise generator and Still Field visualisation
-- Expected branch: `agent/refresh-depth-screenshots`
-- Expected base: `main` at `87ab493`
-- Expected Git state: committed and clean
+- Final branch: `agent/refresh-depth-screenshots` (merged)
+- Final base: `main` at `87ab493` (pre-merge)
+- Final Git state: merged via squash to `main` as `4c665ae`
 
 ## Authority
 
@@ -20,52 +20,40 @@ traversal shipped by PR #42.
   deleting the previous set, and open a fresh PR
 - Governing references: Drive plan `Complex Noise — Screenshots Refresh Plan
   2026-07-29.md`, PRs #43 and #44, and PR #42
-- Approval status: implementation, Drive upload, commit, push and PR creation
-  explicitly requested on 2026-07-29
+- Approval status: implementation, Drive upload, commit, push, PR creation,
+  ready-for-review and merge all authorized on 2026-07-29
 - Authorized paths: screenshot catalog and helper, `docs/screenshots/`,
   `README.md`, `docs/INFO_LAYER.md`, and this handover
 
-## Read First
-
-1. `AGENTS.md`
-2. `docs/SCREENSHOTS.md`
-3. `docs/INFO_LAYER.md`
-4. PR #45
-
 ## Completed
 
-- Core commit `cbe5b20` replaces or retires all seven pre-existing screenshot
-  files and publishes the complete 13-image current set.
-- The deterministic DPR-2 helper now regenerates the transform capture as well
-  as the other twelve images.
+- Core commit on the feature branch replaced or retired all seven pre-existing
+  screenshot files and published the complete 13-image current set.
+- The deterministic DPR-2 helper regenerates the transform capture as well as
+  the other twelve images.
 - Root README and Info Layer embeds, captions and alt text use the new set.
 - Every PNG was reviewed at native resolution and the live app was cross-checked
   in a browser.
-- All 13 PNGs were uploaded to
+- All 13 PNGs remain in
   [Screenshots Final 2026-07-29 — Depth UI Refresh](https://drive.google.com/drive/folders/18E8S6swhYnkKHNMtInW0m7XDWBbBbybR).
 - The previous Drive screenshot folder remains unchanged.
-- Draft PR #45 targets current `main` and supersedes the stacked PRs #43 and
-  #44.
+- PR #45 was marked ready, reviewed, and squash-merged to `main`.
+- Superseded draft PRs #43 and #44 were closed.
 
-## Current Gate
+## Status
 
-- Human review of PNG fidelity and README flow.
-- Mark PR #45 ready and merge only after that review.
+**Complete.** The refreshed screenshot set is live on `main`. No further action
+required on this handover. The file may be deleted in a later cleanup pass if
+desired; it is retained for the moment as an audit trail of the depth-refresh
+work.
 
-## Next Safe Action
+## Hard Stops (still observed)
 
-- Review the rendered README and the 13 PNGs in PR #45, with particular
-  attention to the hero crop, phone callouts, visible perspective depth and
-  Field Lab completeness.
-
-## Hard Stops
-
-- Do not merge without human visual review.
 - Do not delete or overwrite the previous Drive screenshot set.
 - Do not add runtime dependencies or a build step.
 - Do not regenerate the PNGs without reviewing every resulting capture.
 
-## Verification
+## Verification (pre-merge)
 
 ```text
 node scripts/capture-screenshots.mjs
@@ -88,14 +76,11 @@ Google Drive folder readback
 ```
 
 CI was skipped by commit message as authorized; the local browser, lint, syntax
-and diff gates are green.
+and diff gates were green.
 
-## Handover Contract
+## Handover Contract (closed)
 
-- Preserve: the 13-image cap, stable filenames, current-main base, PR #45 and
-  both Drive screenshot folders
-- Update before finishing: this handover if the branch, PR, image set or Drive
-  folder changes
-- Final Git-state requirement: committed and clean
-- External actions requiring fresh approval: ready-for-review transition,
-  merge, release or deployment
+- Preserved: the 13-image cap, stable filenames, current-main base, PR #45
+  (merged) and both Drive screenshot folders
+- Updated on completion: this handover records the merge
+- Final Git-state: clean on `main`

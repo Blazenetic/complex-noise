@@ -6,6 +6,109 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — reviewing three merged PRs, and giving the megabyte back (phase 4)
+
+Phases 1–3 moved 3,327 lines into 22 modules and then made the most expensive
+one cheaper. This is the review pass over all three, and it started by checking
+the least interesting thing possible: whether any arithmetic changed meaning
+while it was being carried between files.
+
+None did. Every substantial function was extracted from the pre-refactor file
+and diffed against its new home, and every difference was a rename, a
+destructure, or something the PRs said they were doing. The split did what it
+said it did.
+
+What the review did find was three places where the code makes a claim about
+itself and does not keep it. In a project whose entire instrumentation argument
+is *a measurement you can read beats a comment you have to trust*, those are not
+cosmetic.
+
+### Fixed
+
+- **The source listing gives its 1.7 MiB back.** Phase 3 cached the listing's
+  stable transcript in a scratch bitmap and justified the memory explicitly:
+  "only a visible, expanded, wide-screen listing pays for this". The allocation
+  was conditional; nothing ever released it. Folding the listing, switching the
+  overlay off, narrowing below 1000 px, turning Stats off, switching the field
+  off or locking the phone all left it resident — so a phone locked at 3 a.m.
+  held 1.7 MiB all night for an overlay that stopped drawing hours earlier, in
+  an app that otherwise stops its render loop outright while the page is hidden
+  precisely so it costs nothing. It is now released on every one of those paths.
+  Re-earning it costs one allocation and one re-raster: what a theme change
+  already costs.
+- **The fold hit-target no longer outlives the listing.** `codeVisible` and the
+  corner it records are only refreshed while the info layer draws, so once the
+  loop stopped they stayed frozen at the last frame's values. Pressing the page
+  background where the listing used to be — with the intensity slider at zero —
+  toggled a fold nobody could see. Stopping the loop now forgets the position
+  along with the bitmap.
+- **The Buffers row counts every buffer.** It reported the link buffer alone:
+  `36.0 KiB` on a page holding closer to two megabytes, because the grid's five
+  typed arrays and the transcript raster were both uncounted. It now reads
+  `9.7 KiB · 1.69 MiB raster · 0 alloc/frame`, and collapses back to
+  `9.7 KiB · 0 alloc/frame` the moment the raster is released — which is how you
+  can watch the fix above happen from the panel instead of taking its word for it.
+- **`edgeSlots` stopped counting slots it had just handed back.** The slot loop
+  incremented its held counter above the release rather than below it, so the
+  panel claimed dimensions over a field holding none of them for a frame after
+  each one expired. Exactly the shape of the stale count phase 2 fixed one
+  function away, fixed the same way.
+- **The front door's own module map listed 20 of its 22 modules.** It had never
+  been told about `callout-content.js` or `code-lines.js`. `AGENTS.md` and the
+  architecture document were right all along; only `js/still-field.js` disagreed
+  with itself.
+
+### Added
+
+- A browser test walks the raster's whole lifecycle through the public stats
+  snapshot: earn it on a wide expanded listing, release it on fold, re-earn it
+  on unfold, release it below the viewport threshold, re-earn it above, release
+  it when the field is switched off.
+- `hud.formatBytes()` — pure, unit-tested, and reads MiB once KiB would need a
+  fourth digit, because "1740.8 KiB" is a number nobody parses as *most of two
+  megabytes*.
+- [`docs/STILL_FIELD_PHASE_4_HANDOVER.md`](docs/STILL_FIELD_PHASE_4_HANDOVER.md):
+  what the review checked, what it changed, and — at greater length — the eight
+  things it looked at and deliberately left alone, with the reasoning, so the
+  next session does not re-derive them from scratch.
+
+### Unchanged, on purpose
+
+Struct-of-arrays remains unearned. So does an event system for the one call
+`nodes.js` makes into `edge-labels.js`. The 45 fps cap still delivers about 30 on
+a 60 Hz display, which is arithmetic rather than a defect. All of it is written
+down with reasons rather than left for someone to rediscover.
+
+### Lab Log
+
+**Melchett:** A *review*? We have already merged them! Three times!
+
+**Darling:** That is rather the point, sir.
+
+**Blazenetic:** The refactor was clean. I checked every function against the
+file it came out of before I touched anything, because a review that starts by
+proposing improvements is a review that never read the diff.
+
+**Arty:** The bitmap was the interesting one. We wrote "allocated only for a
+visible, expanded, wide-screen listing" in three separate documents. All three
+were describing the allocation. Nobody wrote the other half.
+
+**Melchett:** And what does the other half do?
+
+**Arty:** Gives it back, sir. Fold the listing and the panel drops from 1.69
+megabytes to nothing while you watch.
+
+**Baldrick:** My cunning plan was to stop measuring the memory, so there would
+be no bad number.
+
+**Darling:** That is not a plan, that is the *original bug*.
+
+**Blazenetic:** The row that reported 36 KiB on a two-megabyte page was
+technically true. This lab does not ship technically true. If a number is going
+to be on screen all night, it can be the real one.
+
+---
+
 ## [Unreleased] — measure first, cache the thing that was actually expensive (phase 3)
 
 Phase 3 arrived with a tempting plan to turn every node into parallel typed

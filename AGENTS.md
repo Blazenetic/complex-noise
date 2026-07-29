@@ -537,9 +537,21 @@ noise rather than the listening volume.
   the exact figure is not good enough — each rising step needs one more row than
   the last, so it still allocates on nearly all of them. The consequence to
   remember: **these arrays are longer than the live count**, so anything that
-  clears one must clear a bounded range (`counts.fill(0, 0, cells)`), and
-  `population.links.byteLength` now reports what is held rather than what is in
-  use.
+  clears one must clear a bounded range (`counts.fill(0, 0, cells)`), and the
+  HUD's Buffers row reports what is held rather than what is in use.
+- **A cache that is conditional on the way in must be conditional on the way
+  out.** The source listing rasterises its stable transcript into an
+  `OffscreenCanvas` — 434 KiB at DPR 1, **1.7 MiB at the DPR 2 cap** — and the
+  justification for paying that is "only a visible, expanded, wide-screen
+  listing does". Allocating lazily is only half of keeping that promise: the
+  first version was never freed, so a tablet that crossed 1000 px once, or a
+  phone locked at 3 a.m., held it for the rest of the night. `layoutCodeTicker()`
+  releases it whenever the listing is not printing its transcript, and
+  `stopLoop()` releases it on every way the loop can stop. Re-earning it is one
+  allocation and one re-raster, the same cost a theme or DPR change already pays.
+  If you add another scratch surface, give it the same two halves — and report
+  it in `stats.js`, because a Buffers row that omits the largest buffer is worse
+  than no Buffers row.
 - **Node density multiplies the clamped 26–44 window, not the raw viewport
   area.** Applying it to the raw figure opens a 1440×900 display on 132 nodes at
   the *default* setting, which is a redesign for every user who never touches

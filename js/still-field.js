@@ -32,8 +32,10 @@
  *     link-pass.js     the lattice, its envelopes, batching and telemetry
  *     node-pass.js     the nodes, flat then glowing
  *     modes.js         the callout detail modes and their rotation
+ *     callout-content.js  what a callout says: the eight detail-mode branches
  *     callouts.js      node callouts: selection, placement, paint
  *     edge-labels.js   edge dimensions: slots, quantised text, paint
+ *     code-lines.js    the transcript the source overlay prints
  *     code-ticker.js   the on-canvas source listing
  *     loop.js          one frame, and the loop control around it
  *     stats.js         the public statistics snapshot

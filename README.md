@@ -7,9 +7,9 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 [**→ Live demo**](https://blazenetic.github.io/complex-noise/)  
 Add to Home Screen on Android for the full experience.
 
-![Complex Noise playing Brown noise in the dark theme](docs/screenshots/hero-dark.png)
+![Still Field transform-mode callouts with axis-coloured rows](docs/screenshots/info-layer-transform.png)
 
-*The default face of the Lab. Brown noise, a living field, no ads and no annual fee.*
+*Transform detail mode. Axis colours (X red, Y green, Z blue) on the callout rows. The field keeps its residual outlines.*
 
 > It began because a commercial noise app decided ads on every pause and an annual fee were reasonable.  
 > We disagreed.  

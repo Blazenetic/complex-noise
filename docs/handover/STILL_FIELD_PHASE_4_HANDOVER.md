@@ -1,17 +1,22 @@
 # Still Field phase 4 — post-merge review of phases 1–3, and what is left
 
-Status: review complete; fixes landed; raster-release profiling complete
-Base: `main` at `65ef1d0` (the merge of [PR #36](https://github.com/Blazenetic/complex-noise/pull/36))
+Status: review complete; fixes landed; raster-release profiling complete; inverse HUD guard complete
+Base (original): `main` at `65ef1d0` (the merge of [PR #36](https://github.com/Blazenetic/complex-noise/pull/36))
+Current head: `main` at `e0246a9` (includes agent operating layer and all later work listed below)
 Reviewed: [PR #34](https://github.com/Blazenetic/complex-noise/pull/34),
 [PR #35](https://github.com/Blazenetic/complex-noise/pull/35),
 [PR #36](https://github.com/Blazenetic/complex-noise/pull/36)
 Prepared: 29 July 2026
-Updated: 29 July 2026 (issue #38 measurement complete)
+Updated: 29 July 2026 (issue #38 measurement complete; HUD guard via PR #39; subsequent product and docs work recorded)
 
 Read [`AGENTS.md`](../../AGENTS.md) and
-[`STILL_FIELD_ARCHITECTURE.md`](../STILL_FIELD_ARCHITECTURE.md) before editing
+[`still-field-architecture.md`](../still-field-architecture.md) before editing
 code. This document records what the review of the three-PR refactor checked,
 what it changed, and — at least as usefully — what it deliberately did not.
+
+Phase 5 ([`STILL_FIELD_PHASE_5_HANDOVER.md`](./STILL_FIELD_PHASE_5_HANDOVER.md))
+closed the inverse HUD mapping item. This file remains the durable review
+record and the ordered list of remaining independent work.
 
 ---
 
@@ -161,35 +166,62 @@ matters more than the list, because the next session will see them again.
 
 ---
 
+## Subsequent work after this review (recorded so the next session does not re-derive)
+
+All of the following landed on `main` after the original phase-4 base:
+
+- [PR #37](https://github.com/Blazenetic/complex-noise/pull/37) — the phase-4
+  fixes themselves (raster release, Buffers row, edgeSlots count, front-door map).
+- [PR #39](https://github.com/Blazenetic/complex-noise/pull/39) / phase 5 —
+  inverse HUD mapping guard (`HUD_ROW_KEYS` + `defineRowMap()` at boot).
+- [PR #41](https://github.com/Blazenetic/complex-noise/pull/41) — reproducible
+  lockfile, `--churn` / `--dpr` profiler modes, and the matched evidence that
+  closed issue #38 (immediate release retained).
+- [PR #42](https://github.com/Blazenetic/complex-noise/pull/42) — perceptible
+  depth traversal (larger per-node z amplitude, atmospheric falloff).
+- Screenshots refresh ([#43](https://github.com/Blazenetic/complex-noise/pull/43),
+  [#44](https://github.com/Blazenetic/complex-noise/pull/44),
+  [#45](https://github.com/Blazenetic/complex-noise/pull/45)) and the agent
+  operating layer ([#46](https://github.com/Blazenetic/complex-noise/pull/46)).
+- Docs lowercase renames and link refresh across `docs/` (architecture,
+  info-layer, product-requirements, etc.). Paths in this file now match current
+  tree.
+
+No open PRs or issues at the time of this refresh. Test suite is 31/31.
+
+---
+
 ## What a later session should pick up
 
-In rough order of value.
+In rough order of value. Items 1 and 2 are closed; the remaining three are still
+independent and should stay separate PRs.
 
-1. **Raster-release profiling is complete.** Issue #38 measured matched
+1. **Raster-release profiling — COMPLETE.** Issue #38 measured matched
    steady-state runs plus repeated fold/unfold and field stop/start churn at DPR
    1 and DPR 2 under 4× CPU throttle. The rebuild remained inside the 33.3 ms
    frame budget, no accumulating post-GC heap growth appeared, and the measured
    interaction did not earn a grace period. Immediate release remains the
-   decision. The environment, raw tables and reproduction commands are recorded
-   in [`ISSUE_38_PROFILE_RESULTS.md`](./ISSUE_38_PROFILE_RESULTS.md).
-2. **The inverse HUD mapping guard.** `tests/run.mjs` catches a `hud.js` row key
-   with no element in `app.js`. It does not catch an element mapped to a key no
-   builder produces — that row silently keeps whatever `index.html` seeded it
-   with. Phase 2's handover named this and it is still open; it is now slightly
-   more earned, because this PR touched the row set.
-3. **A `CODE_SLOT` consistency guard.** `code-lines.js` addresses live-value slots
-   by index and `refreshCodeValues()` fills them by index, with nothing tying the
-   two together. Adding a line with the wrong slot number prints the wrong number
-   against the right statement, confidently. Phase 3's handover named this too.
-4. **`edge-labels.js` sizes its distance and radius tables at 2,001 by
-   assumption.** The clamp is safe, but a large enough world silently pins the
-   printed value at `2000 u`. Deriving the bound from the world plane, or
-   asserting it, is a small honest fix.
-5. **Accessibility audit.** Named in `docs/README.md` as outstanding since well
-   before this refactor: controls are labelled and touch targets clear 44 px, but
-   no screen-reader walkthrough or contrast audit beyond reduced-motion support
-   has been done. Nothing in the renderer split touched it; it is simply the
-   largest known gap in the project.
+   decision. Full environment, raw tables and reproduction commands are in
+   [`ISSUE_38_PROFILE_RESULTS.md`](./ISSUE_38_PROFILE_RESULTS.md).
+2. **The inverse HUD mapping guard — COMPLETE** (PR #39 / phase 5). `HUD_ROW_KEYS`
+   and `defineRowMap()` now reject both missing and extra keys at boot. Pure unit
+   coverage and the interaction test remain.
+3. **A `CODE_SLOT` consistency guard (next priority).** `code-lines.js` addresses
+   live-value slots by index and `refreshCodeValues()` in `code-ticker.js` fills
+   them by index, with nothing tying the two together. Adding a line with the
+   wrong slot number prints the wrong number against the right statement,
+   confidently. A small pure guard (or shared constant set) that fails at module
+   load or in the unit suite is enough. Keep it independent of the edge-table
+   work.
+4. **`edge-labels.js` distance/radius table bound.** Tables are sized at 2,001 by
+   assumption (`DISTANCE_TEXT_LEN` / `RADIUS_TEXT_LEN`). The clamp is safe today,
+   but a future world that exceeds it silently pins the printed value at
+   `2000 u`. Derive the bound from the world plane (or assert it against
+   `world.linkRadius` / max distance) so the claim stays honest.
+5. **Accessibility audit.** Named in `docs/readme.md` (and earlier docs) as
+   outstanding: controls are labelled and touch targets clear 44 px, but no
+   screen-reader walkthrough or contrast audit beyond reduced-motion support has
+   been done. Larger than the two consistency guards; keep it separate.
 
 ---
 
@@ -217,7 +249,7 @@ And one added by this pass:
 
 ---
 
-## Validation on this head
+## Validation on the original phase-4 head
 
 ```bash
 npm run lint      # clean
@@ -236,3 +268,6 @@ git diff --check  # clean
   to confirm `shown` tracks `held` (4–6 of 6) rather than settling at the
   "every slot held, nothing on screen" state the phase-2 blocked-slot fix
   removed. It does.
+
+Current `main` (post all subsequent PRs) continues to pass the same gates;
+re-run `npm run check` after any behavioural change.

@@ -1,6 +1,6 @@
 # Still Field phase 7 — make the edge-label table bound explicit
 
-Status: implementation and local validation complete; publication in progress
+Status: implementation and local validation complete; draft PR open
 
 Prepared: 29 July 2026
 
@@ -14,11 +14,12 @@ distances or radii at `2000 u`.
 - Repository: `Blazenetic/complex-noise`
 - Role: Still Field Phase 7 implementation and PR-readiness handover
 - Expected branch: `agent/edge-label-table-bound`
-- Expected base or head: `origin/main` at `93fa990`
-- Expected Git state: six Phase 7 paths intentionally uncommitted:
-  `AGENTS.md`, `CHANGELOG.md`, `docs/info-layer.md`,
-  `docs/handover/STILL_FIELD_PHASE_7_HANDOVER.md`,
-  `js/still-field/edge-labels.js`, and `tests/run.mjs`
+- Expected base: `origin/main` at `93fa990`
+- Implementation commit: `7fffc25` (`Guard edge-label measurement tables`)
+- Draft PR: [#48 — Guard Still Field edge-label table
+  bounds](https://github.com/Blazenetic/complex-noise/pull/48)
+- Expected Git state: branch aligned with
+  `origin/agent/edge-label-table-bound`, committed and clean
 
 ## Authority
 
@@ -27,7 +28,7 @@ distances or radii at `2000 u`.
 - Governing decision: retain the existing `2000 u` inclusive allocation budget,
   derive both table lengths from it, and fail before oversized text can paint
 - Approval status: implementation, commit, push, and draft PR creation
-  authorized; merge, release, and deployment not authorized
+  completed; merge, release, and deployment not authorized
 - Authorized paths: the edge-label owner, focused tests, matching
   teaching/operator notes, changelog, and this handover
 
@@ -56,15 +57,15 @@ lazy first-draw construction, and zero-runtime-dependency model are unchanged.
 
 ## Current gate
 
-Commit the six explicit Phase 7 paths, push the dedicated branch, open a draft
-PR against `main`, and let GitHub Actions supply the external CI gate.
+GitHub Actions and human review on draft PR #48. Do not mark ready, merge, or
+deploy without fresh authority.
 
 ## Next safe action
 
-For Phase 7, complete draft-PR publication and record its commit, URL, and CI
-state here. The next independent item is the Accessibility audit: perform and
-record a screen-reader walkthrough and contrast audit separately; do not fold
-it into this renderer-bound change.
+For Phase 7, inspect the PR's `CI` check and address review feedback if asked.
+The next independent item is the Accessibility audit: perform and record a
+screen-reader walkthrough and contrast audit separately; do not fold it into
+this renderer-bound change.
 
 ## Hard stops
 
@@ -84,6 +85,8 @@ git diff --check             # clean
 The focused test also drives `drawEdgeAnnotations()` with an oversized live
 radius and proves the guard throws before touching the canvas.
 
+GitHub Actions: pending after the final handover push.
+
 No overnight profile comparison was run because the two tables remain lazy,
 the existing tracked-pair paint path still performs numeric array lookups, and
 the only steady-state addition is folded into the existing first-draw/radius
@@ -92,11 +95,12 @@ performance claim.
 
 ## Final Git state
 
-Publication in progress; resolve to `committed and clean`.
+`committed and clean`
 
 ## Handover contract
 
-- Preserve the six-file Phase 7 change set and the merged Phase 6 base.
+- Preserve draft PR #48, its six-file Phase 7 change set, and the merged Phase
+  6 base.
 - Update this handover if validation or Git state changes.
 - Final Git-state requirement for this session: `committed and clean`.
 - Merge, release, and deployment require fresh approval.

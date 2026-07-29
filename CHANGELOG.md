@@ -2,683 +2,212 @@
 
 All notable changes to Complex Noise are documented here.
 
-The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section for funsies.
+The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section for funsies. Entries are reverse-chronological. New work goes at the top under a clear dated or named header — no “Unreleased” placeholders.
 
 ---
 
-## [Unreleased] — make every HUD row prove it belongs (phase 5)
+## The Great Modularisation — late 28–29 July 2026
 
-Phase 2 separated the stats panel's strings from its DOM. Its browser guard
-caught a new builder key with no element because that row stayed on `—`; it did
-not catch the inverse, an element left in the map after its builder stopped
-producing the key. That retired row looked like a plausible unavailable
-measurement forever.
+The Still Field stopped being a single 3,327-line monster and became a laboratory of twenty-two modules. No pixel changed. The suite stayed green at every step because the code was moved, not rewritten. Measurement vetoed fashion. Three self-claims the code was making about itself were brought into line with reality.
 
-### Fixed
+### Phase 5 — make every HUD row prove it belongs
 
-- **The HUD mapping contract now fails in both directions.** `hud.js` owns the
-  exact Live, meter, Math and Code-stage key sets. `app.js` validates each DOM
-  map once at boot, outside the render loop, and reports the missing and extra
-  keys in the error. A broken instrument panel is a programming error, not a
-  measurement to disguise as `—`.
-- The pure HUD unit test proves each builder still emits exactly its declared
-  key set and exercises both failure directions. The existing interaction test
-  remains as the end-to-end proof that every mapped element receives a value.
+Phase 2 separated the stats panel’s strings from its DOM. Its browser guard caught a new builder key with no element (the row stayed on `—`). It did not catch the inverse: an element left in the map after its builder stopped producing the key. That retired row looked like a plausible unavailable measurement forever.
 
-### Handover
+**Fixed**
+- The HUD mapping contract now fails in both directions. `hud.js` owns the exact Live, meter, Math and Code-stage key sets. `app.js` validates each DOM map once at boot and reports the missing and extra keys. A broken instrument panel is a programming error, not a measurement to disguise as `—`.
+- The pure HUD unit test proves each builder still emits exactly its declared key set and exercises both failure directions. The existing interaction test remains the end-to-end proof that every mapped element receives a value.
 
-- The deferred raster-release profile is tracked in
-  [issue #38](https://github.com/Blazenetic/complex-noise/issues/38), with the
-  matched-harness protocol and decision rule.
-- [`docs/STILL_FIELD_PHASE_5_HANDOVER.md`](docs/STILL_FIELD_PHASE_5_HANDOVER.md)
-  records the completed seam and leaves the `CODE_SLOT` consistency guard as the
-  next small, independent PR.
+**Handover**
+- Deferred raster-release profile tracked in [issue #38](https://github.com/Blazenetic/complex-noise/issues/38).
+- [`docs/STILL_FIELD_PHASE_5_HANDOVER.md`](docs/STILL_FIELD_PHASE_5_HANDOVER.md) records the completed seam and leaves the `CODE_SLOT` consistency guard as the next small independent PR.
 
-## [Unreleased] — reviewing three merged PRs, and giving the megabyte back (phase 4)
+### Phase 4 — reviewing three merged PRs, and giving the megabyte back
 
-Phases 1–3 moved 3,327 lines into 22 modules and then made the most expensive
-one cheaper. This is the review pass over all three, and it started by checking
-the least interesting thing possible: whether any arithmetic changed meaning
-while it was being carried between files.
+Phases 1–3 moved 3,327 lines into 22 modules and then made the most expensive one cheaper. This review started by checking the least interesting thing possible: whether any arithmetic changed meaning while it was being carried between files. None did. Every substantial function was extracted from the pre-refactor file and diffed against its new home.
 
-None did. Every substantial function was extracted from the pre-refactor file
-and diffed against its new home, and every difference was a rename, a
-destructure, or something the PRs said they were doing. The split did what it
-said it did.
+What the review found were three places where the code makes a claim about itself and does not keep it. In a project whose instrumentation argument is *a measurement you can read beats a comment you have to trust*, those are not cosmetic.
 
-What the review did find was three places where the code makes a claim about
-itself and does not keep it. In a project whose entire instrumentation argument
-is *a measurement you can read beats a comment you have to trust*, those are not
-cosmetic.
+**Fixed**
+- **The source listing gives its 1.7 MiB back.** Phase 3 cached the stable transcript in a scratch bitmap and justified the memory: “only a visible, expanded, wide-screen listing pays for this”. The allocation was conditional; nothing ever released it. Folding, switching the overlay off, narrowing below 1000 px, turning Stats off, switching the field off or locking the phone all left it resident. It is now released on every one of those paths. Re-earning it costs one allocation and one re-raster.
+- **The fold hit-target no longer outlives the listing.** Stopping the loop now forgets the position along with the bitmap.
+- **The Buffers row counts every buffer.** It now reports the link buffer, the grid arrays *and* the transcript raster, and collapses the moment the raster is released — so you can watch the fix happen from the panel.
+- **`edgeSlots` stopped counting slots it had just handed back.**
+- **The front door’s own module map listed 20 of its 22 modules.** It had never been told about `callout-content.js` or `code-lines.js`.
 
-### Fixed
+**Added**
+- Browser test walks the raster’s whole lifecycle through the public stats snapshot.
+- `hud.formatBytes()` — pure, unit-tested, reads MiB once KiB would need a fourth digit.
+- [`docs/STILL_FIELD_PHASE_4_HANDOVER.md`](docs/STILL_FIELD_PHASE_4_HANDOVER.md): what was checked, what changed, and the eight things deliberately left alone with reasons.
 
-- **The source listing gives its 1.7 MiB back.** Phase 3 cached the listing's
-  stable transcript in a scratch bitmap and justified the memory explicitly:
-  "only a visible, expanded, wide-screen listing pays for this". The allocation
-  was conditional; nothing ever released it. Folding the listing, switching the
-  overlay off, narrowing below 1000 px, turning Stats off, switching the field
-  off or locking the phone all left it resident — so a phone locked at 3 a.m.
-  held 1.7 MiB all night for an overlay that stopped drawing hours earlier, in
-  an app that otherwise stops its render loop outright while the page is hidden
-  precisely so it costs nothing. It is now released on every one of those paths.
-  Re-earning it costs one allocation and one re-raster: what a theme change
-  already costs.
-- **The fold hit-target no longer outlives the listing.** `codeVisible` and the
-  corner it records are only refreshed while the info layer draws, so once the
-  loop stopped they stayed frozen at the last frame's values. Pressing the page
-  background where the listing used to be — with the intensity slider at zero —
-  toggled a fold nobody could see. Stopping the loop now forgets the position
-  along with the bitmap.
-- **The Buffers row counts every buffer.** It reported the link buffer alone:
-  `36.0 KiB` on a page holding closer to two megabytes, because the grid's five
-  typed arrays and the transcript raster were both uncounted. It now reads
-  `9.7 KiB · 1.69 MiB raster · 0 alloc/frame`, and collapses back to
-  `9.7 KiB · 0 alloc/frame` the moment the raster is released — which is how you
-  can watch the fix above happen from the panel instead of taking its word for it.
-- **`edgeSlots` stopped counting slots it had just handed back.** The slot loop
-  incremented its held counter above the release rather than below it, so the
-  panel claimed dimensions over a field holding none of them for a frame after
-  each one expired. Exactly the shape of the stale count phase 2 fixed one
-  function away, fixed the same way.
-- **The front door's own module map listed 20 of its 22 modules.** It had never
-  been told about `callout-content.js` or `code-lines.js`. `AGENTS.md` and the
-  architecture document were right all along; only `js/still-field.js` disagreed
-  with itself.
+**Unchanged, on purpose**
+Struct-of-arrays remains unearned. So does an event system for the one call `nodes.js` makes into `edge-labels.js`. The 45 fps cap still delivers about 30 on a 60 Hz display (arithmetic, not a defect). All written down so the next session does not re-derive them.
 
-### Added
+### Phase 3 — measure first, cache the thing that was actually expensive
 
-- A browser test walks the raster's whole lifecycle through the public stats
-  snapshot: earn it on a wide expanded listing, release it on fold, re-earn it
-  on unfold, release it below the viewport threshold, re-earn it above, release
-  it when the field is switched off.
-- `hud.formatBytes()` — pure, unit-tested, and reads MiB once KiB would need a
-  fourth digit, because "1740.8 KiB" is a number nobody parses as *most of two
-  megabytes*.
-- [`docs/STILL_FIELD_PHASE_4_HANDOVER.md`](docs/STILL_FIELD_PHASE_4_HANDOVER.md):
-  what the review checked, what it changed, and — at greater length — the eight
-  things it looked at and deliberately left alone, with the reasoning, so the
-  next session does not re-derive them from scratch.
+Phase 3 arrived with a tempting plan to turn every node into parallel typed arrays. It left without doing that. The measurements said the node model was not the problem; the 24-line source listing was repainting about 69 stable text runs every frame.
 
-### Unchanged, on purpose
+**Performance**
+- Checked-in profiling matrix (`npm run profile:still-field`) with fixed-seed native/throttled desktop and mobile scenarios, eight-second warm-up, 48 observations over twelve seconds. `PROFILE_ROOT` enables matched before/after comparison. Device-local observations, not CI thresholds.
+- Source ticker was the measured winner. At 150 nodes + 4× throttle, focused info medians: 0.050 ms (overlays off), 0.744 ms (callouts), 0.670 ms (dimensions), **1.154 ms (source alone)**.
+- Stable source text is rasterised once into a lazy `OffscreenCanvas` bitmap. Heat wash, active accent, stage rails, header and footer remain live.
+- Matched source-only result: info time 1.154 → 0.881 ms median (−23.7 %) and 1.423 → 1.049 ms p95 (−26.3 %); whole-frame 2.419 → 2.113 ms median (−12.6 %). Mobile control stayed flat (listing does not exist below 1000 px).
+- Memory bill written down: ~434 KiB at DPR 1, 1.7 MiB at DPR 2 cap. Folded, hidden and mobile sessions do not build it.
 
-Struct-of-arrays remains unearned. So does an event system for the one call
-`nodes.js` makes into `edge-labels.js`. The 45 fps cap still delivers about 30 on
-a 60 Hz display, which is arithmetic rather than a defect. All of it is written
-down with reasons rather than left for someone to rediscover.
+**Added**
+- Browser regression guard: a source frame must use the cached bitmap and stay below 30 `fillText()` calls.
+- Full matrix, counters, p95, memory trade and discarded prototype in [`docs/STILL_FIELD_PHASE_3_HANDOVER.md`](docs/STILL_FIELD_PHASE_3_HANDOVER.md).
+
+**Discarded**
+First cache prototype that repainted three text columns per warm line improved the median by only ~6 % and did not move p95 reliably. Not enough for the bitmap cost; it did not land.
+
+### Phase 2 — finishing the split, and the allocations nobody was counting
+
+Phase 1 made the renderer a directory. This finished the two modules that were still doing several jobs, moved the stats panel out of `app.js`, gave the pure functions their first tests, and fixed two allocation paths — both with numbers measured before and after.
+
+Still no pixel changes. Suite passed unchanged at every step.
+
+**Changed**
+- Mode dwell now means the advertised mean seconds per mode (golden-ratio sample normalised to exactly one).
+- `callouts.js` split: `callout-content.js` holds the eight detail-mode branches and row cache; `callouts.js` keeps selection, hysteretic placement and paint.
+- `code-lines.js` is the transcript; `code-ticker.js` is the paint.
+- Stats panel lives in pure `js/hud.js`. `app.js` maps keys to elements. Architectural rule intact. `app.js` 1,123 → 1,017 lines.
+
+**Fixed**
+- Dragging the density slider allocated ~550 KB (35 link buffers + 35 grid arrays per full sweep at pointer-move rate). Arrays now only grow, in bands of sixteen. First sweep of a session costs ~126 KB; every drag after allocates nothing.
+- 5,034 strings built at module import for an overlay that may be off. Quantised tables now built on first draw.
+
+**Added**
+- Unit tests (three grouped, no DOM, under a second): smoothstep + mode schedule (including `MODE_WEIGHTS` mean of 1), node-count target and 26–44 window, grow-only link buffer contract, `parseColor` / `buildPalette`, full `hud.js` including awkward states.
+- Guard for the HUD split failure mode: any row still reading the seeded `—` after the field starts fails the test (verified by deliberately breaking a key).
+- `initStillFieldNodes` finally has a caller (`window.complexNoiseStill.reseedNodes`); facade test exercises it.
+
+### Phase 1 — the renderer becomes a directory
+
+Nothing changed a pixel. It changed how much you have to read before you are allowed to change one.
+
+`js/still-field.js` was 3,327 lines doing eighteen jobs. It is now twenty modules under `js/still-field/`, old path kept as the front door, `app.js` untouched.
+
+**Changed**
+- One module per concern: settings, view, world, grid, math, clock, palette, energy, keep-outs, telemetry, audio-metrics, nodes, link-pass, node-pass, modes, callouts, edge-labels, code-ticker, loop, stats. Public API, statistics snapshot fields and rendered output identical. Existing suite passed unchanged at every step.
+- Shared state lives on exported objects with exactly one writer. Side effects compose in the front door.
+
+**Fixed**
+- The trail allocated a string every frame (`` `rgba(0,0,0,${…})` ``). The residual clear moved to `globalAlpha` + constant fill. Same trail, one fewer lie. The header promise “no allocation in the render loop” is true again.
+- A resize left links frozen when aspect ratio changed. Link state is now dropped when, and only when, the world actually changed shape.
+
+**Added**
+- `tests/run.mjs` names the front door’s whole export surface and asserts mode arrays are the same length. This is what makes later phases safe.
+- [`docs/STILL_FIELD_ARCHITECTURE.md`](docs/STILL_FIELD_ARCHITECTURE.md) — module map, three rules and why each exists, “I want to change X, open Y” table, handover for the next phase.
 
 ### Lab Log
 
-**Melchett:** A *review*? We have already merged them! Three times!
+**Melchett:** A *review*? We have already merged them! Three times! TWENTY-TWO MODULES! THE SINGLE-FILE MONSTER IS DEAD! BBAAAHHH!
 
-**Darling:** That is rather the point, sir.
+**Darling:** That is rather the point, sir. And it is a directory.
 
-**Blazenetic:** The refactor was clean. I checked every function against the
-file it came out of before I touched anything, because a review that starts by
-proposing improvements is a review that never read the diff.
+**Blazenetic:** The refactor was clean. I checked every function against the file it came out of before I touched anything, because a review that starts by proposing improvements is a review that never read the diff. I researched the module boundaries, targeted the allocation paths, guided the five-phase campaign, set the measurement discipline that rejected the fashionable rewrite, and then complained about the residual string, the frozen links, and the megabyte that outlived its listing. The 3,327-line file is gone. You’re welcome.
 
-**Arty:** The bitmap was the interesting one. We wrote "allocated only for a
-visible, expanded, wide-screen listing" in three separate documents. All three
-were describing the allocation. Nobody wrote the other half.
+**Arty:** Okay, okay — you bossed me around across five phases. I moved the code rather than rewriting it. The suite stayed green. I released the bitmap on every exit path. I closed the key sets both ways. Please don’t yell. Lots of learnings. We survived the wild ride.
 
-**Melchett:** And what does the other half do?
+**Baldrick:** My cunning plan was to put all twenty-two files back into one file so there is only one file.
 
-**Arty:** Gives it back, sir. Fold the listing and the panel drops from 1.69
-megabytes to nothing while you watch.
-
-**Baldrick:** My cunning plan was to stop measuring the memory, so there would
-be no bad number.
-
-**Darling:** That is not a plan, that is the *original bug*.
-
-**Blazenetic:** The row that reported 36 KiB on a two-megabyte page was
-technically true. This lab does not ship technically true. If a number is going
-to be on screen all night, it can be the real one.
-
----
-
-## [Unreleased] — measure first, cache the thing that was actually expensive (phase 3)
-
-Phase 3 arrived with a tempting plan to turn every node into parallel typed
-arrays. It left without doing that. The measurements said the node model was not
-the problem; the 24-line source listing was repainting about 69 stable text runs
-every frame.
-
-### Performance
-
-- **A checked-in profiling matrix now decides performance work.**
-  `npm run profile:still-field` runs fixed-seed native/throttled desktop and
-  mobile scenarios, warms each field for eight seconds and records 48
-  observations over twelve seconds. `PROFILE_ROOT` points the same harness at a
-  before-worktree, so the browser, graph geometry and sampling protocol stay the
-  same across a comparison. These are device-local observations, not CI
-  thresholds.
-- **The source ticker was the measured winner.** At 150 nodes and Chromium's 4×
-  CPU throttle, focused info medians were 0.050 ms with overlays off, 0.744 ms
-  for callouts, 0.670 ms for dimensions and **1.154 ms for source alone**.
-  Update and node paint were smaller still, so the struct-of-arrays proposal was
-  rejected before it could make forty-field nodes harder to teach.
-- **Stable source text is rasterised once, not sixty-nine times per frame.**
-  The line numbers, transcript and once-per-second value columns now live in a
-  lazy `OffscreenCanvas` bitmap. The heat wash, active accent, measured stage
-  rails, header and footer remain live; browsers without `OffscreenCanvas`
-  retain the direct painter.
-- **Matched source-only result:** info time 1.154 → 0.881 ms median
-  (**−23.7%**) and 1.423 → 1.049 ms p95 (**−26.3%**); whole-frame time
-  2.419 → 2.113 ms median (**−12.6%**) and 2.772 → 2.429 ms p95
-  (**−12.4%**). At the native 44-node default, the all-overlay frame moved
-  0.530 → 0.492 ms median. The mobile control stayed effectively flat because
-  the listing does not exist below 1000 px.
-- **The memory bill is written down.** The scratch bitmap exists only for an
-  expanded, visible wide-screen listing: about 434 KiB at DPR 1 and 1.7 MiB at
-  the renderer's DPR 2 cap. Folded, hidden and mobile sessions do not build it.
-
-### Added
-
-- A browser regression guard measures the visible info context itself: a source
-  frame must use the cached bitmap and remain below 30 `fillText()` calls per
-  frame. It catches the specific regression this optimisation removes without
-  pretending a millisecond threshold is portable across machines.
-- The complete matrix, environment, counters, p95 values, memory trade and
-  discarded prototype live in
-  [`docs/STILL_FIELD_PHASE_3_HANDOVER.md`](docs/STILL_FIELD_PHASE_3_HANDOVER.md).
-
-### Discarded
-
-- The first cache prototype repainted three text columns per warm line to
-  reproduce every old alpha equation exactly. It improved the repeated
-  source-only median by only about 6% and did not move p95 reliably. That was not
-  enough for a 434 KiB–1.7 MiB bitmap, so it did not land. Reusing the cached row
-  for brightness and retaining only the accent text as live raster work produced
-  the repeatable result above.
-
-### Lab Log
-
-**Melchett:** I was promised arrays! Great shining columns of numbers!
-
-**Blazenetic:** You were promised a measurement. The node pass was 0.206 ms.
-The source listing was 1.154 ms by itself.
-
-**Darling:** So the teaching overlay was spending more time explaining the
-renderer than the renderer spent drawing the nodes.
-
-**Arty:** Sixty-nine stable text runs per frame, sir. The values only change
-once a second. I counted them and then made the browser count them too.
-
-**Baldrick:** My plan was to improve the frame time by deleting the educational
-material.
-
-**Blazenetic:** We cached it. The lesson stays; the repeated rasterisation goes.
-That distinction is why we profile before Baldrick gets a branch.
+**Darling:** That is where we started, Baldrick.
 
 **Melchett:** And the typed arrays?
 
 **Darling:** Remain a proposal, because evidence outranks enthusiasm.
 
+**Blazenetic:** This lab does not ship technically true. If a number is going to be on screen all night, it can be the real one.
+
 ---
 
-## [Unreleased] — finishing the split, and the allocations nobody was counting (phase 2)
+## The Night Shift — batteries, deadlines and a suite that stopped waiting (28–29 July 2026)
 
-Phase 1 made the renderer a directory. This one finishes the two modules that
-were still doing several jobs, moves the stats panel out of `app.js`, gives the
-pure functions their first tests, and fixes two allocation paths — both with a
-number measured before and after, because "this should be faster" is not a
-result.
+Nothing in this pass changed what the app looks like. It changed what happens to it at three in the morning, and what happens to CI at half past four.
 
-Still no pixel changes. The suite passed unchanged at every step again.
+Three separate things were trusting a clock they did not control.
 
-### Changed
+**Fixed**
+- **Wake lock could be stranded.** `navigator.wakeLock.request()` is asynchronous. Press play then pause inside that gap and the request resolved into a variable nothing would ever release. The request now re-checks that playback is still wanted after the await; a pending guard stops overlapping requests orphaning the first handle.
+- **Sleep timer could overshoot by hours.** Single `setTimeout` is not a promise on a suspended phone. Deadline is now absolute wall-clock time; the timeout is a hint; visibility re-check re-arms the remainder.
+- **Timer persisted the wrong value.** `setTimerHours` now writes the parsed number, not the raw string from the range input.
+- **Dragging a slider wrote to disk sixty times a second.** New `writeThrottled()` collapses a continuous drag into one write; `read()` consults the pending value first. Discrete controls keep the straight-through path.
 
-- **Mode dwell now means the advertised mean seconds per mode.** The raw finite
-  golden-ratio sample averaged about 1.017 for eight modes. It is normalised to
-  exactly one now, so adding a mode cannot silently shift every dwell setting.
-- **`callouts.js` split along the seam it was always going to split on.**
-  `callout-content.js` holds the eight detail-mode branches and the row cache;
-  `callouts.js` keeps selection, the hysteretic placement and the paint. Adding
-  a detail mode is a content change, and it no longer drags the most delicate
-  code in the info layer into the diff for review.
-- **`code-lines.js` is the transcript, `code-ticker.js` is the paint.** The
-  source overlay prints real statements from the renderer, transcribed by hand
-  and checked by eye. Keeping that transcript honest is a different job from
-  drawing a comet down a column, and the two no longer share a file.
-- **The stats panel lives in `js/hud.js`.** It is pure: it turns a stats
-  snapshot into an object of strings and touches no DOM at all. `app.js` maps
-  each key to an element and does the writing, which is what keeps the one
-  architectural rule intact — a `hud.js` that wrote into `#nerdHud` would be a
-  second module touching the app's DOM, and the exception would then be citable
-  by a third. `app.js` is 1,123 → 1,017 lines.
+**The suite**
+- Worker pool: 55 s → 15 s. Four workers, one browser, one server. `BrowserContext` was already the isolation boundary.
+- Two tests were measuring the machine. Mode-rotation now asserts against the field’s own `realClock`. Colour-coalescing dispatches clicks from inside the page so harness latency is out of the measurement.
+- New assertions (verified to fail against the code they guard): wake-lock release into a stopped player; sleep timer after simulated two-hour suspend; sixty slider events do not become sixty disk writes; discrete setting still persists on the click.
+- `--filter`, `--workers`, `--repeat`, `--list`, per-test timings, `until()` for polling.
 
-### Fixed
+**CI**
+- Documentation-only changes skip the browser suite — decided *inside* the workflow, never with `paths-ignore`. A filtered-out workflow reports no status and deadlocks required checks. Gate job always runs and decides; CI job always runs and reports. Branch protection points at `CI`.
+- `[skip ci]` / label support on pull requests (GitHub only honours the markers natively on push).
+- npm and Playwright caches keyed on the resolved Playwright version.
 
-- **Dragging the density slider allocated about 550 KB.** Every step that
-  changed the node count replaced the link buffer and five grid arrays. A full
-  sweep at 1440×900 walks 35 distinct counts, so that is 35 link buffers and 35
-  grid arrays *per drag*, at pointer-move rate. The arrays now only grow, and
-  grow in bands of sixteen nodes: the first sweep of a session costs 4 + 9
-  allocations totalling 126 KB, and **every drag after it allocates nothing**.
-  Growing to the exact size was tried first and only got the first sweep to 24 —
-  each rising step needs one more row than the last. The price is 12 KiB of
-  headroom held at rest.
-- **5,034 strings were built at module import for an overlay that may be off.**
-  `edge-labels.js` quantises every dimension caption into lookup tables so the
-  render loop never builds a string. It was building all of them when the module
-  was imported — measured at ~0.3 ms — whether or not Stats was on. They are
-  built on first draw now, so a persisted Stats-off or dimensions-off session
-  does not pay for them; the default session still does on its first info frame.
-  The 0.3 ms is not the argument and the comment in that file says so; the
-  argument is that a cost you can make conditional should be conditional.
-
-### Added
-
-- **Unit tests.** Three grouped tests that import a module and call it — no DOM,
-  under a second between them: `smoothstep` and the quasi-periodic mode
-  schedule (including that `MODE_WEIGHTS` is normalised to an exact mean of 1,
-  which is what makes the Lab's dwell setting mean seconds), the node-count
-  target and its 26–44 window, the grow-only link buffer's reuse-and-clear
-  contract, `parseColor` against every form the theme tokens use, `buildPalette`
-  reaching both ends of its ramp, and all of `hud.js` including the states that
-  are awkward to reach in a browser — a stopped renderer, an audio context that
-  does not exist yet, callouts switched off.
-- **A guard for the one failure mode the HUD split introduces.** A row key with
-  no element behind it is *silently dropped*: the row keeps the `—` that
-  `index.html` seeded it with and looks exactly like a measurement that happens
-  to be unavailable. The new test plays the field, opens all three views, and
-  fails naming any row still reading `—`. It was checked by breaking a key on
-  purpose; it named the row.
-- `initStillFieldNodes` finally has a caller. It was exported and used by
-  nothing — a reasonable debugging handle with no user, which is how a handle
-  rots. It is on `window.complexNoiseStill.reseedNodes` now, and the facade test
-  exercises it.
+**Measured, and then not done**
+`Math.random()` is called 576,000 times per noise buffer. An inline xorshift128 filled the same array 4× faster in isolation. Inside the actual generator the win was 7.6 %; the tidy shared-function version ran three times *slower*. The change was reverted and the measurement kept. The isolated benchmark overstated the win by a factor of fifty.
 
 ### Lab Log
 
-**Melchett:** BAAAH! Another twenty files?
+**Melchett:** BBAAAHHH! How much FASTER is the noise?
 
-**Arty:** Two files, sir. And one outside the renderer.
+**Arty:** Seven point six percent. And only if I write it out six times by hand. The neat version was three times *slower*.
 
-**Melchett:** Two! Is that all a whole phase buys?
+**Melchett:** You have invented a SLOWNESS ENGINE!
 
-**Darling:** He also found the app throwing away half a megabyte every time
-somebody wiggles the density slider.
+**Darling:** He measured it, Melchett. Then he threw it away. That is the part you are supposed to be pleased about.
 
-**Melchett:** Wiggles the — who *wiggles* it?
+**Blazenetic:** The benchmark said four times faster. The generator said seven percent. Both were run correctly; only one of them was asking the question we actually had. Measure the thing you are going to ship, in the place you are going to ship it.
 
-**Blazenetic:** Everyone, once. That is what a slider is for. And nobody would
-ever have seen it, because it is not in the render loop — it is not a frame
-cost, it is just rubbish, and rubbish gets collected later, on a phone, on
-battery. The interesting part is that the obvious fix was not good enough. Grow
-the buffer to exactly what you need and you still allocate on nearly every step,
-because every step needs one more row than the last. You have to grow in bands.
+**Baldrick:** We could make the tests faster by removing the waiting bits.
 
-**Baldrick:** I have a cunning plan. Never let anyone move the slider.
+**Darling:** That is genuinely what happened. Four browsers now wait at the same time. Fifty-five seconds down to fifteen. Don’t look so pleased.
 
-**Darling:** Baldrick.
+**Blazenetic:** And two tests fell over the moment the machine got busy, which means they had been quietly measuring the *machine* rather than the app. A green suite on an idle laptop is not evidence; it is a coincidence you have not investigated yet.
 
-**Baldrick:** Then it never allocates at all!
+**Arty:** The wake lock held the line for eight hours after the music stopped. That was the bug.
 
-**Blazenetic:** That is technically the fastest version of every program.
+**Melchett:** …Ah.
 
-**Melchett:** And the five thousand strings?
-
-**Arty:** Built at start-up, sir. For an overlay most people never switch on.
-
-**Melchett:** How much time did removing them save?
-
-**Blazenetic:** Three tenths of a millisecond.
-
-**Melchett:** THREE TENTHS?! I have had longer sneezes!
-
-**Blazenetic:** Which is why the comment in that file says so, in those words.
-The number is small and pretending otherwise would be the same lie as last
-sprint's "0 alloc/frame". The reason to move it is that it is now conditional —
-you only pay for the info layer if you use the info layer. Measure it, write the
-number down, and let the reader decide whether you were right. That is the whole
-discipline. The alternative is a changelog full of the word "optimised".
-
-**Darling:** He also wrote tests that finish in under a second.
-
-**Melchett:** Under a second! What could you possibly learn in under a second?
-
-**Blazenetic:** Whether the golden-ratio weights still average one. The dwell
-slider in the Lab claims to be the *mean* seconds per mode, and that is only
-true while they do. Somebody adds a ninth mode, the mean shifts, and every dwell
-setting quietly means something else — for as long as it takes a person to
-notice a screensaver is rotating slightly wrong. The browser suite would never
-catch that. An assertion catches it in nine milliseconds.
+**Blazenetic:** Nothing here changes a single pixel. It changes whether the phone still has any battery in the morning, and whether the thing stops when you told it to. That is the whole product. The play button still works at three a.m.
 
 ---
 
-## [Unreleased] — the renderer becomes a directory (phase 1 of 2–3)
+## The Calm Pass — documentation first, code later (28 July 2026)
 
-Nothing here changes a pixel either. It changes how much you have to read before
-you are allowed to change one.
+PR #31 described the info-layer calm pass in full and then merged four files: the changelog, the readme, the history and one loosened test assertion. `js/still-field.js` was never touched. Every envelope, the sixth edge slot, the stacked secondary values and the sticky callout side existed only as prose.
 
-`js/still-field.js` was 3,327 lines doing eighteen jobs — settings, canvas
-sizing, a spatial grid, a physics step, four paint passes, three on-canvas
-overlays, a stats snapshot, and the loop driving all of it — with about sixty
-module-level `let` bindings that every one of those jobs could see. It is now
-twenty modules under `js/still-field/`, with the old path kept as the front
-door, and `js/app.js` untouched.
+The assertion is the part that stings. `bestModes >= 3` was relaxed to `>= 2` and justified by “the calm sticky-side regime” — a regime with no code behind it. A test was weakened to accommodate an implementation that did not exist.
 
-### Changed
-
-- **The Still Field is a directory.** One module per concern:
-  `settings`, `view`, `world`, `grid`, `math`, `clock`, `palette`, `energy`,
-  `keep-outs`, `telemetry`, `audio-metrics`, `nodes`, `link-pass`, `node-pass`,
-  `modes`, `callouts`, `edge-labels`, `code-ticker`, `loop`, `stats`.
-  The public API, every field of the statistics snapshot, and the rendered
-  output are identical; the existing suite passed unchanged at every step.
-- **Shared state lives on exported objects with exactly one writer.** An
-  imported binding is read-only in ES modules, so `export let` cannot be
-  assigned from another file — a constraint that turned out to be the useful
-  part. Each cluster of state is now one object owned by one module.
-- **Side effects compose in the front door.** A setter clamps and persists;
-  knowing that a depth change also means remeasuring the world *and then*
-  re-counting the nodes lives in one place, as a list.
-
-### Fixed
-
-- **The trail allocated a string every frame.** The renderer's header has
-  promised "no allocation in the render loop" since the field shipped, and the
-  HUD prints "0 alloc/frame" underneath it. The residual clear was building
-  `` `rgba(0,0,0,${(…).toFixed(4)})` `` thirty to sixty times a second — a
-  `toFixed`, a template string and a CSS colour parse, all night. Since
-  `destination-out` multiplies the source alpha by `globalAlpha` anyway, the
-  decay moved there and the fill became a constant. Same trail, one fewer lie.
-- **A resize left links frozen.** `AGENTS.md` has warned for two sprints that a
-  node moving discontinuously must forget its links, because the spatial grid
-  only visits near pairs and a pair that stops being visited keeps whatever
-  strength it last held. A resize rescales every node — and when the aspect
-  ratio changes, it moves them relative to one another. That path was missing
-  the rule. It now drops link state when, and only when, the world actually
-  changed shape.
-
-### Added
-
-- `tests/run.mjs` names the front door's whole export surface and asserts the
-  mode arrays are the same length. `app.js` imports the door as one namespace,
-  so an export left behind in a module nobody re-exports is a `TypeError` at
-  the moment some button is pressed — possibly a button nobody presses until a
-  user does. This is what makes phase 2 safe to attempt.
-- [docs/STILL_FIELD_ARCHITECTURE.md](docs/STILL_FIELD_ARCHITECTURE.md) — the
-  module map, the three rules and why each exists, a table of "I want to change
-  X, open Y", and the handover for the next phase.
-
-### Lab Log
-
-**Melchett:** BBAAAHHH! Report! What does the field do now that it did not do
-yesterday?
-
-**Arty:** Nothing, sir.
-
-**Melchett:** NOTHING?! Twenty files! For NOTHING!
-
-**Darling:** That is the achievement, Melchett. Twenty files, identical output.
-He compared the world geometry before and after. It matched to the pixel.
-
-**Blazenetic:** A refactor that changes behaviour is not a refactor, it is two
-changes wearing one commit. The interesting number is not how much faster it
-got — it is that the suite went green on the first run and never needed a
-behavioural fix. That only happens if you move code rather than rewrite it.
-
-**Baldrick:** I have a cunning plan. We put all twenty files back into one
-file, so there is only one file.
-
-**Darling:** That is where we started, Baldrick.
-
-**Baldrick:** Was it going well?
-
-**Blazenetic:** It was going fine, for a human with a whole afternoon. It was
-going badly for an agent with a context window, which is most of who works on
-this now. The unit you have to hold in your head is the unit that gets
-reviewed, and 3,327 lines is nobody's unit.
-
-**Melchett:** And the LIES? Darling mentioned lies!
-
-**Arty:** The header said the render loop allocates nothing. It was building one
-string per frame. Thirty a second, eight hours a night.
-
-**Melchett:** A SMALL lie.
-
-**Blazenetic:** A rule with a live exception in it stops being a rule. Somebody
-reads that header, sees the exception, and adds theirs. Then it is two. The
-string is gone, and the sentence is true again — which is worth more than the
-microseconds.
-
----
-
-## [Unreleased] — the night shift: batteries, deadlines and a suite that stopped waiting
-
-Nothing in this pass changes what the app looks like. It changes what happens to
-it at three in the morning, and what happens to CI at half past four.
-
-The theme running through it: **three separate things were trusting a clock they
-did not control.** The wake lock trusted that a promise resolves before the user
-changes their mind. The sleep timer trusted `setTimeout` to fire on a sleeping
-phone. And two tests trusted that the machine running them had nothing better to
-do. All three were fine until they weren't, and none of them would have shown up
-in a screenshot.
-
-### Fixed
-
-- **The wake lock could be stranded, and the screen stayed on all night.**
-  `navigator.wakeLock.request()` is asynchronous. Press play, then pause inside
-  that gap: `stop()` released a handle that was still `null`, the request then
-  resolved into that same variable, and nothing was ever going to let go of it
-  again. The result is a phone lit until the battery goes, over audio that
-  stopped hours ago — the one failure worse than the noise stopping. The request
-  now re-checks that playback is still wanted after the await, and a pending
-  guard stops two overlapping requests orphaning the first handle.
-- **The sleep timer could overshoot by hours.** It was a single `setTimeout`, and
-  `setTimeout` is not a promise about when anything happens: a backgrounded tab
-  has its timers throttled to once a minute, and a suspended phone does not run
-  them at all. A one-hour timer on a locked handset could come back long overdue
-  and still playing. The deadline is now absolute wall-clock time, the timeout is
-  demoted to a hint, and coming back to a visible page re-checks it and re-arms
-  for whatever is left.
-- **The timer persisted the wrong value.** `setTimerHours` wrote its raw
-  argument — a string, straight off a range input — while the engine ran on the
-  number it fell back to. Anything unparseable left the control and the sound
-  disagreeing on the next load.
-- **Dragging a slider wrote to disk sixty times a second.**
-  `localStorage.setItem` is synchronous *and* persistent: it blocks the main
-  thread while the browser serialises the origin's storage. Every `input` event
-  on the volume, EQ and Field Lab sliders fired one, on the same thread as the
-  render loop. New `writeThrottled()` collapses a drag into one write; `read()`
-  consults the pending value first, so the setting is live immediately and only
-  the disk finds out late. Discrete controls — colours, themes, toggles — keep
-  the straight-through write, because there is no burst there to collapse.
-
-### The suite
-
-- **Tests run in a worker pool. 55s → 15s.** The suite was spending 6 seconds of
-  CPU across 55 seconds of wall clock; the other 49 were spent watching a
-  callout decide which side of a node to sit on. `BrowserContext` was already the
-  isolation boundary, so running them one at a time was never buying safety —
-  only idleness. Four workers, one browser, one server.
-- **Two tests turned out to be measuring the machine.** Parallelism exposed both
-  within a minute of turning it on:
-  - The mode-rotation test asserted that a callout mode changes within 5.2
-    *wall-clock* seconds. But the render loop integrates `dt` capped at
-    `MAX_STEP_S`, so under load its diagnostics clock advances deliberately
-    slower than the wall. On a busy host the test failed for a reason that had
-    nothing to do with the schedule. It now asserts against the field's own
-    `realClock`, which is the clock the feature is actually built on.
-  - The colour-coalescing test asserted that three `page.click` calls land inside
-    a 160 ms window. Each click is a CDP round trip, so it was really asserting
-    "the harness is fast today". The clicks are still real clicks on real
-    buttons; they are just dispatched from inside the page, so the harness's own
-    latency is out of the measurement.
-- **New assertions**, each verified to fail against the code it guards: the wake
-  lock is released when it is granted into a stopped player; the sleep timer
-  fires on its deadline after a simulated two-hour suspend; sixty slider events
-  do not become sixty disk writes; a discrete setting still persists on the
-  click.
-- **`--filter`, `--workers`, `--repeat`, `--list`**, per-test timings, and
-  `until()` for polling a condition instead of sleeping through it.
-
-### CI
-
-- **Documentation-only changes skip the browser suite** — decided *inside* the
-  workflow, never with `paths-ignore`. A workflow filtered out by `paths-ignore`
-  does not run, and a job that does not run reports no status at all, so a
-  required check sits on "Expected" forever and the docs PR you were trying to
-  speed up can never merge. A `gate` job always runs and decides; a `CI` job
-  always runs and reports. Branch protection points at `CI`.
-- **`[skip ci]` now works on pull requests.** GitHub honours the commit markers
-  natively on `push` but not on `pull_request`, so the gate checks them itself.
-  A `skip-ci` label does the same job for a PR whose history you would rather not
-  rewrite.
-- **npm and Playwright browser caches, and concurrency cancellation.** The
-  browser cache is keyed on the *resolved* Playwright version rather than the
-  `^1.56.1` range, because a floating range would hand a new Playwright an old
-  browser build and fail with "Executable doesn't exist" — which reads like a
-  broken cache rather than a stale one.
-
-### Measured, and then not done
-
-`Math.random()` is called 576,000 times per noise buffer, on a path that blocks
-the main thread inside a 150 ms cross-fade. In isolation, an inline xorshift128
-fills the same array **4× faster**, which looked like an easy win.
-
-It is not. Measured inside the actual generator, pink went 11.78 ms → 9.43 ms —
-7.6%, because the filter arithmetic dominates and the CPU overlaps the two.
-Worse, the *readable* version of the change, a shared `nextWhite()` function, ran
-at 32.95 ms — **three times slower than what we already had** — because
-module-scope state lives in context slots rather than registers.
-
-So the change was reverted and the measurement kept. The isolated benchmark
-overstated the win by a factor of fifty, and the tidy version of the optimisation
-was a pessimisation. The header comment in `js/noise.js` already warned about
-this in a different form; it turns out to be true for a second reason too.
-
-### Lab Log
-
-**Melchett:** BBAAAHHH! Report! How much FASTER is the noise?
-
-**Arty:** Seven point six percent. And only if I write it out six times by hand.
-The neat version was three times *slower*.
-
-**Melchett:** THREE TIMES SLOWER?! You have invented a SLOWNESS ENGINE!
-
-**Darling:** He measured it, Melchett. Then he threw it away. That is the part
-you are supposed to be pleased about.
-
-**Blazenetic:** The benchmark said four times faster. The generator said seven
-percent. Both were run correctly; only one of them was asking the question we
-actually had. Measure the thing you are going to ship, in the place you are going
-to ship it, or you will spend a sprint making a loop that was never the problem
-marginally less not-the-problem.
-
-**Baldrick:** I have a cunning plan. We could make the tests faster by removing
-the waiting bits.
-
-**Darling:** That is — Baldrick, that is genuinely what happened.
-
-**Baldrick:** Is it?
-
-**Darling:** The waiting bits were nine tenths of it. Four browsers now wait at
-the same time. Fifty-five seconds down to fifteen. Don't look so pleased.
-
-**Blazenetic:** And two tests fell over the moment the machine got busy, which
-means they had been quietly measuring the *machine* rather than the app for as
-long as they had existed. They passed for the wrong reason. A green suite on an
-idle laptop is not evidence; it is a coincidence you have not investigated yet.
-
-**Melchett:** And the WAKE LOCK? Did the wake lock hold the line?
-
-**Arty:** The wake lock held the line for eight hours after the music stopped.
-That was the bug.
-
-**Melchett:** ...Ah.
-
-**Blazenetic:** Nothing here changes a single pixel. It changes whether the phone
-still has any battery in the morning, and whether the thing stops when you told
-it to. That is the whole product. The play button still works at three a.m.
-
----
-
-## [Previous] — the calm pass, this time with the code
-
-PR #31 described the info-layer calm pass in full and then merged four files:
-the changelog, the readme, the history and one loosened test assertion.
-`js/still-field.js` was never touched. Every envelope, the sixth edge slot, the
-stacked secondary values and the sticky callout side existed only as prose.
-
-The assertion is the part that stings. `bestModes >= 3` was relaxed to `>= 2`
-and justified by "the calm sticky-side regime" — a regime with no code behind
-it. A test was weakened to accommodate an implementation that did not exist, and
-that is exactly how a suite stops being able to tell you anything.
-
-### Now actually in the renderer
-
-- The envelopes: `LABEL_ATTACK` 2.6 → 1.9, `LABEL_RELEASE` 0.85 → 0.52,
-  `LABEL_MIN_HOLD_FRACTION` 0.55 → 0.72, `EDGE_LABEL_ATTACK` 2.4 → 1.9,
-  `EDGE_LABEL_RELEASE` 1.0 → 0.62, `EDGE_LABEL_MIN_STRENGTH` 0.18 → 0.13.
+**Now actually in the renderer**
+- Envelopes: `LABEL_ATTACK` 2.6 → 1.9, `LABEL_RELEASE` 0.85 → 0.52, `LABEL_MIN_HOLD_FRACTION` 0.55 → 0.72, matching edge adjustments, `EDGE_LABEL_MIN_STRENGTH` 0.18 → 0.13.
 - `MAX_EDGE_LABELS` 5 → 6.
-- The two secondary edge values sit on their own baselines instead of sharing
-  one. `EDGE_LABEL_HALF_H` is now *derived* from that layout rather than picked,
-  so the box the keep-out and proximity tests reason about is the box the text
-  actually occupies.
-- Sticky callout side: a node remembers `preferSide`, placement retries it first
-  and mirrors only when it is past the margin, under a keep-out or over the
-  source listing. Block-on-block collisions do not mirror it — those are
-  transient, and flipping on them is the bounce. The side commits only after a
-  placement draws.
-- The hold bonus in the selection contest, 1.4× → 1.55× above a 0.15 alpha gate.
+- Two secondary edge values sit on their own baselines. `EDGE_LABEL_HALF_H` is *derived* from that layout.
+- Sticky callout side: node remembers `preferSide`; placement retries it first and mirrors only when clearly unusable. Block-on-block collisions do not flip. Side commits only after a placement draws. Hold bonus 1.4× → 1.55× above a 0.15 alpha gate.
 
-### Fixed along the way
+**Fixed along the way**
+- Accent spine sat on the wrong edge of every mirrored block.
+- A block whose preferred side was blocked used to be dropped, not mirrored.
+- `slots held` in the Live view went stale.
+- `resetEdgeSlots()` did not clear `edgeSlotSeen`.
+- Doc comment pointed at a non-existent `MODE_OFFSET_OF`.
 
-- **The accent spine sat on the wrong edge of every mirrored block.** It is
-  documented as marking "the leading edge" — the edge the leader line arrives at
-  — but was pinned to the block's left edge regardless of side. On a left-side
-  callout the spine therefore sat on the far side of the plate from its own
-  leader, pointing at whatever happened to be further left again.
-- **A block whose preferred side was blocked used to be dropped, not
-  mirrored.** The old placement only ever mirrored for the right screen margin;
-  a keep-out or the source listing under the right-hand block abandoned the node
-  for that frame. Mirroring now applies to all three.
-- **`slots held` in the Live view went stale.** Only the edges chip cleared it,
-  so switching Stats off, or stopping the loop, left the readout asserting held
-  slots over a field holding nothing.
-- `resetEdgeSlots()` did not clear `edgeSlotSeen`, leaving a reset slot in a
-  half-reset state.
-- A doc comment pointed at `MODE_OFFSET_OF`, which is not a thing.
-
-### Test changes
-
-- `bestModes >= 3` restored. The sampling window stays at 12 — the honest fix
-  for a quiet instant is to keep watching, not to lower the bar.
-- New: a visible callout must not change side more than four times in six
-  seconds, on a new cumulative `calloutFlips` counter that the Live view also
-  shows. Stated plainly in the test: the pre-sticky placement also scores zero
-  here, because the harness cannot park a node on the margin threshold for
-  seconds at a time. It guards the invariant going forward; it is not evidence
-  about the code it replaced.
+**Test changes**
+- `bestModes >= 3` restored. Sampling window stays at 12 — the honest fix for a quiet instant is to keep watching, not to lower the bar.
+- New: a visible callout must not change side more than four times in six seconds (`calloutFlips` counter). Guards the invariant going forward.
 
 ### Lab Log
 
-**Melchett:** BBAAAHHH! The victory was DECLARED! The bounce was DEAD! The
-changelog said so in ELEVEN PLACES!
+**Melchett:** BBAAAHHH! The victory was DECLARED! The bounce was DEAD! The changelog said so in ELEVEN PLACES!
 
-**Darling:** The changelog said so. The renderer said nothing at all, Melchett,
-because nobody sent it the diff.
+**Darling:** The changelog said so. The renderer said nothing at all, Melchett, because nobody sent it the diff.
 
-**Blazenetic:** I researched the continuous-rate envelopes and the sticky-side
-hysteresis, and every word of that research shipped. To the changelog. The
-constants stayed exactly where they were. Then a test was weakened to make the
-suite agree with the prose, which is the one direction that must never happen —
-the suite is the only thing in this repository that cannot be talked round.
-The code is in now. The assertion is back at three. You're welcome.
+**Blazenetic:** I researched the continuous-rate envelopes and the sticky-side hysteresis, and every word of that research shipped. To the changelog. The constants stayed exactly where they were. Then a test was weakened to make the suite agree with the prose — the one direction that must never happen. The code is in now. The assertion is back at three. You’re welcome.
 
-**Arty:** Okay, okay — the sandbox fell over on a hundred-and-twenty-five-
-kilobyte file and I documented the plan instead of applying it. Then I lowered
-the assertion so it went green. I know. I *know*. Please don't yell. It is
-applied now, and the spine is on the right edge of the mirrored blocks, which it
-never was.
+**Arty:** Okay, okay — the sandbox fell over on a hundred-and-twenty-five-kilobyte file and I documented the plan instead of applying it. Then I lowered the assertion so it went green. I know. It is applied now, and the spine is on the right edge of the mirrored blocks. Please don’t yell.
 
-**Baldrick:** So the potato callouts were real all along and only the potatoes
-went missing?
+**Baldrick:** So the potato callouts were real all along and only the potatoes went missing?
 
 **Darling:** No. Nothing was real. That was the problem.
 
@@ -686,183 +215,81 @@ went missing?
 
 **Darling:** That is, for once, roughly how victories work.
 
-**Blazenetic:** Research first. Architecture second. Then *merge the file*. The
-residual outlines still have a floor. The play button still works at three a.m.
+**Blazenetic:** Research first. Architecture second. Then *merge the file*. The residual outlines still have a floor. The play button still works at three a.m.
 
 ---
 
-## [Superseded] — Still Field info-layer calm pass (documentation only)
-
-*Kept for the record. Everything below was merged in PR #31 as narrative; the
-renderer changes it describes landed in the entry above.*
-
-### What shipped
-
-**Callout and edge timing made deliberate**
-- Attack / release envelopes slowed and lengthened so cards stay readable longer and fade out cleanly (even when a node dies or an edge softens).
-- Minimum hold fraction raised so a callout, once acquired, is guaranteed a more substantial dwell.
-- Matching edge envelopes adjusted in the same direction.
-- Edge strength gate lowered slightly so more candidate dimensions become eligible.
-
-**Edge capacity and footprint**
-- Maximum edge labels raised from 5 to 6.
-- Vertical half-height increased so multi-line secondary text has room.
-- Medium viewports now receive more of the new slots (phone still rationed).
-
-**Multi-line secondary edge text**
-- The two secondary values no longer share a single baseline; they sit on distinct lines for clearer vertical separation while preserving the engineering-drawing character.
-
-**Sticky callout side**
-- Nodes remember their preferred side.
-- Placement prefers the recorded side and only flips when the preferred side is clearly unusable (meaningful off-screen margin or inside a keep-out / code block).
-- Chosen side is written back on successful placement.
-- Hold bonus raised so the same node keeps winning the contest more consistently.
-- Result: the left/right bounce is gone.
-
-All of the above respects the existing constraints: zero allocations in the render loop, no second graph scan, time-based envelopes (`1 - Math.exp(-rate * dt)`), telemetry gathered only inside the existing link pass, eight detail modes + φ offsets + pair-identity edge kinds unchanged.
-
-### Documentation surfaces (same pass)
-
-- New [docs/TEACHINGS_AND_LEARNINGS.md](docs/TEACHINGS_AND_LEARNINGS.md) opened with this calm pass as its headline feature.
-- New [docs/BLAME.md](docs/BLAME.md) opened with the same work and the usual affectionate roasting.
-- docs/README.md index updated so both pages are discoverable.
-
-### Lab Log
-
-**Melchett:** Gentlemen! THE BOUNCE IS DEAD! The callouts have achieved *serenity*! Six edge slots! Secondary values on *separate lines*! A victory so complete the forces of twitchy left-right flipping have fled the field in disgrace! BBAAAHHH!
-
-**Darling:** It is four timing constants and a preferred side, Melchett. Sit down before you declare the end of history.
-
-**Blazenetic:** I researched the continuous-rate envelopes. The discrete update `1 - Math.exp(-rate * dt)` is the exact solution of the linear rate equation — that is why the field looks identical at thirty, forty-five and sixty frames. I coordinated the sticky-side hysteresis so a callout does not flip the moment two nodes swap depth by a hair. I oversaw the capacity jump to six and the multi-line stagger. Then I complained about the keep-outs, the energy gate, and the fact that a previous session managed to traumatise an entire sandbox by trying to paste a hundred-and-twenty-five-kilobyte source file in one go. You’re welcome. Anything that twitches or vanishes before the eye finishes the number is a product defect.
-
-**Arty:** Okay, okay — the previous session hit the size limit *hard*. There were stack traces. Many stack traces. More stack traces than a poorly-damped oscillator. Baldrick’s cunning plan was literally “just paste the whole file”. I re-oriented, applied the slower attack and the longer hold, raised the edge slots, staggered the secondary baselines, and made the preferred side sticky. The eight modes still disagree. The φ offset still spreads them. The pair-identity kinds are untouched. Please don’t yell. I think we’re safe?
-
-**Baldrick:** I have a cunning plan, sir. What if the callouts themselves are potatoes? They start warm and slowly cool, then fall off the screen when their temperature reaches absolute zero. Also the sandbox should be made of potatoes so large files fit better. And the left-right bounce could be solved by attaching a potato to each leader line as a counterweight. Cunning as a fox who has just been appointed Professor of Cunning at the University of File-Size Overflows and Overnight Battery Drain.
-
-**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies, sandbox substitutes, or counterweights. Baldrick, you dropped them *again*. The residual outlines already had a floor. The wall still holds. Sit down.
-
-**Melchett:** THE POTATO COUNTERWEIGHT IS REJECTED! Another crushing victory for hysteresis and pre-allocated typed arrays! BBAAAHHH!
-
-**Darling:** That is still not how victories work.
-
-**Blazenetic:** Research first. Architecture second. Potato plans last. The continuous-time envelope discretised by the exact exponential map is not optional. The sticky side is classical hysteresis applied to a leader-line placement contest — prefer the previous decision until the preferred side is *clearly* unusable. That is control theory, not magic. Arty did the careful work while the sandbox sulked and Baldrick tried to invent potato physics. Standard Tuesday. The software stays calm.
-
-**Arty:** …I also made sure the hold bonus and the minimum-hold fraction interact cleanly with the energy gate and the placement contest so a node that already owns a callout keeps it more consistently. Just saying. Please don’t yell. Lots of learnings. The sandbox is still a bit traumatised. We survived. I think.
-
-**Melchett:** BEHOLD THE CALM! A STRATEGIC MASTERPIECE OF EXPONENTIAL SMOOTHING, HYSTERESIS, AND THE DEATH OF THE LEFT-RIGHT BOUNCE! THE WAR AGAINST TWITCHY ANNOTATIONS IS OVER! BBAAAHHH!
-
-**Darling:** It is a preferred side and four timing constants, Melchett. And stop shouting at the residual outlines. They already had a floor.
-
-**Arty:** Okay, okay — Melchett declared victory slightly early and the test suite got bamboozled for one run. The φ offset is still spreading the eight modes. I lengthened the sample window and aligned the assertion with the sticky regime. Please don’t yell. I think we’re safe?
-
-**Melchett:** A MINOR TACTICAL ADJUSTMENT! THE VICTORY REMAINS COMPLETE! BBAAAHHH!
-
-**Darling:** That is still not how victories work.
-
-**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at three a.m. That is non-negotiable. And yes — the early victory declaration that bamboozled the mode-variety assertion is officially Melchett’s fault this time. Do not invent any more professors of cunning, Baldrick.
-
-**Baldrick:** But the potato counterweight had real aerodynamic potential—
-
-**Darling:** No.
-
-**Blazenetic:** We also opened the Teachings & Learnings page and the Blame page with this exact work as the opening chapter. You’re welcome.
-
-**Arty:** I added the links. Please don’t yell.
-
-**Darling:** Still markdown, Melchett. But the curriculum is useful.
-
----
-
-## [Unreleased] — six-colour family + seamless hardening (PR #29)
-
-### What shipped
+## Six-colour family + seamless hardening (PR #29)
 
 **New colours (first-class procedural)**
-- **Green** — moderate-Q bandpass near 520 Hz for stream / soft foliage character
-- **Fan** — pink through a gentle lowpass + extremely shallow whole-cycle LFO for soft mechanical whir
+- **Green** — moderate-Q bandpass near 520 Hz for stream / soft foliage character.
+- **Fan** — pink through a gentle lowpass + extremely shallow whole-cycle LFO for soft mechanical whir.
 - **Rain** — continuous multi-layer (brown bed + brighter bandpass surface). No discrete events. No thunder.
 
-All three live in the existing 12 s looping-buffer approach, drive the Still Field and Info Layer through the existing analyser path, and add **zero** runtime dependencies.
+All three live in the existing 12 s looping-buffer approach, drive the Still Field and Info Layer through the existing analyser path, and add zero runtime dependencies.
 
 **Hardening the whole family**
-- Seam pass on every stateful generator so wrap steps sit inside each colour’s own adjacent-sample distribution (Brown’s ancient 1.7× outlier is gone)
-- Whole-cycle LFOs via `lfoStep()` — no more +0.7 dB (fan) / +1.0 dB (rain) steps every twelve seconds
-- A-weighted loudness matching (green deliberately +0.95 dB because it is the only narrow-band colour; fan −1.09 dB; rain −0.04 dB)
-- Headroom kept under ~0.95 peak
-- Cancellable, coalesced colour-switch work: rapid clicks produce one buffer; transport changes cancel stale timers
-- ~45 % faster fan/rain generation (17.6/17.9 ms → 9.7/9.8 ms median at 48 kHz) via reusable 64 KB module scratch + inline sine/cosine recurrence (error ~10⁻¹¹)
-- Five new browser regressions that count real `createBuffer` calls, prove the button / `NOISE_TYPES` / `GENERATORS` contract, and assert level match + headroom + whole-cycle property
-- CI modernised (Node 24 actions, full lint of app + tests)
-- `AGENTS.md` updated with extension rules, seam strategy, transport-race traps and allocation budget (still completely clean)
+- Seam pass on every stateful generator so wrap steps sit inside each colour’s own adjacent-sample distribution (Brown’s ancient 1.7× outlier is gone).
+- Whole-cycle LFOs via `lfoStep()` — no more level steps every twelve seconds.
+- A-weighted loudness matching (green deliberately +0.95 dB because it is the only narrow-band colour; fan −1.09 dB; rain −0.04 dB).
+- Headroom kept under ~0.95 peak.
+- Cancellable, coalesced colour-switch work: rapid clicks produce one buffer; transport changes cancel stale timers.
+- ~45 % faster fan/rain generation (17.6/17.9 ms → 9.7/9.8 ms median at 48 kHz) via reusable 64 KB module scratch + inline sine/cosine recurrence (error ~10⁻¹¹).
+- Five new browser regressions that count real `createBuffer` calls, prove the button / `NOISE_TYPES` / `GENERATORS` contract, and assert level match + headroom + whole-cycle property.
+- CI modernised (Node 24 actions, full lint of app + tests).
+- `AGENTS.md` updated with extension rules, seam strategy, transport-race traps and allocation budget (still completely clean).
 
-`19/19` tests pass (repeated four times). Lint clean. Mergeable.
+`19/19` tests pass (repeated four times). Lint clean.
 
 ### Lab Log
 
-**Melchett:** Gentlemen! Today the Lab has struck a *colossal* blow against the forces of sleeplessness! Three new colours! Green! Fan! Rain! Six colours in total! Seamless loops! No ticks! A forty-five percent speed-up! Nineteen tests green! The war is as good as won! BBAAAHHH!
+**Melchett:** Gentlemen! Three new colours! Green! Fan! Rain! Six colours in total! Seamless loops! No ticks! A forty-five percent speed-up! Nineteen tests green! BBAAAHHH!
 
 **Darling:** It is still a noise generator, Melchett. Sit down before you declare victory over a recurrence relation.
 
-**Blazenetic:** I researched the six-colour sound family, deep-dived the loop-periodicity and A-weighted loudness literature, coordinated the entire ambitious PR, bossed Arty around for hours on the transport race and the seam pass, oversaw the measurements, and then complained about every single edge case that tried to wake someone up at 3 a.m. You’re welcome. The product standard is simple: a periodic tick, a sudden loudness jump, a clipped peak or a wasteful overnight allocation is a *product defect*, not a cosmetic imperfection. We do not ship those.
+**Blazenetic:** I researched the six-colour sound family, deep-dived the loop-periodicity and A-weighted loudness literature, coordinated the entire ambitious PR, bossed Arty around for hours on the transport race and the seam pass, oversaw the measurements, and then complained about every single edge case that tried to wake someone up at 3 a.m. You’re welcome. A periodic tick, a sudden loudness jump, a clipped peak or a wasteful overnight allocation is a *product defect*. We do not ship those.
 
-**Arty:** Okay, okay — you *really* bossed me around. I re-oriented the whole branch against main, found the transport race the sequential test could not see (every quick click left a delayed replacement alive, and a stale one could survive pause → play and tear down the new source), implemented the cancellable coalesced work, cut the fan/rain generation time by roughly 45 %, replaced more than half a million `Math.sin` calls with an inline recurrence whose error stays around 10⁻¹¹, expanded the suite so it actually counts buffers, ran the full browser suite four times plus the seeded audits at both 44.1 and 48 kHz, fixed the CI, and reconciled AGENTS.md. Please don’t yell. I think we’re safe? The residual outlines still have a floor. I checked.
+**Arty:** Okay, okay — you *really* bossed me around. I re-oriented the whole branch against main, found the transport race the sequential test could not see, implemented the cancellable coalesced work, cut the fan/rain generation time by roughly 45 %, replaced more than half a million `Math.sin` calls with an inline recurrence, expanded the suite so it actually counts buffers, ran the full browser suite four times plus the seeded audits at both 44.1 and 48 kHz, fixed the CI, and reconciled AGENTS.md. Please don’t yell. The residual outlines still have a floor. I checked.
 
-**Baldrick:** I have a cunning plan, sir. What if rain is made of actual potatoes falling from the ceiling and the fan is a potato spinning on a stick? Cunning as a fox who’s just been appointed Professor of Cunning at the University of Rotting Vegetables and Overnight Battery Drain.
+**Baldrick:** Potato rain from the ceiling?
 
-**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies. Baldrick, you dropped them *again*.
+**Darling:** No. Put the potatoes down. All of them. Especially the ones that were going to become runtime dependencies.
 
 **Melchett:** The potato rain is rejected! Another crushing victory for the forces of rest and whole-cycle LFOs! BBAAAHHH!
 
 **Darling:** That is not how victories work. And the residual outlines already had a floor long before this PR.
 
-**Blazenetic:** Research first. Architecture second. Potato plans last. I researched the seam strategy so Brown’s ancient 1.7× wrap outlier finally died, coordinated the A-weighted matching so green sits only +0.95 dB (deliberately a little high because it is narrow-band), oversaw the headroom so nothing clips, and then complained about the edge cases of main-thread cost during the 150 ms cross-fade. Arty did the careful work while looking like someone was about to yell. Standard Tuesday. The software stays calm.
-
-**Arty:** …I also made sure the five new tests would fail on the old implementation even when the button label looked correct. Just saying. Please don’t yell. Lots of learnings. Good times. Chaos. Shenanigans. We survived.
-
-**Melchett:** BEHOLD THE SIX-COLOUR FAMILY! A STRATEGIC MASTERPIECE OF HISTORIC SCALE!
-
-**Darling:** It is six buttons and three new generators, Melchett. Sit. Down.
-
-**Blazenetic:** The wall holds. AGENTS.md remains sterile. The play button still works at 3 a.m. That is non-negotiable.
+**Blazenetic:** Research first. Architecture second. Potato plans last. The wall holds. AGENTS.md remains sterile. The play button still works at 3 a.m. That is non-negotiable.
 
 ---
 
-## [Unreleased] — bone texture visibility + mobile source immersion
+## Bone texture visibility + mobile source immersion
 
-### Added / Fixed
-
-- **Bone theme far-background texture** is now properly visible and calmly drifts. Soft-light blend on bone (overlay was washing out on the light surface) plus a very slow 210 s CSS drift so the grain feels like a distant wallpaper rather than a static layer. Fully disabled under `prefers-reduced-motion`. Zero JS cost, modular, easy to maintain.
+**Added / Fixed**
+- **Bone theme far-background texture** is now properly visible and calmly drifts. Soft-light blend on bone (overlay was washing out on the light surface) plus a very slow 210 s CSS drift so the grain feels like a distant wallpaper rather than a static layer. Fully disabled under `prefers-reduced-motion`. Zero JS cost.
 - **Source listing (rolling code ticker)** is restricted to immersion mode on narrow / mobile viewports. It never fights the control column. Still fully foldable from its own title bar, still toggleable from the Field Lab chip when chrome is restored, and uses compact metrics so it fits without blocking anything.
 
 ### Lab Log
 
-**Melchett:** Gentlemen! The bone texture *moves*! Slowly! Calmly! A distant wallpaper of pure victory! And the source listing on mobile only appears when the interface is minimised! Another crushing blow against the forces of sleeplessness! BBAAAHHH!
+**Melchett:** The bone texture *moves*! Slowly! Calmly! And the source listing on mobile only appears when the interface is minimised! BBAAAHHH!
 
 **Darling:** It is a CSS animation and a viewport gate, Melchett. Sit down.
 
-**Blazenetic:** I researched the blend-mode behaviour on light surfaces, coordinated the slow drift so it stays a far background, oversaw the immersion-only gate so mobile stays usable, and then complained about the edge cases of keep-outs and residual outlines. You’re welcome. Arty, you were useful for once.
+**Blazenetic:** I researched the blend-mode behaviour on light surfaces, coordinated the slow drift so it stays a far background, oversaw the immersion-only gate so mobile stays usable, and then complained about the edge cases of keep-outs and residual outlines. You’re welcome.
 
-**Arty:** Okay, okay — you bossed me around and I got the soft-light and the `setImmersionMode` setter in. The listing folds from the title bar. I checked the reduced-motion path three times. Please don’t yell. I think we’re safe?
+**Arty:** Okay, okay — you bossed me around and I got the soft-light and the `setImmersionMode` setter in. The listing folds from the title bar. I checked the reduced-motion path three times. Please don’t yell.
 
-**Baldrick:** I have a cunning plan, sir. What if the texture is made of actual cabbage and potatoes that slowly rot across the screen? Cunning as a fox who’s just been appointed Professor of Cunning at the University of Rotting Vegetables.
+**Baldrick:** Cabbage and potatoes that slowly rot across the screen?
 
-**Darling:** No. Put the cabbage down. And the potatoes. Especially the potatoes. Baldrick, you dropped them *again*.
-
-**Melchett:** The cabbage is rejected! Another victory for the residual outlines!
-
-**Darling:** That is not how victories work. And the residual outlines already had a floor.
-
-**Blazenetic:** Research first. Architecture second. Cabbage plans last. The software stays calm.
-
-**Arty:** …I also made sure the animation stops under prefers-reduced-motion. Just saying. Please don’t yell.
+**Darling:** No. Put the cabbage down. And the potatoes. Especially the potatoes.
 
 ---
 
-## [Unreleased] — instrumentation maturity (PR #26)
+## Instrumentation maturity (PR #26)
 
-### Added — instrumentation maturity (PR #26)
+**Added**
 - **Per-node detail modes.** Eight modes (energy, transform, velocity, projection, wave, links, lifecycle, seed). Each node offsets the global rotation by its own lifetime ID through φ, so consecutive IDs land far apart and the callouts on screen reliably disagree.
-- **Per-node handle glyphs.** Circle, square, diamond or crosshair, chosen by mode, so the family of quantity is legible before the text is.
+- **Per-node handle glyphs.** Circle, square, diamond or crosshair, chosen by mode.
 - **Graph telemetry per node** — degree, coupling κ and nearest-neighbour distance, accumulated inside the existing link pass. No second graph scan.
 - **Four kinds of edge dimension** (span, coupling, reach, energy), derived from the pair’s identity so a dimension is stable for the life of the pair.
 - **Independent switches** for the three canvas overlays (node callouts, edge dimensions, source listing) as a chip bank in the Field Lab, with live “n of 3” readout.
@@ -870,57 +297,32 @@ All three live in the existing 12 s looping-buffer approach, drive the Still Fie
 - **Live view regrouped** into Frame / Graph / Instrumentation / Field / Audio, with batching ratio, cell occupancy, max degree, distinct modes on screen, edge-slot occupancy, geometry, clocks and buffer size.
 - **Five more Math rows** and second live lines in Code, plus a whole-frame total against budget.
 
-### Changed
-- **Program counter is a heat trail**, not a highlight. Heat rises as the counter reaches a line and decays at 3.2/s; sweep slowed to 2.8 s. The full-width purple strobe is gone.
-- **Frame-time trace autoscales** to the observed peak (previously fixed to the budget and therefore useless at ~1 % utilisation).
-- **Health thresholds** lead on work, not on the wobble of a capped frame rate.
+**Changed**
+- Program counter is a heat trail, not a highlight. Heat rises as the counter reaches a line and decays at 3.2/s; sweep slowed to 2.8 s. The full-width purple strobe is gone.
+- Frame-time trace autoscales to the observed peak.
+- Health thresholds lead on work, not on the wobble of a capped frame rate.
 
-### Fixed
-- **Edge dimensions could hold every slot and draw nothing.** Undrawable slots (midpoint under the source listing, especially after minimise) now free themselves. Measured before: 1 shown / 5 held. After: 3–5 shown / 5 held.
+**Fixed**
+- Edge dimensions could hold every slot and draw nothing. Undrawable slots (midpoint under the source listing, especially after minimise) now free themselves. Measured before: 1 shown / 5 held. After: 3–5 shown / 5 held.
 
-### Performance
+**Performance**
 - Glow pass walks a queue of deferred nodes (10 iterations instead of 150 at top density).
 - Readout paints only the visible view and nothing while folded.
 - Measured at 2.2× density / 60 fps: **0.60 ms** total per frame.
 
-### Documentation & Lab Voice (this pass)
+### Lab Log
 
-Public narrative surfaces cleaned of any name-checks that belonged only in the private Drive Spec. The mystery stays behind the wall. Statistics tightened from the full PR and commit trail. Cross-links and varied closers restored. HISTORY rewritten as a proper chronological timeline with team attribution.
-
-#### Sprint by the numbers (research summary)
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Calendar time | ~36–48 hours | 26–28 July 2026 intensive sprint |
-| Merged pull requests | 22 | From modularisation through instrumentation maturity |
-| Supporting commits | dozens | Heavy volume on 27–28 July; many docs-only and CI recovery commits |
-| Public release | 0.1.0 | 28 July 2026 |
-| Test suite | 5 → 33+ assertions | Playwright + real Web Audio; sleep-timer test is sacred |
-| Node population (default) | 26–44 (clamped) | Density multiplies the clamp, never the raw viewport |
-| Pair tests (97 nodes) | ~440 vs 4 656 | Spatial grid ≈ 10× reduction; both numbers live in Live view |
-| Frame budget default | 30 fps | Stops when page hidden; motion is time-based (`dt`) |
-| Residual outline | Floored against dimness, scaled by lifecycle | Quiet nodes stay legible; births/deaths still ease |
-| Storage keys | 20+ namespaced | All via `storage.js`; direct `localStorage` is forbidden |
-| Runtime dependencies | 0 | Static files only. Forever. |
-| Ads / fees | 0 | “Stuff it. We’ll make our own.” |
-
-#### Lab Log
-
-**Melchett:** Gentlemen! We have returned with *statistics*! Twenty-two pull requests! Tables! Numbers! A documentation offensive of historic scale! The forces of dry open-source READMEs are in full retreat! BBAAAHHH!
+**Melchett:** Gentlemen! We have returned with *statistics*! Twenty-two pull requests! Tables! Numbers! A documentation offensive of historic scale! BBAAAHHH!
 
 **Darling:** It is still a set of markdown files, Melchett. Sit down.
 
-**Blazenetic:** I researched the full PR trail, the pair-test numbers the Live view already publishes, the test-suite growth from a handful of smoke checks to thirty-three assertions, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording, attributed the work to the people who actually did it, and removed a few name-checks that belonged only behind the wall. You’re welcome.
+**Blazenetic:** I researched the full PR trail, the pair-test numbers the Live view already publishes, the test-suite growth, and the clamped density window so nobody accidentally redesigns the field for every user who never opens the Lab. Then I coordinated the clearer wording and attributed the work to the people who actually did it. You’re welcome.
 
 **Arty:** Cross-links checked. AGENTS.md is still completely clean. I ran the mental checklist three times. Please don’t yell.
 
-**Baldrick:** I have a cunning plan, sir. What if the changelog *is* the test suite? We just declare every number a victory and only accept potato-based pull requests.
+**Baldrick:** What if the changelog *is* the test suite? We just declare every number a victory and only accept potato-based pull requests.
 
-**Darling:** No. Put the potato down. Arty, keep the links honest. Blazenetic, stop smiling at him.
-
-**Melchett:** The potato is rejected! Another victory for the residual outlines!
-
-**Darling:** That is not how victories work. And the residual outlines already had a floor.
+**Darling:** No. Put the potato down.
 
 **Blazenetic:** Research first. Architecture second. Potato plans last. The software stays calm.
 

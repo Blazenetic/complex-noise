@@ -37,6 +37,27 @@ sized dots.
 
 The Still Field stopped being a single 3,327-line monster and became a laboratory of twenty-two modules. No pixel changed. The suite stayed green at every step because the code was moved, not rewritten. Measurement vetoed fashion. Three self-claims the code was making about itself were brought into line with reality.
 
+### Phase 7 — make the edge table ceiling answer for itself
+
+Edge distances and link radii were stored in two 2,001-entry text tables. The
+paint path clamped both lookups safely, but the value `2001` carried no name and
+nothing connected that allocation budget to the world scale it had to cover. A
+larger future world could therefore print a convincing but false `2000 u`.
+
+**Fixed**
+- `EDGE_MEASUREMENT_MAX` now names the inclusive `2000 u` ceiling, and both
+  lazy table lengths derive from it.
+- The live link radius is checked before edge text paints and whenever it
+  changes. The first measurement that would need another table entry throws
+  instead of silently pinning.
+- A direct module test proves the inclusive length, rounding and clamp rules,
+  and both oversized and non-finite failure paths.
+
+**Teaching note**
+- Quantised tables are a memory contract as well as a speed trick. Name the
+  supported domain, derive the allocation from it, and make the producer prove
+  it still fits before the lookup can look plausible.
+
 ### Phase 6 — give the source listing a checked vocabulary
 
 The on-canvas transcript paired each source statement with a live measurement

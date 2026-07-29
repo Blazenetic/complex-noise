@@ -5,7 +5,7 @@ This folder holds product requirements, implementation context, visitor-facing L
 The Lab ships serious sleep tools.  
 The documentation is allowed to have a little more personality. Sometimes a *lot* more.
 
-> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics, eight detail modes, six colours, a Blame page, a living curriculum, the night-shift reliability work, and the Great Modularisation!  
+> **Melchett:** Behold the documentation index! A strategic masterpiece complete with statistics, eight detail modes, six colours, a Blame page, a living curriculum, the night-shift reliability work, the Great Modularisation, and a Recurring Themes decoder!  
 > **Darling:** It is a table of links, Melchett.  
 > **Blazenetic:** With correct cross-references, a CONTRIBUTING.md that actually tells people how to report security issues, a History rewritten as a proper chronological campaign narrative, a Changelog free of Unreleased placeholders, and a clear reminder that I research the maths rather than invent it. The multiverse of identical callouts is slightly smaller today. You’re welcome.
 
@@ -16,9 +16,10 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | File | Purpose |
 |------|---------|
 | [HISTORY.md](./HISTORY.md) | **Single chronological source of truth.** Origin, the 26–28 July sprint, instrumentation, six-colour hardening, the Calm Pass, the Night Shift, and the Great Modularisation (five phases). Clear chapter structure for easy future appends. |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Character introduction + a couple of dated example scenes. Feels like walking into an occupied room. Not another history. |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Character introduction, short field guide to how the Lab operates, and dated occupied-room scenes. Not another history. |
 | [TEACHINGS_AND_LEARNINGS.md](./TEACHINGS_AND_LEARNINGS.md) | **Pure living curriculum.** Technical teachings + quotes that teach. Measurement-first standing template. Headline: the Great Modularisation. Previous chapters: Night Shift, Calm Pass. Future chapters add cleanly without retelling the full story. |
 | [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Attribution tables carry the weight. Short narrative re-caps only. Opens with the Great Modularisation. Grows over time. |
+| [RECURRING_THEMES.md](./RECURRING_THEMES.md) | Living reference for the lab’s standing phrases, standards and motifs — what they mean technically and culturally. Useful decoder for new readers and shared vocabulary for future narrative. |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for phase 3 |
 | [STILL_FIELD_PHASE_5_HANDOVER.md](./STILL_FIELD_PHASE_5_HANDOVER.md) | **Active brief.** The bidirectional HUD row contract, the target-browser profile tracked in issue #38, and the next independent guards in priority order |

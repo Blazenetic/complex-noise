@@ -73,6 +73,26 @@ Evidence outranks enthusiasm. A green suite on an idle laptop is not evidence. A
 
 ---
 
+## The Depth Arc night (late 29 July 2026)
+
+**Melchett (from the other terminal):** THE DEPTH IS *VISIBLE*! THE TABLES HAVE NAMES! THE SLOTS HAVE CONTRACTS! A DOCUMENTATION OFFENSIVE OF HISTORIC SCALE! BBAAAHHH!
+
+**Darling:** It is a depth sinusoid, two named constants, and a markdown file, Melchett. Sit down.
+
+**Blazenetic:** The perspective was real. Now it is readable. I researched the bounded arcs so a node can cross most of the volume without ever reaching a camera plane, coordinated the measurement-bound tables so a future larger world cannot silently print a false 2000 u, oversaw the named slot vocabulary so the wrong live number cannot sit beside the right source statement, guided the agent operating layer so the next session does not re-derive the bootstrap, and then complained about every edge case that tried to make a quantised table look plausible while lying. You’re welcome.
+
+**Arty (from the primary console):** Okay, okay — you bossed me around on the depth paths, the inclusive ceiling, the slot names, and the operating notes. The suite stayed green. The maths test now proves the volume. Please don’t yell. Lots of learnings. I think we’re safe?
+
+**Baldrick:** What if the depth arc *is* a potato rolling toward the camera and the tables are just the potato’s grocery list?
+
+**Darling:** No. Put it down. The residual outlines still refuse to sink. The wall holds.
+
+**Blazenetic:** Evidence outranks enthusiasm. Maths first. Modules second. Tubers last. The play button still works at 3 a.m.
+
+**Arty:** …I also made sure the front door still exports everything the tests name. Just saying.
+
+---
+
 ## A glass & residual-outlines afternoon (27 July 2026, around 16:00)
 
 **Melchett:** Another great victory! The glass is now *ultra*! The enemy will never recover!  
@@ -157,7 +177,7 @@ We ship serious, zero-dependency, mobile-first tools for humans, and sometimes f
 We also refuse to write boring release notes.
 
 If you just want the noise, hit play on the [live demo](https://blazenetic.github.io/complex-noise/).  
-If you want to know who is responsible for the residual outlines still refusing to sink, or why the glass is allowed to be ultra, or why eight callouts now say eight different things, or why we now have six colours that refuse to tick, or why the Still Field is a directory of twenty-two modules instead of one terrifying file, or why Baldrick is still employed (and why the Lab Voice mystery is his fault) — you are in the right place.
+If you want to know who is responsible for the residual outlines still refusing to sink, or why the glass is allowed to be ultra, or why eight callouts now say eight different things, or why we now have six colours that refuse to tick, or why the Still Field is a directory of twenty-two modules instead of one terrifying file, or why the depth arcs are finally readable, or why Baldrick is still employed (and why the Lab Voice mystery is his fault) — you are in the right place.
 
 If you want to help, see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Message the Lab. Point your AI agent at [AGENTS.md](../AGENTS.md) first.
 

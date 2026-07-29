@@ -445,7 +445,7 @@ test('the Still Field facade keeps its whole public API', async page => {
 // test can `await import('/js/still-field/modes.js')` and assert on the module
 // directly, in the same browser, with no DOM and no render loop — which is how
 // the class of bug the smoke tests cannot see cheaply gets caught: an
-// off-by-one in a quantisation table, a mode weight that stops averaging 1, a
+// off-by-one in a quantisation table, a mode-weight normalisation regression, a
 // colour string the regex silently rejects.
 //
 // Keep them grouped. A `test()` costs a BrowserContext, so a dozen one-line
@@ -460,6 +460,7 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
     const field = await import('/js/still-field.js');
     const { view } = await import('/js/still-field/view.js');
     const { world, targetNodeCount, measureWorld } = await import('/js/still-field/world.js');
+    const { population } = await import('/js/still-field/nodes.js');
 
     // The schedule walks one full cycle of weighted slices. Sample it densely
     // enough to land in every slice and record which modes came up, in order.
@@ -485,6 +486,20 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
       return targetNodeCount();
     };
     const target = { half: at(0.5), one: at(1), two: at(2), max: at(4) };
+
+    // The link buffer is a grow-only high-water mark. A population change must
+    // reuse and clear it rather than hand stale strengths to a new index space.
+    const highWater = population.links;
+    const highBytes = highWater.byteLength;
+    highWater[0] = 1;
+    field.setStillFieldDensity(0.5);
+    const buffer = {
+      reusedOnShrink: population.links === highWater,
+      clearedOnShrink: population.links.every(v => v === 0),
+      didNotShrink: population.links.byteLength === highBytes,
+      capacity: Math.sqrt(population.links.length),
+      liveNodes: population.nodes.length,
+    };
     field.setStillFieldDensity(restore.density);
     view.w = restore.w;
     view.h = restore.h;
@@ -501,6 +516,7 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
       remainingAlwaysPositive,
       outOfRange: [modes.modeAt(-5), modes.modeAt(1e9)].filter(m => m < 0 || m >= modes.LABEL_MODE_COUNT).length,
       target,
+      buffer,
       minScale: world.minScale,
     };
   });
@@ -517,11 +533,11 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
   assertEqual(r.step[5], 1, 'smoothstep must clamp above 1');
   assert(r.step[2] < 0.25, 'smoothstep(0.25) should ease below the straight line');
 
-  // The dwell setting is documented as the *mean* seconds per mode, which only
-  // holds while the golden-ratio weights average 1. Add a ninth mode without
-  // checking this and every dwell in the Lab quietly means something else.
-  assert(Math.abs(r.weightMean - 1) < 0.05,
-    `MODE_WEIGHTS must average about 1, got ${r.weightMean.toFixed(4)}`);
+  // The dwell setting is documented as the *mean* seconds per mode. Raw finite
+  // golden-ratio samples only approach that mean, so the generated set must be
+  // normalised regardless of how many modes it contains.
+  assert(Math.abs(r.weightMean - 1) < 1e-6,
+    `MODE_WEIGHTS must average exactly 1, got ${r.weightMean.toFixed(8)}`);
   assert(r.weightMin > 0, 'a mode with a non-positive weight would never be shown');
 
   // Quasi-periodic, not a modulo: every mode must still get exactly one slice
@@ -540,6 +556,11 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
   assert(r.target.half < r.target.one && r.target.one < r.target.two,
     'the node target must rise with density');
   assert(r.target.max <= 150, `the population ceiling must hold, got ${r.target.max}`);
+  assert(r.buffer.reusedOnShrink, 'shrinking the population must reuse the high-water link buffer');
+  assert(r.buffer.clearedOnShrink, 'a reused link buffer must not retain strengths from the old index space');
+  assert(r.buffer.didNotShrink, 'the link buffer high-water mark must not shrink during a slider sweep');
+  assert(r.buffer.capacity >= r.buffer.liveNodes, 'link capacity must cover every live node');
+  assertEqual(r.buffer.capacity % 16, 0, 'link capacity must grow in sixteen-node bands');
   assert(Math.abs(r.minScale - 1 / (1 + 0.75)) < 1e-9, 'the far plane should sit at 1/(1+depth)');
 });
 

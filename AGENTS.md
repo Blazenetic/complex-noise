@@ -329,17 +329,16 @@ the field's baseline opacity; mid and spark supply hue only.
 length — `tests/run.mjs` asserts it), then add the branch to
 `refreshNodeCallout()` in `js/still-field/callout-content.js` — **not**
 `callouts.js`, which is placement and paint and has no business in the diff for
-a new mode. `MODE_WEIGHTS`
-re-derives itself, and the per-node offset spreads the new mode across the
-field automatically. Up to four key/value rows; only the first three can be
-axis-coloured.
+a new mode. `MODE_WEIGHTS` re-derives and normalises itself to a mean of one,
+and the per-node offset spreads the new mode across the field automatically. Up
+to four key/value rows; only the first three can be axis-coloured.
 
 **Add an edge dimension kind** — all in `js/still-field/edge-labels.js`: add an
 `EDGE_KIND_*` index, raise `EDGE_KIND_COUNT`, add the branch in
 `drawEdgeAnnotations()`, and add any new quantised string table inside
 `ensureEdgeTables()` (they are built on first draw, not at module load, so a
-visitor who never opens the info layer never pays for them). Whatever the kind reads must be derivable from values the link
-pass already has.
+visitor with Stats or dimensions disabled never pays for them). Whatever the
+kind reads must be derivable from values the link pass already has.
 
 **Add a persisted setting** — add the key to `STORAGE_KEYS` in
 `js/constants.js` and read/write it through `js/storage.js`. Never call

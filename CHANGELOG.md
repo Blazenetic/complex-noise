@@ -18,6 +18,9 @@ Still no pixel changes. The suite passed unchanged at every step again.
 
 ### Changed
 
+- **Mode dwell now means the advertised mean seconds per mode.** The raw finite
+  golden-ratio sample averaged about 1.017 for eight modes. It is normalised to
+  exactly one now, so adding a mode cannot silently shift every dwell setting.
 - **`callouts.js` split along the seam it was always going to split on.**
   `callout-content.js` holds the eight detail-mode branches and the row cache;
   `callouts.js` keeps selection, the hysteretic placement and the paint. Adding
@@ -45,22 +48,23 @@ Still no pixel changes. The suite passed unchanged at every step again.
   Growing to the exact size was tried first and only got the first sweep to 24 —
   each rising step needs one more row than the last. The price is 12 KiB of
   headroom held at rest.
-- **5,034 strings were built at boot for an overlay you might never open.**
+- **5,034 strings were built at module import for an overlay that may be off.**
   `edge-labels.js` quantises every dimension caption into lookup tables so the
   render loop never builds a string. It was building all of them when the module
   was imported — measured at ~0.3 ms — whether or not Stats was on. They are
-  built on first draw now. The 0.3 ms is not the argument and the comment in
-  that file says so; the argument is that a cost you can make conditional should
-  be conditional, especially on the boot path of a page whose first job is to
-  start playing audio.
+  built on first draw now, so a persisted Stats-off or dimensions-off session
+  does not pay for them; the default session still does on its first info frame.
+  The 0.3 ms is not the argument and the comment in that file says so; the
+  argument is that a cost you can make conditional should be conditional.
 
 ### Added
 
 - **Unit tests.** Three grouped tests that import a module and call it — no DOM,
   under a second between them: `smoothstep` and the quasi-periodic mode
-  schedule (including that `MODE_WEIGHTS` still averages 1, which is what makes
-  the Lab's dwell setting mean seconds), the node-count target and its 26–44
-  window, `parseColor` against every form the theme tokens use, `buildPalette`
+  schedule (including that `MODE_WEIGHTS` is normalised to an exact mean of 1,
+  which is what makes the Lab's dwell setting mean seconds), the node-count
+  target and its 26–44 window, the grow-only link buffer's reuse-and-clear
+  contract, `parseColor` against every form the theme tokens use, `buildPalette`
   reaching both ends of its ramp, and all of `hud.js` including the states that
   are awkward to reach in a browser — a stopped renderer, an audio context that
   does not exist yet, callouts switched off.

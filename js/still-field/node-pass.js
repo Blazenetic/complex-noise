@@ -74,11 +74,15 @@ export function drawNodes(ctx, nodes, n) {
         ctx.shadowBlur = Math.min(12, 4 + node.energy * 8);
       }
 
-      // Nearness is the depth cue: closer nodes are larger and more opaque.
+      // Perspective supplies the geometry; a restrained atmospheric treatment
+      // makes it legible on a two-pixel object. Near nodes gain a little extra
+      // presence while far nodes stay as quiet points, strengthening the
+      // approach/recede read without changing their projected positions.
       const nearness = (node.scale - minScale) / (1 - minScale);
-      const radius = (2.1 + node.energy * 1.9) * node.scale * radiusScale;
+      const depthPresence = 0.82 + nearness * 0.34;
+      const radius = (2.1 + node.energy * 1.9) * node.scale * radiusScale * depthPresence;
       const alpha = clamp(
-        node.fade * (0.42 + nearness * 0.5) * (0.7 + node.energy * 0.45) * alphaScale,
+        node.fade * (0.34 + nearness * 0.66) * (0.7 + node.energy * 0.45) * alphaScale,
         0,
         1,
       );

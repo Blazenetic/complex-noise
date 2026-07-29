@@ -604,6 +604,27 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
     view.h = restore.h;
     measureWorld(0);
 
+    // A correct pinhole projection can still look flat if each object only
+    // explores a thin local depth band. Measure the trajectory assigned to
+    // every live node at the default camera strength: each must stay away from
+    // both planes while earning a substantial near/far scale ratio.
+    let nearestZ = 1;
+    let furthestZ = 0;
+    let smallestScaleRatio = Infinity;
+    let smallestAmplitude = Infinity;
+    let largestAmplitude = 0;
+    for (const node of population.nodes) {
+      const nearZ = node.zBase - node.zAmp;
+      const farZ = node.zBase + node.zAmp;
+      const nearScale = 1 / (1 + nearZ * settings.depth);
+      const farScale = 1 / (1 + farZ * settings.depth);
+      if (nearZ < nearestZ) nearestZ = nearZ;
+      if (farZ > furthestZ) furthestZ = farZ;
+      if (nearScale / farScale < smallestScaleRatio) smallestScaleRatio = nearScale / farScale;
+      if (node.zAmp < smallestAmplitude) smallestAmplitude = node.zAmp;
+      if (node.zAmp > largestAmplitude) largestAmplitude = node.zAmp;
+    }
+
     return {
       phi: PHI, tau: TAU,
       step: [smoothstep(-1), smoothstep(0), smoothstep(0.25), smoothstep(0.5), smoothstep(1), smoothstep(2)],
@@ -617,6 +638,9 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
       target,
       buffer,
       minScale: world.minScale,
+      depthArc: {
+        nearestZ, furthestZ, smallestScaleRatio, smallestAmplitude, largestAmplitude,
+      },
     };
   });
 
@@ -661,6 +685,16 @@ test('unit: the field maths — smoothstep, the mode schedule, the node target',
   assert(r.buffer.capacity >= r.buffer.liveNodes, 'link capacity must cover every live node');
   assertEqual(r.buffer.capacity % 16, 0, 'link capacity must grow in sixteen-node bands');
   assert(Math.abs(r.minScale - 1 / (1 + 0.75)) < 1e-9, 'the far plane should sit at 1/(1+depth)');
+  assert(r.depthArc.nearestZ >= 0.049,
+    `a depth path must stay off the near plane, reached z=${r.depthArc.nearestZ.toFixed(3)}`);
+  assert(r.depthArc.furthestZ <= 0.951,
+    `a depth path must stay off the far plane, reached z=${r.depthArc.furthestZ.toFixed(3)}`);
+  assert(r.depthArc.smallestAmplitude >= 0.339 && r.depthArc.largestAmplitude <= 0.421,
+    `depth amplitudes left their calm 0.34–0.42 band: `
+    + `${r.depthArc.smallestAmplitude.toFixed(3)}–${r.depthArc.largestAmplitude.toFixed(3)}`);
+  assert(r.depthArc.smallestScaleRatio >= 1.4,
+    `every node should visibly traverse depth; weakest near/far scale ratio was `
+    + `${r.depthArc.smallestScaleRatio.toFixed(3)}×`);
 });
 
 test('unit: theme colours parse and ramp', async page => {

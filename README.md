@@ -1,6 +1,6 @@
 # Complex Noise
 
-**Procedural noise for deep rest.** - Free forever
+**Procedural noise for deep rest** - Free forever
 
 · Zero dependencies · Zero ads · Zero potatoes  
 

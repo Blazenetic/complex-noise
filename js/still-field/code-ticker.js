@@ -10,6 +10,11 @@
  * The listing also claims a corner before anything else in the info layer is
  * placed, so callouts and edge dimensions can treat it as one more region to
  * stay out of — see `hitsCodeBlock()`.
+ *
+ * **The transcript itself lives in `code-lines.js`.** This file is the paint:
+ * layout, the sweep, the heat, the gutter and the footer. Keeping last month's
+ * loop out of the listing is a different job from drawing it, and the two should
+ * not share a diff.
  */
 
 import { view, surfaces, snap } from './view.js';
@@ -21,65 +26,15 @@ import { telemetry } from './telemetry.js';
 import { grid } from './grid.js';
 import { LABEL_MODE_NAMES, modeAt } from './modes.js';
 import { MAX_GLOW_NODES } from './node-pass.js';
+import {
+  CODE_LINES, CODE_STAGE, CODE_INDENT, CODE_TEXT, CODE_SLOT,
+  CODE_VALUE_COUNT, CODE_SUMMARY_SLOT, CODE_STAGE_COUNT,
+  CODE_STAGE_LINES, CODE_STAGE_FIRST, CODE_STAGE_LAST,
+} from './code-lines.js';
 
 const CODE_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
-/**
- * Real statements from this renderer, grouped by pipeline stage.
- *
- * These are transcribed from the code they describe and are checked by eye
- * against it — if you change `loop.js`'s `update()` or `link-pass.js`, change
- * these too. `slot` indexes a live value refreshed once a second and printed
- * against the line, so the column is not a decorative snippet: it is the loop
- * that is running, with the numbers it is currently running on.
- *
- * Stages: 0 update, 1 links, 2 nodes, 3 info.
- */
-const CODE_STAGE = 0, CODE_INDENT = 1, CODE_TEXT = 2, CODE_SLOT = 3;
-const CODE_LINES = [
-  [0, 0, 'dt = min((now - last) / 1000, 0.1);', 0],
-  [0, 0, 'clock += dt * speed;', 1],
-  [0, 0, 'for (const node of nodes) {', 2],
-  [0, 1, 'node.vx += (rand() - .5) * J * dt;', 3],
-  [0, 1, 'node.vx *= exp(-0.55 * dt);', -1],
-  [0, 1, 'node.z = zBase + sin(zPhase) * zAmp;', 4],
-  [0, 1, 'node.scale = 1 / (1 + node.z * δ);', 5],
-  [0, 1, 'node.E = .30b + .24w + .46a;', 12],
-  [0, 1, 'if (node.life >= 1) respawn(node);', 16],
-  [0, 0, '}', -1],
-  [1, 0, 'grid.rebuild(nodes);', 6],
-  [1, 0, 'for (const [a, b] of grid.pairs()) {', 7],
-  [1, 1, 'd = hypot(dx, dy, dz * zWorld);', 8],
-  [1, 1, 't = pow(1 - d / radius, 0.65);', 9],
-  [1, 1, 's += (t - s) * (1 - exp(-λ * dt));', 10],
-  [1, 1, 'a.deg++; b.deg++; a.κ += s;', 17],
-  [1, 1, 'batch.stroke(a, b, shade(s));', 11],
-  [1, 0, '}', -1],
-  [2, 0, 'shade = pow(node.energy, 1.35);', 18],
-  [2, 0, 'ctx.arc(sx, sy, radius, 0, TAU);', 13],
-  [3, 0, 'info.clearRect(0, 0, w, h);', 14],
-  [3, 0, 'mode = (base + node.slot) % 8;', 20],
-  [3, 0, 'label.α += (target - label.α) * k;', 15],
-  [3, 0, 'dimension(a, b, kind(idA + idB·φ));', 19],
-];
-const CODE_VALUE_COUNT = 22;
-const CODE_SUMMARY_SLOT = 21;
 const codeValueText = new Array(CODE_VALUE_COUNT).fill('');
-
-/** Lines per stage, so the cursor can spread a stage's real cost across them. */
-const CODE_STAGE_LINES = new Int32Array(4);
-for (const line of CODE_LINES) CODE_STAGE_LINES[line[CODE_STAGE]]++;
-/**
- * First and last line index of each stage's contiguous run, so the gutter can
- * draw one rail per stage rather than one mark per line.
- */
-const CODE_STAGE_FIRST = Int32Array.from([-1, -1, -1, -1]);
-const CODE_STAGE_LAST = new Int32Array(4);
-for (let i = 0; i < CODE_LINES.length; i++) {
-  const stage = CODE_LINES[i][CODE_STAGE];
-  if (CODE_STAGE_FIRST[stage] < 0) CODE_STAGE_FIRST[stage] = i;
-  CODE_STAGE_LAST[stage] = i;
-}
 
 const CODE_LINE_H = 13;
 const CODE_BLOCK_W = 356;
@@ -104,7 +59,7 @@ const CODE_HEAT_EPSILON = 0.02;
 const codeLineHeat = new Float32Array(CODE_LINES.length);
 /** Descending opacity for the footer's four stacked stage segments. */
 const CODE_STAGE_ALPHA = Float32Array.from([0.75, 0.55, 0.4, 0.28]);
-const stageShareScratch = new Float32Array(4);
+const stageShareScratch = new Float32Array(CODE_STAGE_COUNT);
 
 let codeCursor = 0;
 let codeValueNextUpdate = 0;
@@ -382,7 +337,7 @@ function drawCodeHeader(ctx, left, top, totalMs) {
  */
 function drawCodeGutter(ctx, left, bodyTop, share0, share1, share2, share3) {
   const x = snap(left - 8);
-  for (let stage = 0; stage < 4; stage++) {
+  for (let stage = 0; stage < CODE_STAGE_COUNT; stage++) {
     const first = CODE_STAGE_FIRST[stage];
     if (first < 0) continue;
     const share = stage === 0 ? share0 : stage === 1 ? share1 : stage === 2 ? share2 : share3;
@@ -406,7 +361,7 @@ function drawCodeFooter(ctx, left, y, share0, share1, share2, share3) {
   stageShareScratch[2] = share2;
   stageShareScratch[3] = share3;
   ctx.fillStyle = paint.accent;
-  for (let stage = 0; stage < 4; stage++) {
+  for (let stage = 0; stage < CODE_STAGE_COUNT; stage++) {
     const w = (stageShareScratch[stage] / sum) * CODE_BLOCK_W;
     ctx.globalAlpha = CODE_STAGE_ALPHA[stage];
     ctx.fillRect(snap(x), barY, Math.max(1, w - 1), 2);

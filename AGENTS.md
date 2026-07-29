@@ -205,9 +205,10 @@ has the reasoning and the worked examples; these are the rules themselves:
   stats snapshot into an object of strings and touches no DOM; `app.js` maps each
   key to an element. That keeps the one architectural rule intact — a `hud.js`
   that wrote into `#nerdHud` would be a second module touching the app's DOM, and
-  the exception would then be citable by a third. **A row key with no element is
-  silently dropped**, leaving the row on the `—` `index.html` seeded it with;
-  `tests/run.mjs` fails naming any row still reading `—` with the field running.
+  the exception would then be citable by a third. `HUD_ROW_KEYS` is the shared
+  contract: `defineRowMap()` rejects a missing or retired key once at boot, and
+  `tests/run.mjs` also fails naming any row still reading the `—` `index.html`
+  seeded it with after the field starts.
 
 `tests/run.mjs` names the front door's whole export surface. Move code freely
 between these modules; that test is what tells you the door still opens. It also

@@ -170,7 +170,12 @@ slot-proximity tests use, is derived from that layout rather than chosen, so the
 box the tests reason about is the box the text actually occupies.
 
 Every string comes out of a table indexed by the quantised measurement, so a
-dimension that changes every frame still allocates nothing.
+dimension that changes every frame still allocates nothing. Distance and radius
+share the named inclusive bound `EDGE_MEASUREMENT_MAX = 2000`; both table
+lengths derive from it. The live link radius is checked before those lazy tables
+can paint, including after a resize or Lab setting change, so a future world
+that crosses the bound fails visibly instead of pinning a plausible measurement
+at `2000 u`.
 
 Samples are collected inside the existing link pass, which already has each
 pair's distance and endpoints. There is no second graph scan, no sorting and no

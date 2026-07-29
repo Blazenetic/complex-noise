@@ -27,7 +27,7 @@ npm start           # serves on http://localhost:8123
 ## Test it
 
 ```bash
-npm install                     # first time only — Playwright is the sole dev dependency
+npm ci                          # install the exact locked development dependencies
 npm test                        # headless browser suite, ~15s
 npm test -- --filter=colour     # only tests whose name contains "colour"
 npm test -- --workers=1         # serialise, e.g. when bisecting a flake
@@ -35,6 +35,8 @@ npm test -- --repeat=20         # run the selection 20x to hunt a flake
 npm test -- --headed            # watch it (implies --workers=1)
 npm test -- --list              # print test names and exit
 npm run profile:still-field     # evidence, not pass/fail; ~3 minutes
+npm run profile:still-field -- --churn          # interaction churn only
+npm run profile:still-field -- --churn --dpr=2  # largest transcript raster
 ```
 
 `tests/run.mjs` drives a real Chromium against a real Web Audio graph. It starts
@@ -46,7 +48,10 @@ times over twelve seconds, forces GC around its heap observation, and includes
 native/throttled desktop and mobile controls. It is not a CI benchmark and has
 no thresholds: timing describes the current browser and machine. Use
 `--filter=<scenario>` to narrow a run and `PROFILE_ROOT=/another/worktree` for a
-same-harness before/after comparison.
+same-harness before/after comparison. `--churn` is a separate 12-cycle
+fold/unfold and field stop/start observation; it records both the first drawn
+frame and the worst callback in each 250 ms interaction window. `--dpr=2`
+exercises the renderer's device-pixel-ratio cap.
 
 Tests run in a **worker pool** (four by default, `TEST_WORKERS` to override),
 each worker owning a fresh `BrowserContext`. The context is the isolation

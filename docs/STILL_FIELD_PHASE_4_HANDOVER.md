@@ -1,11 +1,12 @@
 # Still Field phase 4 — post-merge review of phases 1–3, and what is left
 
-Status: review complete; fixes landed
+Status: review complete; fixes landed; raster-release profiling complete
 Base: `main` at `65ef1d0` (the merge of [PR #36](https://github.com/Blazenetic/complex-noise/pull/36))
 Reviewed: [PR #34](https://github.com/Blazenetic/complex-noise/pull/34),
 [PR #35](https://github.com/Blazenetic/complex-noise/pull/35),
 [PR #36](https://github.com/Blazenetic/complex-noise/pull/36)
 Prepared: 29 July 2026
+Updated: 29 July 2026 (issue #38 measurement complete)
 
 Read [`AGENTS.md`](../AGENTS.md) and
 [`STILL_FIELD_ARCHITECTURE.md`](./STILL_FIELD_ARCHITECTURE.md) before editing
@@ -164,14 +165,13 @@ matters more than the list, because the next session will see them again.
 
 In rough order of value.
 
-1. **Re-run the profiler with the raster release in place.** The release adds one
-   allocation and one re-raster per fold/unfold and per loop restart. That is
-   expected to be unmeasurable against the 0.881 ms steady-state info median, but
-   it is an assumption and the harness exists to check assumptions:
-   `npm run profile:still-field -- --filter=desktop-150-source`, and
-   `PROFILE_ROOT` at a pre-change worktree for the matched comparison. If the
-   fold path turns out to matter, the answer is a short grace period before the
-   release, not putting the leak back.
+1. **Raster-release profiling is complete.** Issue #38 measured matched
+   steady-state runs plus repeated fold/unfold and field stop/start churn at DPR
+   1 and DPR 2 under 4× CPU throttle. The rebuild remained inside the 33.3 ms
+   frame budget, no accumulating post-GC heap growth appeared, and the measured
+   interaction did not earn a grace period. Immediate release remains the
+   decision. The environment, raw tables and reproduction commands are recorded
+   in [`ISSUE_38_PROFILE_RESULTS.md`](./ISSUE_38_PROFILE_RESULTS.md).
 2. **The inverse HUD mapping guard.** `tests/run.mjs` catches a `hud.js` row key
    with no element in `app.js`. It does not catch an element mapped to a key no
    builder produces — that row silently keeps whatever `index.html` seeded it

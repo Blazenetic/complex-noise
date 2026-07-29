@@ -21,17 +21,26 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Attribution tables carry the weight. Short narrative re-caps only. Opens with the Great Modularisation. Grows over time. |
 | [RECURRING_THEMES.md](./RECURRING_THEMES.md) | Living reference for the lab’s standing phrases, standards and motifs — what they mean technically and culturally. Useful decoder for new readers and shared vocabulary for future narrative. |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
-| [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for phase 3 |
-| [STILL_FIELD_PHASE_5_HANDOVER.md](./STILL_FIELD_PHASE_5_HANDOVER.md) | **Active brief.** The bidirectional HUD row contract, the target-browser profile tracked in issue #38, and the next independent guards in priority order |
-| [ISSUE_38_PROFILE_RESULTS.md](./ISSUE_38_PROFILE_RESULTS.md) | Matched pre/post raster-release steady-state and interaction-churn evidence, target-browser environment, decision-rule outcome, and reproduction commands |
-| [STILL_FIELD_PHASE_4_HANDOVER.md](./STILL_FIELD_PHASE_4_HANDOVER.md) | Post-merge review of the three refactor PRs: what was checked function-by-function, the three self-claims the code was not keeping, and the eight things deliberately left alone (superseded as the active brief) |
-| [STILL_FIELD_PHASE_3_HANDOVER.md](./STILL_FIELD_PHASE_3_HANDOVER.md) | Phase-three profiling matrix, decision gates, invariants, validation and definition of done (superseded as the active brief) |
+| [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for later phases |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
+| [SCREENSHOTS.md](./SCREENSHOTS.md) | Stable screenshot catalog and capture principles |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |
 | [../AGENTS.md](../AGENTS.md) | Technical orientation for humans and AI agents — clean, professional, zero banter |
 | [../CHANGELOG.md](../CHANGELOG.md) | What shipped + short Lab Log reactions — reverse-chronological, named campaigns, no Unreleased placeholders |
 | [../README.md](../README.md) | The main product page (narrative framing + technical overview) |
+
+### Handover & profile records (`docs/handover/`)
+
+Process and measurement records kept out of the main visitor index:
+
+| File | Purpose |
+|------|---------|
+| [handover/STILL_FIELD_PHASE_5_HANDOVER.md](./handover/STILL_FIELD_PHASE_5_HANDOVER.md) | **Active brief.** The bidirectional HUD row contract, the target-browser profile tracked in issue #38, and the next independent guards in priority order |
+| [handover/ISSUE_38_PROFILE_RESULTS.md](./handover/ISSUE_38_PROFILE_RESULTS.md) | Matched pre/post raster-release steady-state and interaction-churn evidence, target-browser environment, decision-rule outcome, and reproduction commands |
+| [handover/STILL_FIELD_PHASE_4_HANDOVER.md](./handover/STILL_FIELD_PHASE_4_HANDOVER.md) | Post-merge review of the three refactor PRs: what was checked function-by-function, the three self-claims the code was not keeping, and the eight things deliberately left alone (superseded as the active brief) |
+| [handover/STILL_FIELD_PHASE_3_HANDOVER.md](./handover/STILL_FIELD_PHASE_3_HANDOVER.md) | Phase-three profiling matrix, decision gates, invariants, validation and definition of done (superseded as the active brief) |
+| [handover/SCREENSHOTS_REFRESH_HANDOVER.md](./handover/SCREENSHOTS_REFRESH_HANDOVER.md) | Screenshots depth-refresh audit trail (complete) |
 
 The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications. The live technical contract is [AGENTS.md](../AGENTS.md).
 

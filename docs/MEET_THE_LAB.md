@@ -1,7 +1,7 @@
 # Meet the Lab
 
 You found the door that says “research”.  
-Inside it is a small Australian lab that ships calm, reliable tools for humans while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep — after roughly fifty-two wall-clock hours of furious multi-agent work, 187 commits, one overnight bootstrap, and then a five-phase wild ride that turned a 3,327-line Still Field into a laboratory of twenty-two modules without changing a single pixel.
+Inside it is a small Australian lab that ships calm, reliable tools for humans while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Changelog](../CHANGELOG.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Info Layer](./INFO_LAYER.md) · [All docs](./)
 
@@ -36,7 +36,7 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
-## A Tuesday that actually happened (glass & residual outlines)
+## A glass & residual-outlines afternoon (27 July 2026, around 16:00)
 
 **Melchett:** Another great victory! The glass is now *ultra*! The enemy will never recover!  
 **Darling:** That is a CSS variable, Melchett. Sit down.  
@@ -49,7 +49,7 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
-## The instrumentation Tuesday (this afternoon)
+## Instrumentation afternoon (28 July 2026, mid-afternoon)
 
 **Melchett:** Eight modes! Four edge dimensions! A heat trail instead of a strobe! The source listing folds from its own title bar! A chip bank with a live “n of 3”! Crushing victory for the forces of rest! BBAAAHHH!
 
@@ -71,9 +71,9 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 
 ---
 
-## The Great Modularisation Tuesday (the wild ride)
+## The Modularisation night (late 28 – early 29 July 2026)
 
-**Melchett (from the kitchen):** TWENTY-TWO MODULES! THE SINGLE-FILE MONSTER IS DEAD! IDENTICAL OUTPUT! A STRATEGIC MASTERPIECE! BBAAAHHH!
+**Melchett (from the kitchen, ~02:40):** TWENTY-TWO MODULES! THE SINGLE-FILE MONSTER IS DEAD! IDENTICAL OUTPUT! A STRATEGIC MASTERPIECE! BBAAAHHH!
 
 **Darling:** It is a directory, Melchett. And keep the volume down; some of us are on the other terminal.
 
@@ -98,7 +98,7 @@ Voice of reason. Put-upon competence. Appears precisely when the others are abou
 ## Why any of this exists
 
 We ship serious, zero-dependency, mobile-first tools for humans, and sometimes for AI agents.
- 
+
 We also refuse to write boring release notes.
 
 If you just want the noise, hit play on the [live demo](https://blazenetic.github.io/complex-noise/).  

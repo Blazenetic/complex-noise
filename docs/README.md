@@ -15,10 +15,10 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 
 | File | Purpose |
 |------|---------|
-| [HISTORY.md](./HISTORY.md) | Chronological narrative of the origin, the 26–28 July sprint, instrumentation, six-colour hardening, the Calm Pass, the Night Shift, and the Great Modularisation (five phases). Clear chapter structure for easy future appends. |
-| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Friendly visitor introduction to the Lab cast — feels like walking into an occupied room |
-| [TEACHINGS_AND_LEARNINGS.md](./TEACHINGS_AND_LEARNINGS.md) | **Living curriculum.** Headline feature: the night-shift reliability work (PR #33) — clocks you do not control, measuring the right thing, wake-lock races, wall-clock deadlines. Previous chapter: the calm info-layer pass (PR #32). Future sessions will add more. |
-| [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Who researched, who implemented under firm direction, who proposed the potato plans, who declared victory early, who restored order. Opens with the night-shift work. Grows over time. |
+| [HISTORY.md](./HISTORY.md) | **Single chronological source of truth.** Origin, the 26–28 July sprint, instrumentation, six-colour hardening, the Calm Pass, the Night Shift, and the Great Modularisation (five phases). Clear chapter structure for easy future appends. |
+| [MEET_THE_LAB.md](./MEET_THE_LAB.md) | Character introduction + a couple of dated example scenes. Feels like walking into an occupied room. Not another history. |
+| [TEACHINGS_AND_LEARNINGS.md](./TEACHINGS_AND_LEARNINGS.md) | **Pure living curriculum.** Technical teachings + quotes that teach. Measurement-first standing template. Headline: the Great Modularisation. Previous chapters: Night Shift, Calm Pass. Future chapters add cleanly without retelling the full story. |
+| [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Attribution tables carry the weight. Short narrative re-caps only. Opens with the Great Modularisation. Grows over time. |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for phase 3 |
 | [STILL_FIELD_PHASE_5_HANDOVER.md](./STILL_FIELD_PHASE_5_HANDOVER.md) | **Active brief.** The bidirectional HUD row contract, the target-browser profile tracked in issue #38, and the next independent guards in priority order |
@@ -28,7 +28,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |
 | [../AGENTS.md](../AGENTS.md) | Technical orientation for humans and AI agents — clean, professional, zero banter |
-| [../CHANGELOG.md](../CHANGELOG.md) | What shipped + Lab Log reactions — reverse-chronological, named campaigns, no Unreleased placeholders |
+| [../CHANGELOG.md](../CHANGELOG.md) | What shipped + short Lab Log reactions — reverse-chronological, named campaigns, no Unreleased placeholders |
 | [../README.md](../README.md) | The main product page (narrative framing + technical overview) |
 
 The PRODUCT_REQUIREMENTS and FINDINGS documents are **historical context**, kept because they explain why the app looks and behaves the way it does. They are not current specifications. The live technical contract is [AGENTS.md](../AGENTS.md).
@@ -66,11 +66,11 @@ A fuller work report covering the intensive 26–28 July development lives in th
 3. Keep the wall: narrative surfaces may be chaotic; agent surfaces stay sterile.
 4. If you find a security issue, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-> **Arty:** I added extra links, the pair-test numbers, the Teachings page and the Blame page so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. The bounce is dead. The clocks we control are the ones we trust. The renderer is twenty-two files and the panel is strings. Every number in the phase-2 entry was measured twice, before and after. I checked.
+> **Arty:** I added extra links, the pair-test numbers, the Teachings page and the Blame page so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. The bounce is dead. The clocks we control are the ones we trust. The renderer is twenty-two files and the panel is strings. Every number in the phase-2 entry was measured twice, before and after. I checked.  
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 
 The wall holds. AGENTS.md remains sterile.  
 See also the [live demo](https://blazenetic.github.io/complex-noise/) and the [root README](../README.md).
 
-Another Tuesday in the Lab. The software is calm. The docs are not.
+Another late night in the Lab. The software is calm. The docs are not.

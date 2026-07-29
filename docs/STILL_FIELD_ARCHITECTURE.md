@@ -280,11 +280,13 @@ Three things follow, and the third is the one to remember:
   render loop's contract of allocating nothing, while these run four times a
   second on a panel that is open and visible. A builder that mutated a shared
   object could not be tested by comparing two calls.
-- **A key with no element is silently dropped.** No exception, no console
-  warning: the row simply keeps the `—` that `index.html` seeded it with, which
-  looks exactly like a measurement that happens to be unavailable. The test
-  `every stats-panel row reaches an element` exists solely for this — it plays
-  the field, opens each view, and fails naming any row still reading `—`.
+- **The key set is checked in both directions.** `HUD_ROW_KEYS` names the Live,
+  meter, Math and Code-stage contracts beside the builders. `app.js` passes each
+  element map through `defineRowMap()` once at boot, so both a missing element
+  and an element left behind after its builder key is retired fail with the exact
+  mismatch. The test `every stats-panel row reaches an element` remains the
+  end-to-end half: it plays the field, opens each view, and fails naming any row
+  still reading `—`.
 
 ---
 
@@ -407,8 +409,8 @@ The smaller seams remain:
   `refreshCodeValues()` is the first earned addition.
 - `edge-labels.js` sizes the distance/radius text tables at 2,001 by assumption.
   The clamp is safe but can silently pin a value if a future world exceeds it.
-- `hud.js` keys must match `app.js` element maps. The test catches a builder key
-  with no element, not the inverse.
+- The HUD key seam is now guarded in both directions; see
+  [`STILL_FIELD_PHASE_5_HANDOVER.md`](./STILL_FIELD_PHASE_5_HANDOVER.md).
 
 The post-merge review of phases 1–3 closed the raster-lifetime gap above and
 made the Buffers row count every buffer. Everything it looked at and chose *not*

@@ -29,11 +29,50 @@
  * four objects a second, and a builder that mutated a shared row object could
  * not be tested by comparing two calls.
  *
- * The keys are the contract: `app.js` maps each one to an element, so a key
- * added here without an element is silently dropped rather than throwing, and a
- * key removed leaves the element showing its last value. `tests/run.mjs` checks
- * the mapping covers the keys.
+ * The keys are the contract: `app.js` maps each one to an element.
+ * `defineRowMap()` rejects either direction of drift once at boot, outside the
+ * renderer, and `tests/run.mjs` checks the builders still keep that contract.
  */
+
+export const HUD_ROW_KEYS = Object.freeze({
+  live: Object.freeze([
+    'fps', 'work', 'budget',
+    'nodes', 'links', 'pairs', 'grid', 'occupancy', 'degree', 'density', 'turnover',
+    'labels', 'mode', 'dims', 'overlays',
+    'wave', 'world', 'viewport', 'trail', 'glow', 'clock', 'buffers',
+    'energy', 'low', 'mid', 'high',
+    'source', 'drift', 'uptime',
+  ]),
+  meters: Object.freeze(['low', 'mid', 'high', 'energy']),
+  math: Object.freeze([
+    'project', 'energy', 'distance', 'target', 'envelope', 'wave', 'schedule',
+    'grid', 'life', 'spawn', 'trail', 'neighbours', 'detail',
+  ]),
+  stages: Object.freeze(['update', 'links', 'nodes', 'info']),
+});
+
+/**
+ * Validate and return one app-side row map.
+ *
+ * A broken HUD contract is a programming error, not an unavailable measurement
+ * to disguise as the "—" seeded in `index.html`.
+ */
+export function defineRowMap(view, elements) {
+  const expected = HUD_ROW_KEYS[view];
+  if (!expected) throw new Error(`Unknown HUD row map: ${view}`);
+
+  const actual = Object.keys(elements);
+  const missing = expected.filter(key => !Object.hasOwn(elements, key));
+  const extra = actual.filter(key => !expected.includes(key));
+  if (missing.length || extra.length) {
+    const detail = [
+      missing.length ? `missing ${missing.join(', ')}` : '',
+      extra.length ? `extra ${extra.join(', ')}` : '',
+    ].filter(Boolean).join('; ');
+    throw new Error(`HUD ${view} row map does not match its builder: ${detail}`);
+  }
+  return elements;
+}
 
 /**
  * How hard the renderer is working, as one word.

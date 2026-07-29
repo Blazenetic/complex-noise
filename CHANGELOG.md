@@ -6,6 +6,34 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — make every HUD row prove it belongs (phase 5)
+
+Phase 2 separated the stats panel's strings from its DOM. Its browser guard
+caught a new builder key with no element because that row stayed on `—`; it did
+not catch the inverse, an element left in the map after its builder stopped
+producing the key. That retired row looked like a plausible unavailable
+measurement forever.
+
+### Fixed
+
+- **The HUD mapping contract now fails in both directions.** `hud.js` owns the
+  exact Live, meter, Math and Code-stage key sets. `app.js` validates each DOM
+  map once at boot, outside the render loop, and reports the missing and extra
+  keys in the error. A broken instrument panel is a programming error, not a
+  measurement to disguise as `—`.
+- The pure HUD unit test proves each builder still emits exactly its declared
+  key set and exercises both failure directions. The existing interaction test
+  remains as the end-to-end proof that every mapped element receives a value.
+
+### Handover
+
+- The deferred raster-release profile is tracked in
+  [issue #38](https://github.com/Blazenetic/complex-noise/issues/38), with the
+  matched-harness protocol and decision rule.
+- [`docs/STILL_FIELD_PHASE_5_HANDOVER.md`](docs/STILL_FIELD_PHASE_5_HANDOVER.md)
+  records the completed seam and leaves the `CODE_SLOT` consistency guard as the
+  next small, independent PR.
+
 ## [Unreleased] — reviewing three merged PRs, and giving the megabyte back (phase 4)
 
 Phases 1–3 moved 3,327 lines into 22 modules and then made the most expensive

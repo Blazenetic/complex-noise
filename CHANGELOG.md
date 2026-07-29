@@ -6,6 +6,105 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — the renderer becomes a directory (phase 1 of 2–3)
+
+Nothing here changes a pixel either. It changes how much you have to read before
+you are allowed to change one.
+
+`js/still-field.js` was 3,327 lines doing eighteen jobs — settings, canvas
+sizing, a spatial grid, a physics step, four paint passes, three on-canvas
+overlays, a stats snapshot, and the loop driving all of it — with about sixty
+module-level `let` bindings that every one of those jobs could see. It is now
+twenty modules under `js/still-field/`, with the old path kept as the front
+door, and `js/app.js` untouched.
+
+### Changed
+
+- **The Still Field is a directory.** One module per concern:
+  `settings`, `view`, `world`, `grid`, `math`, `clock`, `palette`, `energy`,
+  `keep-outs`, `telemetry`, `audio-metrics`, `nodes`, `link-pass`, `node-pass`,
+  `modes`, `callouts`, `edge-labels`, `code-ticker`, `loop`, `stats`.
+  The public API, every field of the statistics snapshot, and the rendered
+  output are identical; the existing suite passed unchanged at every step.
+- **Shared state lives on exported objects with exactly one writer.** An
+  imported binding is read-only in ES modules, so `export let` cannot be
+  assigned from another file — a constraint that turned out to be the useful
+  part. Each cluster of state is now one object owned by one module.
+- **Side effects compose in the front door.** A setter clamps and persists;
+  knowing that a depth change also means remeasuring the world *and then*
+  re-counting the nodes lives in one place, as a list.
+
+### Fixed
+
+- **The trail allocated a string every frame.** The renderer's header has
+  promised "no allocation in the render loop" since the field shipped, and the
+  HUD prints "0 alloc/frame" underneath it. The residual clear was building
+  `` `rgba(0,0,0,${(…).toFixed(4)})` `` thirty to sixty times a second — a
+  `toFixed`, a template string and a CSS colour parse, all night. Since
+  `destination-out` multiplies the source alpha by `globalAlpha` anyway, the
+  decay moved there and the fill became a constant. Same trail, one fewer lie.
+- **A resize left links frozen.** `AGENTS.md` has warned for two sprints that a
+  node moving discontinuously must forget its links, because the spatial grid
+  only visits near pairs and a pair that stops being visited keeps whatever
+  strength it last held. A resize rescales every node — and when the aspect
+  ratio changes, it moves them relative to one another. That path was missing
+  the rule. It now drops link state when, and only when, the world actually
+  changed shape.
+
+### Added
+
+- `tests/run.mjs` names the front door's whole export surface and asserts the
+  mode arrays are the same length. `app.js` imports the door as one namespace,
+  so an export left behind in a module nobody re-exports is a `TypeError` at
+  the moment some button is pressed — possibly a button nobody presses until a
+  user does. This is what makes phase 2 safe to attempt.
+- [docs/STILL_FIELD_ARCHITECTURE.md](docs/STILL_FIELD_ARCHITECTURE.md) — the
+  module map, the three rules and why each exists, a table of "I want to change
+  X, open Y", and the handover for the next phase.
+
+### Lab Log
+
+**Melchett:** BBAAAHHH! Report! What does the field do now that it did not do
+yesterday?
+
+**Arty:** Nothing, sir.
+
+**Melchett:** NOTHING?! Twenty files! For NOTHING!
+
+**Darling:** That is the achievement, Melchett. Twenty files, identical output.
+He compared the world geometry before and after. It matched to the pixel.
+
+**Blazenetic:** A refactor that changes behaviour is not a refactor, it is two
+changes wearing one commit. The interesting number is not how much faster it
+got — it is that the suite went green on the first run and never needed a
+behavioural fix. That only happens if you move code rather than rewrite it.
+
+**Baldrick:** I have a cunning plan. We put all twenty files back into one
+file, so there is only one file.
+
+**Darling:** That is where we started, Baldrick.
+
+**Baldrick:** Was it going well?
+
+**Blazenetic:** It was going fine, for a human with a whole afternoon. It was
+going badly for an agent with a context window, which is most of who works on
+this now. The unit you have to hold in your head is the unit that gets
+reviewed, and 3,327 lines is nobody's unit.
+
+**Melchett:** And the LIES? Darling mentioned lies!
+
+**Arty:** The header said the render loop allocates nothing. It was building one
+string per frame. Thirty a second, eight hours a night.
+
+**Melchett:** A SMALL lie.
+
+**Blazenetic:** A rule with a live exception in it stops being a rule. Somebody
+reads that header, sees the exception, and adds theirs. Then it is two. The
+string is gone, and the sentence is true again — which is worth more than the
+microseconds.
+
+---
+
 ## [Unreleased] — the night shift: batteries, deadlines and a suite that stopped waiting
 
 Nothing in this pass changes what the app looks like. It changes what happens to

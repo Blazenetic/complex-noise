@@ -79,7 +79,7 @@ Premium brushed-titanium dark (the default, because night is dark) plus a bone-w
 ### Still Field
 The full-page nodes-and-edges visualisation that refuses to be a screensaver.
 
-Nodes drift through a shallow 3D volume with real perspective (pinhole camera, not a 3D engine). They breathe toward you and recede. They are born, they live 70–150 seconds, they fade. When a node dies its links retract into the surviving partners instead of vanishing like a bad animation. Quiet nodes keep a soft residual outline so they stay legible instead of dissolving into the background gradient.
+Nodes drift through a calm 3D volume with real perspective (pinhole camera, not a 3D engine). Each one makes a long, bounded near-to-far traverse, breathing toward you and receding without ever reaching a camera plane. They are born, they live 70–150 seconds, they fade. When a node dies its links retract into the surviving partners instead of vanishing like a bad animation. Quiet nodes keep a soft residual outline so they stay legible instead of dissolving into the background gradient.
 
 Colour rides a violet → cyan ramp driven by three non-aligning energy layers (per-node breath + irrational plane wave + analyser). Brown keeps the field calm and violet. White pushes it toward electric cyan. The field is alive even when the audio is paused — silence still has breath and wave.
 
@@ -187,7 +187,7 @@ Buffers are long enough that the loop point is effectively inaudible. State (las
 **Still Field visualisation**  
 Two full-viewport Canvas 2D layers behind the UI. No WebGL. No library. The depth is real perspective maths researched and applied carefully — not a 3D engine cosplaying as calm.
 
-- **Depth.** Each node carries a `z` and projects through a pinhole camera, `scale = 1 / (1 + z · 0.75)`. Genuine parallax. Bounded sinusoid so nodes breathe without escaping overnight.
+- **Depth.** Each node carries a `z` and projects through a pinhole camera, `scale = 1 / (1 + z · 0.75)`. Genuine parallax. Long, phase-separated bounded sinusoids carry every node through most of the volume without escaping overnight; restrained size and opacity falloff make the geometry readable on two-pixel points.
 - **Linking.** 3D distance, not screen distance. Spatial grid with counting sort into pre-sized typed arrays. At 97 nodes the field visits ~440 pairs a frame instead of 4 656. Both numbers are visible in the Live view so the claim is checkable.
 - **Lifecycle.** 70–150 s lives. R2 low-discrepancy spawn (Roberts, 2018). Retracting links. Residual outlines floored against dimness but scaled by the lifecycle envelope so births and deaths still ease.
 - **Energy.** Three layers that never line up. Violet stays calm under brown; white pushes cyan.

@@ -744,6 +744,55 @@ test('unit: theme colours parse and ramp', async page => {
     `the ramp must cross its midpoint colour between steps ${Math.floor(half)} and ${Math.ceil(half)}`);
 });
 
+test('unit: edge measurement tables guard their bound and clamp indices', async page => {
+  const r = await page.evaluate(async () => {
+    const edge = await import('/js/still-field/edge-labels.js');
+    const { world } = await import('/js/still-field/world.js');
+    const boundError = value => {
+      try {
+        edge.assertEdgeMeasurementBound(value);
+        return '';
+      } catch (error) {
+        return error.message;
+      }
+    };
+    const originalRadius = world.linkRadius;
+    world.linkRadius = edge.EDGE_MEASUREMENT_MAX + 0.5;
+    let paintPath = '';
+    try {
+      edge.drawEdgeAnnotations(null, 0);
+    } catch (error) {
+      paintPath = error.message;
+    } finally {
+      world.linkRadius = originalRadius;
+    }
+
+    return {
+      maximum: edge.EDGE_MEASUREMENT_MAX,
+      length: edge.EDGE_MEASUREMENT_TEXT_LEN,
+      indices: [-10, 0.49, 0.5, 1999.5, 9999].map(edge.edgeMeasurementIndex),
+      exact: boundError(edge.EDGE_MEASUREMENT_MAX),
+      roundedInside: boundError(edge.EDGE_MEASUREMENT_MAX + 0.49),
+      firstOutside: boundError(edge.EDGE_MEASUREMENT_MAX + 0.5),
+      nonFinite: boundError(Infinity),
+      paintPath,
+    };
+  });
+
+  assertEqual(r.maximum, 2000, 'the documented edge measurement maximum must remain explicit');
+  assertEqual(r.length, r.maximum + 1, 'the inclusive table length must derive from the maximum');
+  assertEqual(JSON.stringify(r.indices), JSON.stringify([0, 0, 1, 2000, 2000]),
+    'measurement indices must round to the nearest unit and clamp to the table');
+  assertEqual(r.exact, '', 'the exact table maximum must remain printable');
+  assertEqual(r.roundedInside, '', 'a value that rounds to the maximum must remain printable');
+  assert(r.firstOutside.includes('ends at 2000 u'),
+    'the first value requiring another string must fail with the named bound');
+  assert(r.nonFinite.includes('ends at 2000 u'),
+    'a non-finite world measurement must fail before reaching a table lookup');
+  assert(r.paintPath.includes('ends at 2000 u'),
+    'the edge paint entry must reject an oversized live radius before touching the canvas');
+});
+
 test('unit: source listing values match their transcript slots', async page => {
   const r = await page.evaluate(async () => {
     const code = await import('/js/still-field/code-lines.js');

@@ -145,12 +145,14 @@ const edgeSlotDegrees2 = new Uint8Array(MAX_EDGE_LABELS); // summed endpoint deg
  * in `drawEdgeAnnotations()`, which is unmeasurable. Where a cost is small either
  * way, put it where it is conditional.
  *
- * The lengths are constants rather than `TABLE.length` because `writeEdgeSlot()`
- * clamps against them on every tracked pair, every frame, and it must not depend
- * on whether anything has drawn yet.
+ * The measurement capacity is named independently of either table. Distance and
+ * radius share the same unit and the renderer guarantees a linked pair's
+ * distance is no greater than `world.linkRadius`, so one checked bound covers
+ * both. The table length is derived from that inclusive maximum rather than
+ * repeating the old magic `2001`.
  */
-const DISTANCE_TEXT_LEN = 2001;
-const RADIUS_TEXT_LEN = 2001;
+export const EDGE_MEASUREMENT_MAX = 2000;
+export const EDGE_MEASUREMENT_TEXT_LEN = EDGE_MEASUREMENT_MAX + 1;
 const ANGLE_TEXT_LEN = 361;
 const DEGREE_TEXT_LEN = 65;
 /** `prefix` + a 0.00–1.00 value, for every hundredth. */
@@ -166,6 +168,27 @@ let REACH_TEXT = null;
 let ENERGY_TEXT = null;
 let DELTA_E_TEXT = null;
 let DEGREE_TEXT = null;
+let checkedLinkRadius = NaN;
+
+/**
+ * Fail before an edge measurement could be printed outside the table.
+ *
+ * `Math.round` defines what the reader sees, so values below the half-unit
+ * boundary remain representable while the first value that would need a new
+ * string is rejected.
+ */
+export function assertEdgeMeasurementBound(maximum) {
+  if (!Number.isFinite(maximum) || Math.round(maximum) > EDGE_MEASUREMENT_MAX) {
+    throw new RangeError(
+      `Edge measurement table ends at ${EDGE_MEASUREMENT_MAX} u; received ${maximum} u`,
+    );
+  }
+}
+
+/** Quantise one representable measurement into its allocation-free table index. */
+export function edgeMeasurementIndex(value) {
+  return clamp(Math.round(value), 0, EDGE_MEASUREMENT_MAX);
+}
 
 function unitTable(prefix) {
   const out = new Array(UNIT_TEXT_LEN);
@@ -178,11 +201,14 @@ function unitTable(prefix) {
  * is the first moment any of these strings can reach a screen.
  */
 function ensureEdgeTables() {
+  if (DISTANCE_TEXT && checkedLinkRadius === world.linkRadius) return;
+  assertEdgeMeasurementBound(world.linkRadius);
+  checkedLinkRadius = world.linkRadius;
   if (DISTANCE_TEXT) return;
-  DISTANCE_TEXT = new Array(DISTANCE_TEXT_LEN);
-  for (let i = 0; i < DISTANCE_TEXT_LEN; i++) DISTANCE_TEXT[i] = `${i} u`;
-  RADIUS_TEXT = new Array(RADIUS_TEXT_LEN);
-  for (let i = 0; i < RADIUS_TEXT_LEN; i++) RADIUS_TEXT[i] = `r ${i} u`;
+  DISTANCE_TEXT = new Array(EDGE_MEASUREMENT_TEXT_LEN);
+  for (let i = 0; i < EDGE_MEASUREMENT_TEXT_LEN; i++) DISTANCE_TEXT[i] = `${i} u`;
+  RADIUS_TEXT = new Array(EDGE_MEASUREMENT_TEXT_LEN);
+  for (let i = 0; i < EDGE_MEASUREMENT_TEXT_LEN; i++) RADIUS_TEXT[i] = `r ${i} u`;
   ANGLE_TEXT = new Array(ANGLE_TEXT_LEN);
   for (let i = 0; i < ANGLE_TEXT_LEN; i++) ANGLE_TEXT[i] = `θ ${i - 180}°`;
   DZ_TEXT = unitTable('Δz ');
@@ -310,7 +336,7 @@ function writeEdgeSlot(s, a, b, ax, ay, bx, by, distance, target, strength) {
   edgeSlotY[s] = (ay + by) * 0.5;
   edgeSlotAngle[s] = angle;
   edgeSlotLength[s] = Math.sqrt(dx * dx + dy * dy);
-  edgeSlotDistance[s] = clamp(Math.round(distance), 0, DISTANCE_TEXT_LEN - 1);
+  edgeSlotDistance[s] = edgeMeasurementIndex(distance);
   edgeSlotDegrees[s] = clamp(Math.round(angle * RAD_TO_DEG), -180, 180);
   edgeSlotDz[s] = clamp(Math.round(Math.abs(a.z - b.z) * 100), 0, 100);
   edgeSlotStrength[s] = strength;
@@ -413,7 +439,7 @@ export function drawEdgeAnnotations(ctx, dt) {
       right = DZ_TEXT[edgeSlotDz[s]];
     } else if (kind === EDGE_KIND_REACH) {
       lead = REACH_TEXT[edgeSlotReach[s]];
-      left = RADIUS_TEXT[clamp(Math.round(world.linkRadius), 0, RADIUS_TEXT_LEN - 1)];
+      left = RADIUS_TEXT[edgeMeasurementIndex(world.linkRadius)];
       right = ANGLE_TEXT[edgeSlotDegrees[s] + 180];
     } else {
       lead = ENERGY_TEXT[edgeSlotEnergy[s]];

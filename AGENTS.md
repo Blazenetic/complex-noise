@@ -457,7 +457,10 @@ noise rather than the listening volume.
   string, across all four kinds, comes from a quantised lookup table. Candidate
   and collision coordinates live in pre-sized typed arrays. Do not turn those
   paths back into template-string, object, or array creation at 30 fps — that
-  includes innocent-looking array literals inside a draw helper.
+  includes innocent-looking array literals inside a draw helper. Distance and
+  radius tables derive from the inclusive `EDGE_MEASUREMENT_MAX`; the live link
+  radius must pass `assertEdgeMeasurementBound()` before either can paint, so
+  raising world scale requires raising and reviewing the text-table budget too.
 - **An overlay slot that cannot draw must not keep its slot.** Edge dimensions
   have six slots. A pair whose midpoint lands under the source listing is
   unpaintable, and the listing changes corner when the interface is minimised —

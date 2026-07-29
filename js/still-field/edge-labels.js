@@ -335,7 +335,6 @@ export function drawEdgeAnnotations(ctx, dt) {
   let held = 0;
 
   for (let s = 0; s < MAX_EDGE_LABELS; s++) {
-    if (edgeSlotIdA[s] !== 0) held++;
     if (edgeSlotIdA[s] === 0 && edgeSlotAlpha[s] <= 0.01) continue;
 
     const expired = clock.real >= edgeSlotHold[s];
@@ -366,6 +365,14 @@ export function drawEdgeAnnotations(ctx, dt) {
       edgeSlotIdB[s] = 0;
       continue;
     }
+
+    // Counted here, below the release, rather than at the top of the loop.
+    // Counting first included slots this very pass had just handed back, so the
+    // panel reported dimensions held over a field that was holding none of them
+    // — the same shape of lie as the stale count `drawInfoLayer` zeroes when
+    // dimensions are switched off, and it cleared only on the next frame that
+    // happened to draw.
+    held++;
 
     // Still fading is still worth drawing — but not while it is over the
     // listing, which is exactly what made it undrawable in the first place.

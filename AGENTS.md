@@ -34,10 +34,19 @@ npm test -- --workers=1         # serialise, e.g. when bisecting a flake
 npm test -- --repeat=20         # run the selection 20x to hunt a flake
 npm test -- --headed            # watch it (implies --workers=1)
 npm test -- --list              # print test names and exit
+npm run profile:still-field     # evidence, not pass/fail; ~3 minutes
 ```
 
 `tests/run.mjs` drives a real Chromium against a real Web Audio graph. It starts
 its own server on a free port, so nothing needs to be running first.
+
+`tests/profile-still-field.mjs` is the repeatable performance harness. It warms
+each scenario for eight seconds, samples the renderer's smoothed telemetry 48
+times over twelve seconds, forces GC around its heap observation, and includes
+native/throttled desktop and mobile controls. It is not a CI benchmark and has
+no thresholds: timing describes the current browser and machine. Use
+`--filter=<scenario>` to narrow a run and `PROFILE_ROOT=/another/worktree` for a
+same-harness before/after comparison.
 
 Tests run in a **worker pool** (four by default, `TEST_WORKERS` to override),
 each worker owning a fresh `BrowserContext`. The context is the isolation

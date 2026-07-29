@@ -380,6 +380,58 @@ test('the source overlay folds from its own title bar', async page => {
     'a second press should unfold it');
 });
 
+test('the source ticker reuses its stable text raster', async page => {
+  // The transcript is 24 stable source lines plus line numbers and live-value
+  // columns. Painting all of those with fillText every frame made the source
+  // overlay the measured phase-three bottleneck. Its body now lives in a lazy
+  // scratch bitmap, while heat washes, the active tint, header, gutter and
+  // footer remain live.
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await page.evaluate(async () => {
+    const field = await import('/js/still-field.js');
+    field.setStillFieldCallouts(false);
+    field.setStillFieldEdges(false);
+    field.setStillFieldCode(true);
+  });
+  await page.click('#uiChromeMinimise');
+  // Let the lazy bitmap and its first value refresh settle before instrumenting
+  // the visible canvas. OffscreenCanvas has a different context prototype, so
+  // its once-per-second cache repaint is deliberately outside these counts.
+  await page.waitForTimeout(1200);
+
+  const startClock = await page.evaluate(() => {
+    const counts = { frames: 0, fillText: 0, drawImage: 0 };
+    const proto = CanvasRenderingContext2D.prototype;
+    const clearRect = proto.clearRect;
+    const fillText = proto.fillText;
+    const drawImage = proto.drawImage;
+    proto.clearRect = function (...args) {
+      if (this.canvas.id === 'stillFieldInfo') counts.frames++;
+      return clearRect.apply(this, args);
+    };
+    proto.fillText = function (...args) {
+      if (this.canvas.id === 'stillFieldInfo') counts.fillText++;
+      return fillText.apply(this, args);
+    };
+    proto.drawImage = function (...args) {
+      if (this.canvas.id === 'stillFieldInfo') counts.drawImage++;
+      return drawImage.apply(this, args);
+    };
+    window.__tickerPaintCounts = counts;
+    return window.complexNoiseStill.getFieldStats().realClock;
+  });
+
+  await until(page, `window.complexNoiseStill.getFieldStats().realClock > ${startClock + 0.75}`,
+    10000, 'the source ticker did not advance through a profiling window');
+  const counts = await page.evaluate(() => window.__tickerPaintCounts);
+
+  assert(counts.frames >= 5, `expected several info frames, saw ${counts.frames}`);
+  assert(counts.drawImage >= counts.frames,
+    `the cached transcript should draw every info frame, ${counts.drawImage} images over ${counts.frames} frames`);
+  assert(counts.fillText / counts.frames < 30,
+    `stable transcript text is being rasterised again: ${(counts.fillText / counts.frames).toFixed(1)} fillText calls/frame`);
+});
+
 test('the Still Field facade keeps its whole public API', async page => {
   // The renderer is a directory now, and `js/still-field.js` is the front door
   // that re-composes it. `app.js` imports that door as one namespace, so an

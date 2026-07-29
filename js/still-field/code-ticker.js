@@ -42,6 +42,7 @@ const CODE_GUTTER = 22;
 const CODE_MIN_VIEWPORT = 1000;
 const CODE_HEAD_H = 20;
 const CODE_FOOT_H = 20;
+const CODE_BODY_H = CODE_LINES.length * CODE_LINE_H;
 /**
  * Seconds for the program counter to complete one sweep of the listing.
  *
@@ -57,6 +58,15 @@ const CODE_HEAT_DECAY = 3.2;
 /** Below this a line is at rest and skips its highlight work entirely. */
 const CODE_HEAT_EPSILON = 0.02;
 const codeLineHeat = new Float32Array(CODE_LINES.length);
+/**
+ * Line numbers never change. Building them with `String().padStart()` in the
+ * paint loop allocated one string per line, per frame, while the HUD claimed
+ * the renderer allocated nothing there.
+ */
+const CODE_LINE_NUMBER = new Array(CODE_LINES.length);
+for (let i = 0; i < CODE_LINES.length; i++) {
+  CODE_LINE_NUMBER[i] = String(i + 1).padStart(2, '0');
+}
 /** Descending opacity for the footer's four stacked stage segments. */
 const CODE_STAGE_ALPHA = Float32Array.from([0.75, 0.55, 0.4, 0.28]);
 const stageShareScratch = new Float32Array(CODE_STAGE_COUNT);
@@ -64,6 +74,28 @@ const stageShareScratch = new Float32Array(CODE_STAGE_COUNT);
 let codeCursor = 0;
 let codeValueNextUpdate = 0;
 let codeActiveLine = 0;
+let codeValueVersion = 0;
+
+/**
+ * The transcript body is almost entirely static, yet the first implementation
+ * issued about 69 `fillText()` calls for it on every frame: line numbers,
+ * source and live-value columns. The values only refresh once a second and the
+ * rest changes only with theme, layout or DPR, so that work belongs in a
+ * scratch bitmap rather than on an eight-hour paint path.
+ *
+ * The cache is lazy and conditional: phones never show this overlay, folded
+ * listings never need its body, and browsers without OffscreenCanvas retain
+ * the direct paint below. At DPR 2 the bitmap is about 1.7 MiB; that explicit
+ * memory trade removes dozens of text rasterisations per visible frame.
+ */
+let codeBodyCache = null;
+let codeBodyCtx = null;
+let codeBodyDpr = 0;
+let codeBodyLeft = NaN;
+let codeBodyTop = NaN;
+let codeBodyValueVersion = -1;
+let codeBodyInk = '';
+let codeBodyInkMuted = '';
 
 /** Where the listing landed this frame, so callouts can stay off it. */
 let codeVisible = false;
@@ -174,6 +206,83 @@ function refreshCodeValues() {
   codeValueText[20] = `${LABEL_MODE_NAMES[modeAt(clock.real)]} +${telemetry.modesOnScreen}`;
   codeValueText[CODE_SUMMARY_SLOT] = `u ${telemetry.msUpdate.toFixed(2)} · l ${telemetry.msLinks.toFixed(2)}`
     + ` · n ${telemetry.msNodes.toFixed(2)} · i ${telemetry.msInfo.toFixed(2)} ms`;
+  codeValueVersion++;
+}
+
+/**
+ * Repaint the stable transcript body only when one of its inputs changed.
+ *
+ * Coordinates are cached against the chosen corner as well as the DPR. Snapping
+ * an absolute CSS coordinate at a fractional DPR is not always equivalent to
+ * snapping its local offset, so retaining `left` and `bodyTop` preserves the
+ * same device-pixel origins as the direct path.
+ *
+ * @returns {boolean} whether a bitmap is available for this frame
+ */
+function prepareCodeBodyCache(left, bodyTop) {
+  if (typeof globalThis.OffscreenCanvas === 'undefined') return false;
+
+  const pixelW = Math.ceil(CODE_BLOCK_W * view.dpr);
+  const pixelH = Math.ceil(CODE_BODY_H * view.dpr);
+  if (!codeBodyCache) {
+    codeBodyCache = new globalThis.OffscreenCanvas(pixelW, pixelH);
+    codeBodyCtx = codeBodyCache.getContext('2d', { alpha: true });
+  } else if (codeBodyCache.width !== pixelW || codeBodyCache.height !== pixelH) {
+    codeBodyCache.width = pixelW;
+    codeBodyCache.height = pixelH;
+  }
+  if (!codeBodyCtx) return false;
+
+  const unchanged = codeBodyDpr === view.dpr
+    && codeBodyLeft === left
+    && codeBodyTop === bodyTop
+    && codeBodyValueVersion === codeValueVersion
+    && codeBodyInk === paint.ink
+    && codeBodyInkMuted === paint.inkMuted;
+  if (unchanged) return true;
+
+  codeBodyDpr = view.dpr;
+  codeBodyLeft = left;
+  codeBodyTop = bodyTop;
+  codeBodyValueVersion = codeValueVersion;
+  codeBodyInk = paint.ink;
+  codeBodyInkMuted = paint.inkMuted;
+
+  const ctx = codeBodyCtx;
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.clearRect(0, 0, CODE_BLOCK_W, CODE_BODY_H);
+  ctx.textBaseline = 'top';
+  ctx.font = CODE_FONT;
+
+  for (let i = 0; i < CODE_LINES.length; i++) {
+    const line = CODE_LINES[i];
+    const y = snap(bodyTop + i * CODE_LINE_H) - bodyTop;
+
+    ctx.textAlign = 'right';
+    ctx.globalAlpha = 0.26;
+    ctx.fillStyle = paint.inkMuted;
+    ctx.fillText(CODE_LINE_NUMBER[i], snap(left + CODE_GUTTER - 6) - left, y);
+
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 0.40;
+    ctx.fillStyle = paint.ink;
+    ctx.fillText(
+      line[CODE_TEXT],
+      snap(left + CODE_GUTTER + line[CODE_INDENT] * 12) - left,
+      y,
+    );
+
+    const slot = line[CODE_SLOT];
+    if (slot >= 0) {
+      ctx.textAlign = 'right';
+      ctx.globalAlpha = 0.32;
+      ctx.fillStyle = paint.inkMuted;
+      ctx.fillText(codeValueText[slot], snap(left + CODE_BLOCK_W) - left, y);
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+  return true;
 }
 
 /**
@@ -245,13 +354,11 @@ export function drawCodeTicker(ctx, dt) {
   const bodyTop = top + CODE_HEAD_H;
   drawCodeGutter(ctx, left, bodyTop, share0, share1, share2, share3);
 
+  const cachedBody = prepareCodeBodyCache(left, bodyTop);
   for (let i = 0; i < lines; i++) {
-    const line = CODE_LINES[i];
     const y = bodyTop + i * CODE_LINE_H;
     const heat = codeLineHeat[i];
-    const warm = heat > CODE_HEAT_EPSILON;
-
-    if (warm) {
+    if (heat > CODE_HEAT_EPSILON) {
       // A wash this faint is under the threshold at which a moving band is
       // distracting, which is the entire brief for this overlay.
       ctx.globalAlpha = heat * 0.085;
@@ -260,31 +367,66 @@ export function drawCodeTicker(ctx, dt) {
       ctx.globalAlpha = heat * 0.5;
       ctx.fillRect(snap(left - 8), snap(y - 1), 2, CODE_LINE_H);
     }
+  }
 
-    ctx.textAlign = 'right';
-    ctx.globalAlpha = 0.26 + heat * 0.24;
-    ctx.fillStyle = paint.inkMuted;
-    ctx.fillText(String(i + 1).padStart(2, '0'), snap(left + CODE_GUTTER - 6), snap(y));
+  if (cachedBody) {
+    // Heat washes were painted first; the cached resting text belongs above
+    // them, exactly where the direct text loop placed it.
+    ctx.globalAlpha = 1;
+    ctx.drawImage(
+      codeBodyCache,
+      0, 0, codeBodyCache.width, codeBodyCache.height,
+      left, bodyTop, CODE_BLOCK_W, CODE_BODY_H,
+    );
+  }
 
+  for (let i = 0; i < lines; i++) {
+    const line = CODE_LINES[i];
+    const y = bodyTop + i * CODE_LINE_H;
+    const heat = codeLineHeat[i];
+    const warm = heat > CODE_HEAT_EPSILON;
     const textX = snap(left + CODE_GUTTER + line[CODE_INDENT] * 12);
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 0.40 + heat * 0.22;
-    ctx.fillStyle = paint.ink;
-    ctx.fillText(line[CODE_TEXT], textX, snap(y));
-    // Warmth tints rather than replaces: over-printing in the accent at the
-    // heat's own alpha crossfades the colour instead of stepping it.
+    const slot = line[CODE_SLOT];
+    if (!cachedBody) {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = paint.inkMuted;
+      ctx.globalAlpha = 0.26 + heat * 0.24;
+      ctx.fillText(CODE_LINE_NUMBER[i], snap(left + CODE_GUTTER - 6), snap(y));
+
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 0.40 + heat * 0.22;
+      ctx.fillStyle = paint.ink;
+      ctx.fillText(line[CODE_TEXT], textX, snap(y));
+
+      if (slot >= 0) {
+        ctx.textAlign = 'right';
+        ctx.globalAlpha = 0.32 + heat * 0.34;
+        ctx.fillStyle = paint.inkMuted;
+        ctx.fillText(codeValueText[slot], snap(left + CODE_BLOCK_W), snap(y));
+      }
+    }
+
     if (warm) {
+      if (cachedBody) {
+        // Reuse this row of already-rasterised glyphs to brighten all three
+        // columns. At the source text's 0.40 resting alpha, painting the same
+        // pixels again at `heat` produces 0.40 + 0.24·heat — within 0.02 of
+        // the old 0.40 + 0.22·heat curve, without rasterising three text runs.
+        const sourceY = i * CODE_LINE_H * view.dpr;
+        const sourceH = CODE_LINE_H * view.dpr;
+        ctx.globalAlpha = heat;
+        ctx.drawImage(
+          codeBodyCache,
+          0, sourceY, codeBodyCache.width, sourceH,
+          left, y, CODE_BLOCK_W, CODE_LINE_H,
+        );
+      }
+      // Warmth tints rather than replaces: over-printing in the accent at the
+      // heat's own alpha crossfades the colour instead of stepping it.
+      ctx.textAlign = 'left';
       ctx.globalAlpha = heat * 0.42;
       ctx.fillStyle = paint.accent;
       ctx.fillText(line[CODE_TEXT], textX, snap(y));
-    }
-
-    const slot = line[CODE_SLOT];
-    if (slot >= 0) {
-      ctx.textAlign = 'right';
-      ctx.globalAlpha = 0.32 + heat * 0.34;
-      ctx.fillStyle = paint.inkMuted;
-      ctx.fillText(codeValueText[slot], snap(left + CODE_BLOCK_W), snap(y));
     }
   }
 

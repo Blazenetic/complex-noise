@@ -8,6 +8,7 @@
   "scripts": {
     "start": "http-server . -p 8123 -c-1",
     "test": "node tests/run.mjs",
+    "profile:still-field": "node tests/profile-still-field.mjs",
     "lint": "eslint js tests"
   },
   "devDependencies": {

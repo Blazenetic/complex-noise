@@ -8,8 +8,11 @@
   "scripts": {
     "start": "http-server . -p 8123 -c-1",
     "test": "node tests/run.mjs",
+    "test:list": "node tests/run.mjs --list",
+    "test:serial": "node tests/run.mjs --workers=1",
     "profile:still-field": "node tests/profile-still-field.mjs",
-    "lint": "eslint js tests"
+    "lint": "eslint --no-error-on-unmatched-pattern js tests scripts",
+    "check": "npm run lint && npm test"
   },
   "devDependencies": {
     "eslint": ">=9",

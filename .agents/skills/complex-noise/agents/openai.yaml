@@ -1,0 +1,4 @@
+interface:
+  display_name: "Complex Noise"
+  short_description: "Operate and change Complex Noise safely"
+  default_prompt: "Use $complex-noise to orient in the repository and complete this Complex Noise task safely."

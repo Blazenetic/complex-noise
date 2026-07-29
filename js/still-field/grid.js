@@ -20,6 +20,9 @@ export const NEIGHBOUR_DY = Int8Array.from([0, 0, 1, 1, 1]);
 /** Ceiling on cell count, so a small reach on a huge world cannot run away. */
 const MAX_GRID_CELLS = 8192;
 
+/** Granularity the per-node arrays grow in. See the note in `allocateGrid`. */
+const NODE_CAPACITY_STEP = 16;
+
 /**
  * The grid itself. `counts`, `start`, `items` and `cellOf` are reallocated only
  * when the shape changes, which never happens inside a frame.
@@ -62,15 +65,29 @@ export function allocateGrid(spanX, spanY, radius, nodeCount) {
   }
   grid.cell = cell;
 
+  // Grow-only. `allocateGrid` is reached from the density, reach, depth and
+  // intensity sliders, all of which fire `input` at pointer-move rate, and
+  // sizing to the exact shape meant replacing five typed arrays on nearly every
+  // event: a full density sweep at 1440×900 reallocated on all 35 of its steps,
+  // in both directions, every time. Nothing here needs the arrays to be exactly
+  // the right size — `buildGrid` is told how many cells and how many nodes to
+  // use — so a high-water mark costs a few unused words and saves all of that.
+  // `cellCount` remains the *live* figure, because that is what the HUD reports
+  // and what a reader means by "cells".
   const cells = grid.cols * grid.rows;
-  if (grid.counts.length !== cells) {
+  if (grid.counts.length < cells) {
     grid.counts = new Int32Array(cells);
     grid.start = new Int32Array(cells);
     grid.cursor = new Int32Array(cells);
   }
-  if (grid.items.length !== nodeCount) {
-    grid.items = new Int16Array(nodeCount);
-    grid.cellOf = new Int16Array(nodeCount);
+  // The per-node arrays grow in bands, for the same reason the link buffer does
+  // (see `ensureLinkCapacity` in nodes.js): a density drag walks the node count
+  // up one at a time, and growing to the exact figure means allocating on every
+  // rising step. A band of sixteen turns a full-range sweep into a handful.
+  if (grid.items.length < nodeCount) {
+    const banded = Math.ceil(nodeCount / NODE_CAPACITY_STEP) * NODE_CAPACITY_STEP;
+    grid.items = new Int16Array(banded);
+    grid.cellOf = new Int16Array(banded);
   }
   grid.cellCount = cells;
 }
@@ -86,7 +103,10 @@ export function allocateGrid(spanX, spanY, radius, nodeCount) {
 export function buildGrid(nodes, n, originX, originY) {
   const { cols, rows, cell, counts, start, cursor, items, cellOf } = grid;
   const cells = cols * rows;
-  counts.fill(0);
+  // Bounded, not `counts.fill(0)`: the arrays are high-water-marked by
+  // `allocateGrid`, so they can be longer than the live cell count and clearing
+  // the tail would be work for cells nothing will read.
+  counts.fill(0, 0, cells);
 
   for (let i = 0; i < n; i++) {
     const node = nodes[i];

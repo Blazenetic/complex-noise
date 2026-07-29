@@ -4,6 +4,9 @@ All notable changes to Complex Noise are documented here.
 
 The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with an additional Lab Log section for funsies. Entries are reverse-chronological. New work goes at the top under a clear dated or named header — no “Unreleased” placeholders.
 
+**Documents**  
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/INFO_LAYER.md) · [All docs](docs/)
+
 ---
 
 ## The Great Modularisation — late 28–29 July 2026
@@ -291,7 +294,7 @@ All three live in the existing 12 s looping-buffer approach, drive the Still Fie
 - **Per-node detail modes.** Eight modes (energy, transform, velocity, projection, wave, links, lifecycle, seed). Each node offsets the global rotation by its own lifetime ID through φ, so consecutive IDs land far apart and the callouts on screen reliably disagree.
 - **Per-node handle glyphs.** Circle, square, diamond or crosshair, chosen by mode.
 - **Graph telemetry per node** — degree, coupling κ and nearest-neighbour distance, accumulated inside the existing link pass. No second graph scan.
-- **Four kinds of edge dimension** (span, coupling, reach, energy), derived from the pair’s identity so a dimension is stable for the life of the pair.
+- **Four kinds of edge dimension** (span, coupling, reach, energy), derived from the pair’s identity so a dimension is stable for as long as the pair exists — a dimension never mutates into a different quantity while you are reading it — and neighbouring edges reliably disagree.
 - **Independent switches** for the three canvas overlays (node callouts, edge dimensions, source listing) as a chip bank in the Field Lab, with live “n of 3” readout.
 - **Foldable source listing** — folds from its own title bar on the field (session-only). Stage rails in the gutter and a stacked stage-share footer while open.
 - **Live view regrouped** into Frame / Graph / Instrumentation / Field / Audio, with batching ratio, cell occupancy, max degree, distinct modes on screen, edge-slot occupancy, geometry, clocks and buffer size.
@@ -337,7 +340,7 @@ First public release after intensive iterative development (26–28 July 2026).
 **Core audio**
 - Procedural Brown (default), Pink and White noise generators
 - Seamless ~12 s looping buffers with continuous internal state (inaudible loop points)
-- Volume control with smooth ramps (soft default 0.22)
+- Volume control with soft default 0.22
 - Continuous sleep-timer slider (0–10 h, 0.5 h steps) with gentle fade-out
 - Wake Lock support
 - 3-band Still Equaliser (low-shelf 220 Hz / peaking 1 kHz / high-shelf 3.5 kHz, ±12 dB)
@@ -410,3 +413,5 @@ First public release after intensive iterative development (26–28 July 2026).
 Made in a small Australian lab.  
 Research first. Architecture second. Potato plans last.  
 The residual outlines have a floor. You’re welcome.
+
+Further reading: [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Info Layer](docs/INFO_LAYER.md) · [All docs](docs/)

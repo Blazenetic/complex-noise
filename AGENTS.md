@@ -186,7 +186,7 @@ loop.js          one frame, and the loop control around it
 stats.js         the public statistics snapshot
 ```
 
-Three rules hold it together. [docs/STILL_FIELD_ARCHITECTURE.md](docs/STILL_FIELD_ARCHITECTURE.md)
+Three rules hold it together. [docs/still-field-architecture.md](docs/still-field-architecture.md)
 has the reasoning and the worked examples; these are the rules themselves:
 
 - **Shared state lives on an exported object with exactly one writer.** An
@@ -238,7 +238,7 @@ that watches a field of nodes and infers the answer.
 - **Field visualisation** toggle (default on)
 - **Intensity** and **Speed** sliders (speed practical range **0.7 – 4.8**, default 2.0)
 - **Stats** (the info layer) — default on, one toggle governing three things.
-  The full description is in [docs/INFO_LAYER.md](docs/INFO_LAYER.md); the parts
+  The full description is in [docs/info-layer.md](docs/info-layer.md); the parts
   that constrain a change are:
   - Engineering-drawing callouts on the info canvas: node handle, leader line,
     plate, key/value rows (up to four). There are **eight** detail modes —
@@ -570,3 +570,13 @@ noise rather than the listening volume.
   matches the existing product voice.
 - JSDoc on exported functions.
 - Comments explain *why*, not *what*.
+
+## Supporting references
+
+- Live contract: this file (always re-fetch; never rely on memory of an older version)
+- Info-layer contract: `docs/info-layer.md`
+- Product requirements: `docs/product-requirements.md`
+- Historical context: `docs/history.md`, `docs/archaeology.md`, `docs/teachings-and-learnings.md`
+- Visitor docs and Lab Voice live under the lab-voice skill
+
+The software stays calm. The documentation is allowed to be chaotic. That is the deal — and the mechanics of keeping that balance stay outside the public repository.

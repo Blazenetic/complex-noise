@@ -150,27 +150,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-
-      # `package-lock.json` is not committed, so `setup-node`'s npm cache — which
-      # keys on a lockfile — has nothing to key on. Caching the npm download
-      # directory against `package.json` gets most of the benefit; resolution
-      # still happens fresh, which is the trade this repo made by not committing
-      # the lock.
-      - name: Cache npm downloads
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-${{ runner.os }}-${{ hashFiles('package.json') }}
-          restore-keys: npm-${{ runner.os }}-
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # Resolve the version that actually got installed rather than the `^1.56.1`
-      # range in package.json. The range floats, and a cache keyed on the range
-      # would hand a newly-resolved Playwright an old browser build — which fails
-      # with "Executable doesn't exist at …", a message that reads like a broken
-      # cache rather than a stale one.
+      # Keep the browser cache paired with the exact Playwright version selected
+      # by package-lock.json whenever the lockfile is updated.
       - name: Resolve the Playwright version
         id: pw
         run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"

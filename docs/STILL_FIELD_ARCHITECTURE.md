@@ -340,54 +340,64 @@ move.
 
 ---
 
-## Handover: what phase 3 should pick up
+## Phase 3: measured before moved
 
-### 1. Frame cost, measured on a throttled CPU
+Phase 3 turned the profiling handover into
+`tests/profile-still-field.mjs`: a fixed-seed, eight-second-warmup harness over
+native desktop and 4×-throttled desktop/mobile controls. It samples the
+renderer’s existing exponentially smoothed stage telemetry 48 times over twelve
+seconds and can serve another worktree through `PROFILE_ROOT`, so before and
+after use the same browser, harness and seeded graph.
 
-Still the first thing worth doing, and phase 2 did not do it either. What it did
-do is write down one figure from a desktop run at default settings: **the info
-layer is about 75% of the frame** (0.70 ms of 0.94 ms; update 0.09, links 0.11,
-nodes 0.04). That is one machine, one viewport, 44 nodes, everything switched on
-— not a result, but it is a place to start, and it says the interesting stage is
-the one people assume is free.
+The result rejected the proposed struct-of-arrays rewrite. At 150 nodes under
+4× throttling, node update and paint were not the dominant work:
 
-Take the four stage timings to 150 nodes on a throttled CPU before optimising
-anything. The obvious candidates are not obviously right: the analyser scan looks
-like a fixed per-frame cost until you notice `fftSize` is 256, so it is 128
-iterations and almost certainly noise.
+| Focused desktop overlay | Info median | Info p95 |
+|---|---:|---:|
+| None | 0.050 ms | 0.105 ms |
+| Callouts | 0.744 ms | 1.032 ms |
+| Dimensions | 0.670 ms | 0.797 ms |
+| Source | **1.154 ms** | **1.423 ms** |
 
-### 2. Struct-of-arrays for the node hot fields
+The source ticker was repainting about 69 stable text runs every frame: 24 line
+numbers, 24 source statements and 21 live-value columns. Its values refresh once
+a second; its transcript changes only with theme, layout or DPR.
 
-`x, y, z, vx, vy, energy, fade, sx, sy, scale` in parallel `Float32Array`s would
-be more cache-friendly than 150 objects with forty fields each. This is a real
-change with a real risk of making the code worse to read, and it should not be
-attempted without a measurement showing it matters — which is what item 1 is for.
+`code-ticker.js` now rasterises that stable body into one lazy
+`OffscreenCanvas`, draws the bitmap each visible frame, and reuses individual
+cached rows for the heat brightening. The heat wash, accent overprint, stage
+rails, header and footer remain live. A direct-paint fallback remains for
+browsers without `OffscreenCanvas`.
 
-Note that phase 2 made this *harder* in one small way and easier in another: the
-callout row cache is now reached through `calloutRowKey`/`calloutRowValue` in
-`callout-content.js`, so the string fields could move without touching the paint,
-but the node object is still one literal in `makeNode()` and must stay that way
-until the whole thing changes at once.
+The matched 150-node source-only case moved from 1.154 → 0.881 ms median
+(−23.7%) and 1.423 → 1.049 ms p95 (−26.3%) for the info stage. Whole-frame
+median moved 2.419 → 2.113 ms (−12.6%). The native default moved 0.530 → 0.492
+ms median for the whole frame. The mobile control was unchanged because the
+source listing is not visible below 1000 px.
 
-### 3. The remaining seam in `nodes.js`
+The trade is a bitmap allocated only after an expanded wide-screen source
+listing becomes visible: about 434 KiB at DPR 1, or 1.7 MiB at the renderer’s
+DPR 2 cap. The exact protocol, complete matrix, discarded exact-alpha prototype
+and uncertainty are recorded in
+[`STILL_FIELD_PHASE_3_HANDOVER.md`](./STILL_FIELD_PHASE_3_HANDOVER.md).
 
-`nodes.js` imports `edge-labels.js` only so a population change can free the
-dimension slots. It is a DAG edge in the right direction, but it is the one place
-a simulation module reaches into an overlay. Phase 2 did not introduce an event
-system to fix it, because one call does not justify one — if phase 3 grows a
-lifecycle hook for another reason, this is its first customer.
+## Handover: what a later phase should pick up
 
-### 4. Smaller things seen and left
+Do not proceed directly to struct-of-arrays. Phase 3 measured links as the
+largest non-information stage at the 150-node ceiling, but its median remained
+below one millisecond under 4× throttling. Re-run the checked-in harness on the
+target device before accepting the readability cost of a new node
+representation.
 
-- `code-lines.js` is checked against the renderer **by eye**. There is no test
-  that a line still describes real code, and there cannot easily be one. If the
-  transcript drifts, the overlay becomes confidently wrong. A future phase could
-  at least assert that every `CODE_SLOT` a line names is one `refreshCodeValues()`
-  actually fills.
-- `edge-labels.js` still sizes `DISTANCE_TEXT` and `RADIUS_TEXT` at 2,001 by
-  assumption rather than from a bound on the link radius. The clamp keeps it
-  safe, but the number is a guess, and a world large enough to exceed it would
-  silently pin every dimension at "2000 u".
-- `hud.js` returns objects whose keys must match `app.js`'s element maps. The
-  test catches a missing element; nothing catches an element mapped to a key
-  nothing produces (it simply never updates, which is the same symptom).
+The smaller seams remain:
+
+- `nodes.js` imports `edge-labels.js` only so a population change can free
+  dimension slots. It is a DAG edge in the right direction; one call still does
+  not justify an event system.
+- `code-lines.js` is checked against the renderer by eye. If work touches the
+  source values again, a consistency guard between `CODE_SLOT` and
+  `refreshCodeValues()` is the first earned addition.
+- `edge-labels.js` sizes the distance/radius text tables at 2,001 by assumption.
+  The clamp is safe but can silently pin a value if a future world exceeds it.
+- `hud.js` keys must match `app.js` element maps. The test catches a builder key
+  with no element, not the inverse.

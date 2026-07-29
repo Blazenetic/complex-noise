@@ -1,6 +1,6 @@
 # Still Field phase 3 — execution handover
 
-Status: ready for implementation  
+Status: implementation complete; ready for review
 Branch: `agent/still-field-phase-3`  
 Base: `main` at `6d01f3ac65cc31ab905162a6e025c8ed036b64cc`  
 Prepared: 29 July 2026
@@ -11,6 +11,97 @@ This is the working brief for the next Still Field session. Read
 code. The architecture document remains the source of truth for module
 ownership and dependency direction; this document turns its phase-three
 handover into an executable sequence.
+
+## Phase-three outcome
+
+The source ticker was the measured winner. The production change caches its
+stable transcript body in a lazy scratch bitmap and keeps the heat wash, active
+accent, gutter, header and footer live. It does not change the public API, user
+controls, graph scan or mobile path.
+
+The benchmark is now reproducible:
+
+```bash
+npm run profile:still-field
+npm run profile:still-field -- --filter=desktop-150-source
+PROFILE_ROOT=/path/to/before-worktree npm run profile:still-field
+```
+
+`tests/profile-still-field.mjs` uses a fixed random seed, an eight-second warmup
+and 48 observations over twelve seconds. Stress cases use Chromium's 4× CPU
+throttle. The 150-node cases deliberately inject the renderer's documented hard
+ceiling from DevTools rather than widening the Field Lab's user-facing range.
+Reported percentiles are distributions of the renderer's smoothed telemetry
+sampled every 250 ms, not raw-frame percentiles.
+
+### Environment
+
+- Linux x86_64 container; Node 24.14.0; Playwright 1.62.0.
+- Headless Chromium 149.0.7827.0; device pixel ratio 1.
+- Desktop 1440 × 900; mobile 412 × 915.
+- Audio paused; dark theme; 30 fps cap; default reach, trail and depth.
+- Mobile stress/control minimised the interface. All runs checked console and
+  page errors; none were reported.
+
+### Baseline decision
+
+Median stage times, in milliseconds:
+
+| Scenario | Update | Links | Nodes | Info | Total |
+|---|---:|---:|---:|---:|---:|
+| Desktop, default 44, all overlays, native | 0.037 | 0.099 | 0.022 | **0.366** | 0.530 |
+| Desktop, 150, all overlays, 4× | 0.177 | 0.900 | 0.206 | **1.949** | 3.281 |
+| Desktop, 150, no overlays, 4× | 0.214 | 0.831 | 0.172 | 0.050 | 1.289 |
+| Mobile, 150, all overlays, 4× | 0.111 | **0.840** | 0.212 | 0.682 | 1.845 |
+| Mobile, 150, no overlays, 4× | 0.129 | **0.739** | 0.191 | 0.057 | 1.139 |
+
+The focused desktop controls isolated the information sub-stages without adding
+timers to production:
+
+| 150 nodes, 4× CPU | Info median | Info p95 | Visible annotations |
+|---|---:|---:|---:|
+| None | 0.050 ms | 0.105 ms | — |
+| Callouts only | 0.744 ms | 1.032 ms | 5 |
+| Dimensions only | 0.670 ms | 0.797 ms | 5 |
+| Source only | **1.154 ms** | **1.423 ms** | 24 source lines |
+
+This ruled out a struct-of-arrays rewrite: node update and paint were not the
+dominant costs. It also showed why the wide-screen source listing, not the
+mobile overlays, was the focused first optimisation.
+
+### Before and after
+
+The matched, seeded source-only stress case is the clean comparison:
+
+| Metric | Before | After | Change |
+|---|---:|---:|---:|
+| Source info median | 1.154 ms | 0.881 ms | **−23.7%** |
+| Source info p95 | 1.423 ms | 1.049 ms | **−26.3%** |
+| Whole frame median | 2.419 ms | 2.113 ms | **−12.6%** |
+| Whole frame p95 | 2.772 ms | 2.429 ms | **−12.4%** |
+
+At the native 44-node default, the all-overlay median moved from 0.366 to
+0.345 ms for the info stage and from 0.530 to 0.492 ms for the whole frame.
+The mobile all-overlay control was effectively unchanged (0.682 → 0.687 ms);
+the listing is hidden below 1000 px, so the cache is neither constructed nor
+consulted there.
+
+The trade is explicit. The scratch bitmap is allocated only for a visible,
+expanded, wide-screen source listing: about 434 KiB at DPR 1 and 1.7 MiB at the
+renderer's DPR 2 cap. Browsers without `OffscreenCanvas` retain the old direct
+paint. The live code still owns heat decay, stage rails, the active accent,
+header and footer; only the stable line numbers, transcript and once-per-second
+value strings are rasterised into the cache.
+
+### Discarded experiment
+
+The first cache prototype re-rasterised three text columns per warm line to
+reproduce the old alpha equations exactly. Across repeated source-only runs it
+improved the median by only about 6% and did not move p95 reliably—too small for
+the memory trade. The landed version brightens a cached row with one bitmap
+draw and retains the source-text accent overprint. It produced the material,
+repeatable result above and remained visually equivalent in dark-theme
+before/after browser captures.
 
 ## Landed foundation
 
@@ -228,3 +319,10 @@ Phase three is complete when:
 - lint, diff check and DAG check pass;
 - no console/page errors or unintended visual/interaction changes are present;
 - architecture and handover docs record the result and the next honest step.
+
+Validation on the phase-three head:
+
+- 30/30 browser tests passed, including the new source-cache invariant;
+- ESLint, `git diff --check` and the 31-module DAG check passed;
+- deterministic dark-theme before/after captures were inspected at 1440 × 900;
+- every profiling scenario reported an empty console/page-error list.

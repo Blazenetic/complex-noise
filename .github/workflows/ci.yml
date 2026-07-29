@@ -179,11 +179,9 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
+      # Keep the local handoff gate and CI on the same command.
+      - name: Check
+        run: npm run check
 
   # --------------------------------------------------------------------------
   # The single required status check.

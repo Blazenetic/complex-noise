@@ -1,61 +1,76 @@
-# The Still Field, module by module
+# Still Field Architecture
 
 Companion to [AGENTS.md](../AGENTS.md). That file states the rules; this one
-explains where they came from, so the next person to move code around knows
-which constraints are load-bearing and which are merely current.
+explains the live module structure, ownership boundaries, and the constraints
+that keep the renderer maintainable and battery-safe.
 
-This is an **agent surface**: no banter, no narrative. If you want the story of
-why any of this exists, that is [history.md](./history.md).
-
----
-
-## Why the renderer became a directory
-
-`js/still-field.js` was 3,327 lines and eighteen kinds of thing at once:
-persisted settings, canvas sizing, a spatial grid, a physics step, four paint
-passes, three on-canvas overlays, a statistics snapshot, and the loop that drove
-them all. It was not badly written — most of its length is comments explaining
-bugs that already happened — but everything in it could see everything else,
-through about sixty module-level `let` bindings.
-
-That has a specific cost in a repository whose point is teaching people to work
-with AI agents. An agent asked to adjust the edge dimensions had to read the
-node lifecycle to be *sure* it had not touched it. There was no smaller unit of
-"the part I am changing" than the whole file, so every change was reviewed
-against the whole file, and every context window carried the whole file.
-
-The split does not make the code shorter. It makes the *unit you have to hold in
-your head* smaller, which is a different and more useful property.
+This is an **agent surface**: no banter, no narrative. Behavioural contracts for
+the info layer itself live in [info-layer.md](./info-layer.md). Historical context
+lives in [history.md](./history.md) and the handover notes under `docs/handover/`.
 
 ---
 
-## The map
+## Front door
+
+`js/still-field.js` is the composition root and the only public import surface.
+`app.js` imports from it and nothing else under `js/still-field/`.
+
+It owns:
+
+- the public API (`initStillField`, setters, getters, `subscribe`, stats);
+- the order in which a setting change reaches the rest of the renderer;
+- the two canvases handed in at init time (field + info).
+
+It never queries the document for layout, never measures chrome, and never
+writes into the app’s own DOM. `app.js` pushes keep-out rectangles via
+`setLabelKeepOuts()` and renders every control from the snapshot published by
+`subscribe()`.
+
+A setting change is always “store it, then do whatever else has to happen, then
+publish”. The interesting part is the middle step and it lives here so that
+reading how a control behaves never means reading the renderer.
+
+```js
+export function setStillFieldDepth(v) {
+  prefs.setDepth(v);
+  measureWorld(population.nodes.length);   // the far plane moved
+  applyNodeCount();                        // …so the node target moved with it
+  emit();
+}
+```
+
+---
+
+## Module map
+
+Read top to bottom. Each row may only depend on rows above it. That layering is
+the whole DAG rule and is checkable (see “Keeping the graph a DAG” below).
 
 | Module | Owns | Reads |
 |---|---|---|
-| `math.js` | φ, τ, `smoothstep` | nothing |
-| `clock.js` | the drift clock, the diagnostics clock | nothing |
-| `telemetry.js` | every live counter | nothing |
-| `grid.js` | a uniform spatial grid over a rectangle | nothing |
-| `keep-outs.js` | screen rectangles the info layer must avoid | nothing |
-| `palette.js` | theme colours, quantised into ramps | the DOM, once per theme change |
-| `view.js` | the two canvases, viewport, dpr, reduced motion | nothing |
-| `settings.js` | every user choice, and `subscribe()` | `constants`, `storage` |
+| `math.js` | φ, τ, `smoothstep` | — |
+| `clock.js` | drift clock, diagnostics clock | — |
+| `telemetry.js` | every live counter the renderer writes | — |
+| `grid.js` | uniform spatial grid over a rectangle | — |
+| `keep-outs.js` | screen rectangles the info layer must avoid | — |
+| `palette.js` | theme colours, pre-quantised into ramps | DOM (once per theme change) |
+| `view.js` | two canvases, viewport, DPR, reduced motion | — |
+| `settings.js` | every user choice + `subscribe()` | `constants`, `storage` |
 | `world.js` | world plane, projection, link radius | `settings`, `view`, `grid` |
-| `energy.js` | the three energy layers, the CSS mirror | `math`, `clock` |
-| `modes.js` | the callout detail modes and their rotation | `math`, `settings` |
-| `audio-metrics.js` | frequency-band energy | `audio.js` |
-| `code-lines.js` | the transcript the source overlay prints | nothing |
-| `code-ticker.js` | the on-canvas source listing, and its transcript raster | view, settings, clock, palette, keep-outs, telemetry, grid, modes, code-lines |
-| `edge-labels.js` | edge dimension slots and their text tables | + `world`, `code-ticker` |
-| `callout-content.js` | what a callout *says*: the eight mode branches | `math`, `world`, `clock`, `telemetry`, `energy`, `modes` |
+| `energy.js` | three energy layers + CSS mirror | `math`, `clock` |
+| `modes.js` | callout detail modes and their rotation | `math`, `settings` |
+| `audio-metrics.js` | frequency-band energy from the analyser | `audio.js` |
+| `code-lines.js` | transcript the source overlay prints | — |
+| `code-ticker.js` | on-canvas source listing + its transcript raster | view, settings, clock, palette, keep-outs, telemetry, grid, modes, code-lines |
+| `edge-labels.js` | edge dimension slots + quantised text tables | + `world`, `code-ticker` |
+| `callout-content.js` | what a callout *says* (eight mode branches) | `math`, `world`, `clock`, `telemetry`, `energy`, `modes` |
 | `callouts.js` | node callouts: selection, placement, paint | + `edge-labels`, `callout-content` |
-| `node-pass.js` | the node paint, flat then glowing | view, world, settings, palette, telemetry |
-| `nodes.js` | the population: model, lifecycle, one step | + `grid`, `energy`, `callouts`, `edge-labels` |
-| `link-pass.js` | the lattice, envelopes, batching, telemetry | + `nodes`, `edge-labels` |
-| `loop.js` | one frame, and loop control | most of the above |
-| `stats.js` | the public statistics snapshot | everything |
-| `../still-field.js` | the public API, and the order side effects happen in | everything |
+| `node-pass.js` | node paint (flat then glowing) | view, world, settings, palette, telemetry |
+| `nodes.js` | population model, lifecycle, one simulation step | + `grid`, `energy`, `callouts`, `edge-labels` |
+| `link-pass.js` | lattice, envelopes, batching, graph telemetry | + `nodes`, `edge-labels` |
+| `loop.js` | one frame + loop control | most of the above |
+| `stats.js` | public statistics snapshot | everything |
+| `../still-field.js` | public API + side-effect ordering | everything |
 
 One module sits outside the renderer entirely:
 
@@ -63,17 +78,17 @@ One module sits outside the renderer entirely:
 |---|---|---|
 | `js/hud.js` | every string the `#nerdHud` panel shows | nothing — it is handed a stats snapshot |
 
-`hud.js` imports nothing and touches no DOM. See "Where the panel lives" below.
-
-Read it top to bottom: each row may only depend on rows above it. That is the
-whole layering rule, and it is checkable — see "Keeping the graph a DAG" below.
+`hud.js` imports nothing from the field and touches no DOM. See “HUD contract”
+below.
 
 ---
 
-## Rule 1 — shared state lives on an object with exactly one writer
+## The three architectural rules
 
-The obvious way to split a file full of `let` is to export the `let`s. It does
-not work:
+### 1. Shared state lives on an object with exactly one writer
+
+ES module bindings are live but read-only from the importing side. Exporting a
+`let` therefore cannot be assigned from another file:
 
 ```js
 // settings.js
@@ -84,70 +99,55 @@ import { speed } from './settings.js';
 speed = 3;            // TypeError: Assignment to constant variable.
 ```
 
-ES module bindings are *live* but **read-only** from the importing side. Only
-the declaring module may assign. That is a genuinely good constraint — it means
-you can always find the writer — but it does mean shared mutable state has to be
-a property on something.
-
-So each cluster of state is one exported object, owned by one module:
+So each cluster of mutable state is one exported plain object, owned by one
+module:
 
 ```js
 // settings.js — the only file that assigns to `settings`
 export const settings = { speed: 2.0, /* … */ };
-export function setSpeed(v) { settings.speed = clamp(v, MIN, MAX); write(KEY, settings.speed); }
+export function setSpeed(v) {
+  settings.speed = clamp(v, MIN, MAX);
+  write(KEY, settings.speed);
+}
 
 // anywhere else — read freely
 import { settings } from './settings.js';
 const speed = view.reducedMotion ? settings.speed * 0.35 : settings.speed;
 ```
 
-The eight objects are `settings`, `view`, `world`, `grid`, `clock`, `telemetry`,
-`population` and `paint` (plus `surfaces` for the canvases and `energy` for the
-one smoothed level). If you need to change one from a module that does not own
-it, add a function to the owner. Do not add a second writer: the moment two
-files assign to `telemetry.edges`, the counter stops meaning anything.
+The owned objects are `settings`, `view`, `world`, `grid`, `clock`, `telemetry`,
+`population`, `paint` (and `surfaces` for the canvases, `energy` for the
+smoothed level). If a module needs to change a value it does not own, add a
+function to the owner. Do not introduce a second writer; the moment two files
+assign to `telemetry.edges` the counter stops meaning anything.
 
-**Performance note.** These are read inside loops that run over 150 nodes at up
-to 60 fps, so it is fair to ask what a property load costs versus a module-level
-variable. Both are one indirection; the object is monomorphic and never changes
-shape, so the load is inline-cached. Where it matters, the passes hoist:
+In hot loops, destructure what you need into locals once at the top of the
+function. The object is monomorphic and never changes shape, so the load is
+inline-cached; the destructure is the same thing the old monolithic code did by
+having the arrays in scope.
 
-```js
-const { cols, rows, counts, start, items } = grid;   // once per frame
-```
+### 2. Imports form a DAG
 
-That is not a micro-optimisation ritual, it is the same thing the old code did
-implicitly by having the arrays in scope. Do it in new hot loops too.
+The graph is a directed acyclic graph and must stay one. Two consequences shaped
+the current boundaries and will shape yours:
 
----
+- **`telemetry.js` is a leaf.** Every stage writes to it. If it also assembled
+  the HUD snapshot it would sit at the centre of a cycle with all of them. It
+  therefore holds counters and nothing else; `stats.js` does the assembling.
+  `stats.js` may import anything precisely because nothing imports it except the
+  front door.
+- **`modes.js` exists to break a cycle.** Both `callouts.js` and `code-ticker.js`
+  need the mode rotation, and `callouts.js` already imports `code-ticker.js`
+  (a callout must not be placed over the listing). Extracting the rotation gave
+  the quasi-periodic dwell schedule a file of its own.
 
-## Rule 2 — imports point one way
+General rule: when two modules need the same thing and one already depends on
+the other, the shared thing wants its own module.
 
-The graph is a DAG. Two consequences shaped the module boundaries, and both are
-worth knowing because they will shape yours:
+#### Keeping the graph a DAG
 
-**`telemetry.js` is a leaf.** Every stage of the pipeline writes to it. If it
-also *read* from those stages — to assemble the HUD snapshot, which is what it
-did when it was part of the big file — it would sit at the centre of a cycle
-with all of them. So it holds counters and nothing else, and `stats.js` does the
-assembling. `stats.js` may import anything precisely because nothing imports
-`stats.js` except the front door.
-
-**`modes.js` exists to break a cycle.** `callouts.js` needs the mode rotation.
-So does `code-ticker.js`, which prints the current mode against a line of source.
-And `callouts.js` already imports `code-ticker.js`, because a callout must not
-be placed over the listing. Leaving the rotation in `callouts.js` would have made
-that a cycle. Extracting it gave the quasi-periodic dwell schedule a file of its
-own, which turned out to be the clearest place for it anyway.
-
-That is the general shape of the fix: **when two modules need the same thing and
-one already depends on the other, the shared thing wants its own module.**
-
-### Keeping the graph a DAG
-
-There is no lint rule for this (the project has no build step and lives inside a
-deliberately light ESLint config). It is a dozen lines of Python when you need
-it:
+There is no lint rule (the project has no build step). A dozen lines of Python
+suffice:
 
 ```bash
 python3 - <<'EOF'
@@ -157,7 +157,7 @@ for dirpath, _, files in os.walk('js'):
     for f in files:
         if not f.endswith('.js'): continue
         p = os.path.normpath(os.path.join(dirpath, f))
-        # Strip block comments first: this file's own docs quote import
+        # Strip block comments first: this file’s own docs quote import
         # statements, and a grep that counts those reports a phantom cycle.
         src = re.sub(r'/\*.*?\*/', '', open(p).read(), flags=re.S)
         g[p] = {os.path.normpath(os.path.join(dirpath, m))
@@ -176,34 +176,76 @@ EOF
 ```
 
 Run it if you move code between modules. A cycle in ES modules does not throw —
-it silently hands one side a partially-initialised module, and the symptom is a
-`undefined is not a function` at import time that points at the wrong file.
+it silently hands one side a partially-initialised module. The symptom is usually
+`undefined is not a function` at import time pointing at the wrong file.
 
----
-
-## Rule 3 — side effects compose in the front door
+### 3. Side effects compose in the front door
 
 `settings.js` setters clamp and persist. That is all they do. They do not
 remeasure the world, restart the loop, or clear a canvas.
 
 Everything that has to happen *around* a setting change lives in
-`js/still-field.js`, where it reads as a short list:
-
-```js
-export function setStillFieldDepth(v) {
-  prefs.setDepth(v);
-  measureWorld(population.nodes.length);   // the far plane moved
-  applyNodeCount();                        // …so the node target moved with it
-  emit();
-}
-```
-
-The payoff is that "what does this control do?" is answered by reading twenty
-lines of one file, and "how is this value stored?" is answered by reading
-`settings.js` without the renderer attached to it. The cost is that every public
-setter must remember to `emit()`. That is deliberate: forgetting it fails
+`js/still-field.js`, where it reads as a short list. The cost is that every
+public setter must remember to `emit()`. That is deliberate: forgetting it fails
 visibly and immediately (the UI stops updating), which is the right kind of
 failure for a rule you have to remember.
+
+---
+
+## Frame pipeline
+
+`loop.js` is the only place a frame is defined. One frame is:
+
+1. Accept a timestep (capped at `MAX_STEP_S` after a stall or hidden tab).
+2. Advance the two clocks (drift clock at user speed, real clock at wall time).
+3. `update()` — audio metrics in, node step + spatial grid out.
+4. `draw()` — four stages in fixed order:
+   - trail (destination-out alpha decay, rate per second);
+   - links (`link-pass.js`);
+   - nodes (`node-pass.js`, flat then optional glow);
+   - info layer on `#stillFieldInfo` (edge dimensions → callouts → source listing).
+
+The loop stops outright when the page is hidden. Requesting frames the browser
+will only throttle still wakes the compositor; not asking is free.
+
+Motion is integrated from elapsed time. Anything expressed as “x per frame”
+silently changes meaning when the user moves the frame cap. Decays, fades and
+smoothing use `1 - Math.exp(-rate * dt)`.
+
+Nothing allocates inside the loop. Candidate and collision data live in
+pre-sized typed arrays; every changing string comes from a quantised table;
+the trail’s alpha rides `globalAlpha` rather than an `rgba()` string.
+
+---
+
+## HUD contract
+
+The stats panel is strings here, elements in `app.js`.
+
+`js/hud.js` turns a stats snapshot into an object of strings and touches no DOM.
+`app.js` maps each key to an element. That keeps the single architectural rule
+intact: a second module writing into `#nerdHud` would be an exception the third
+one could cite.
+
+```js
+// hud.js — pure
+export function liveRows(stats, metrics, source, budgetMs, uptimeMs) {
+  return { fps: …, work: …, nodes: … /* one key per row */ };
+}
+
+// app.js — the only file that knows a key corresponds to an element
+const LIVE_ROW_ELS = { fps: els.nerdFps, work: els.nerdWork, /* … */ };
+for (const key in rows) setText(LIVE_ROW_ELS[key], rows[key]);
+```
+
+`HUD_ROW_KEYS` (and the parallel Math / Code / meter sets) is the shared
+contract. `defineRowMap()` rejects a missing or retired key once at boot. The
+browser test still fails naming any row that is still reading the `—` that
+`index.html` seeded after the field has started.
+
+Builders return fresh objects. The render-loop stats snapshot reuses one object
+because the loop may allocate nothing; the HUD builders run four times a second
+on a visible panel and are free to allocate.
 
 ---
 
@@ -217,205 +259,63 @@ failure for a rule you have to remember.
 | change how links are found or drawn | `link-pass.js` |
 | change how nodes are drawn or which ones glow | `node-pass.js` |
 | add a node detail mode | `modes.js` (name + glyph), then `callout-content.js` (the branch) |
-| move a callout, or change when one is shown | `callouts.js` |
+| move a callout or change when one is shown | `callouts.js` |
 | add an edge dimension kind | `edge-labels.js` |
 | correct a line of the source listing | `code-lines.js` |
 | change how the source listing is drawn | `code-ticker.js` |
-| change the perspective, the world size, the link radius | `world.js` |
-| add a number to the HUD | `telemetry.js` (the counter), `stats.js` (the field), `../hud.js` (the string), `../app.js` (the element it lands in) |
+| change perspective, world size or link radius | `world.js` |
+| add a number to the HUD | `telemetry.js` (counter) → `stats.js` (field) → `../hud.js` (string) → `../app.js` (element) |
 | restyle the field | `css/styles.css` — the tokens `palette.js` reads |
-| change the frame budget, the cap, or the stage order | `loop.js` |
+| change the frame budget, the cap, or stage order | `loop.js` |
+
+`tests/run.mjs` names the front door’s whole export surface. Move code freely
+between the modules under `js/still-field/`; that test is what tells you the
+door still opens. Arithmetic that does not need a DOM belongs in a `unit:` test
+that imports the module directly.
 
 ---
 
-## What the split deliberately did not change
+## Performance and overnight contracts
 
-- **Any behaviour.** The public API, every field of the statistics snapshot, and
-  the rendered output are identical. The suite passed unchanged, and the world
-  geometry (`worldW`, `linkRadius`, `gridCells`) was compared before and after.
-- **The performance contract.** Same allocation-free passes, same pre-quantised
-  palettes, same typed-array slot state, same `getComputedStyle`-once rule.
-- **The public path.** `app.js` still does `import * as stillField from
-  './still-field.js'` and did not change at all.
+These are still live and still enforced by the suite and by AGENTS.md.
 
-Two things *were* changed, in their own commits, on purpose: the trail's
-per-frame `rgba()` string became a constant fill plus `globalAlpha`, and a
-resize that rescales the field now drops link state. Both are described in their
-commit messages.
-
----
-
-## Rule 4 — the panel is strings, `app.js` is elements
-
-Phase 2 moved the `#nerdHud` panel out of `app.js` and into `js/hud.js`, which
-needed a boundary that does not break the one architectural rule.
-
-The tempting split is a `hud.js` that owns `#nerdHud` the way `still-field.js`
-owns its two canvases. It was rejected: the rule says `app.js` is the only module
-that touches the app's DOM, and a second module with an exception is an exception
-the *third* one can cite.
-
-So the line is drawn somewhere else. **`hud.js` turns numbers into strings;
-`app.js` puts strings into elements.**
-
-```js
-// hud.js — pure. Same stats in, same strings out.
-export function liveRows(stats, metrics, source, budgetMs, uptimeMs) {
-  return { fps: …, work: …, nodes: …, /* one key per row */ };
-}
-
-// app.js — the only file that knows a key corresponds to an element.
-const LIVE_ROW_ELS = { fps: els.nerdFps, work: els.nerdWork, /* … */ };
-for (const key in rows) setText(LIVE_ROW_ELS[key], rows[key]);
-```
-
-Three things follow, and the third is the one to remember:
-
-- Every formatting decision is testable without a DOM. `tests/run.mjs` asserts
-  the strings directly, including the ones that only appear in states that are
-  awkward to reach in a browser — a stopped renderer, an audio context that does
-  not exist yet, callouts switched off.
-- The builders return **fresh objects**, unlike `getStillFieldStats()`, which
-  reuses one snapshot. That is not an inconsistency: the snapshot is read by the
-  render loop's contract of allocating nothing, while these run four times a
-  second on a panel that is open and visible. A builder that mutated a shared
-  object could not be tested by comparing two calls.
-- **The key set is checked in both directions.** `HUD_ROW_KEYS` names the Live,
-  meter, Math and Code-stage contracts beside the builders. `app.js` passes each
-  element map through `defineRowMap()` once at boot, so both a missing element
-  and an element left behind after its builder key is retired fail with the exact
-  mismatch. The test `every stats-panel row reaches an element` remains the
-  end-to-end half: it plays the field, opens each view, and fails naming any row
-  still reading `—`.
+- The Still Field is on by default and expected to run for many hours on a phone
+  that is not on charge. Every new per-frame cost is an overnight battery cost.
+- Frame rate is a user setting (30 / 45 / 60). Nothing may be expressed as a
+  per-frame coefficient.
+- The loop stops when the page is hidden.
+- No objects, arrays or template strings are allocated inside the render loop.
+  Candidate and collision coordinates live in pre-sized typed arrays; strings
+  are cached or quantised.
+- Graph telemetry belongs inside `drawLinks()`. A second O(n²) scan or edge-list
+  construction is an overnight regression.
+- Text and trail cannot share a canvas. All instrumentation goes on
+  `#stillFieldInfo` (cleared each frame, no `shadowBlur`, whole-pixel glyph
+  origins).
+- Callout side is hysteretic on purpose. Deriving it from position each frame
+  reintroduces bounce.
+- The info-label energy gate must remain reachable while audio is paused; the
+  field is deliberately alive when paused.
+- The source-listing raster is allocated only while the listing is visible,
+  expanded and on a wide viewport. It is released on every path that stops the
+  listing (fold, Stats off, field off, page hidden, `stopLoop`).
+- Link buffer and grid arrays only ever grow, and they grow in bands (high-water
+  mark + round to next sixteen). A density sweep therefore allocates once, not
+  once per step of the slider.
+- Distance and radius text tables are sized from the named inclusive bound
+  `EDGE_MEASUREMENT_MAX`. The live link radius is asserted before those tables
+  can paint.
 
 ---
 
-## Phase 2, and what it found
+## What this document deliberately does not cover
 
-Phase 1 was the structural move. Phase 2 finished the info layer's split, lifted
-the panel out of `app.js`, added the first unit tests, and did the two allocation
-fixes that had numbers attached. What follows is what it left.
+- The behavioural contract for callouts, edge dimensions, the source listing and
+  the Live / Math / Code panel — see [info-layer.md](./info-layer.md).
+- Product requirements, history, archaeology and teachings — see the matching
+  files under `docs/`.
+- Lab Voice narrative — kept outside agent-facing technical files.
 
-### What was done
-
-1. **`callouts.js` split.** `callout-content.js` holds the eight mode branches
-   and the row cache; `callouts.js` keeps selection, the hysteretic placement and
-   the paint. Adding a detail mode no longer puts the placement hysteresis in the
-   diff. `code-ticker.js` split the same way: `code-lines.js` is the transcript,
-   which is maintained by eye against the renderer, and the ticker is the paint.
-2. **`hud.js`**, per Rule 4 above. `app.js` is 1,123 → 1,017 lines.
-3. **Unit tests.** Three grouped tests over the pure functions, running in under
-   a second between them, plus the row-coverage guard.
-4. **Two allocation fixes, measured.** Both are described below.
-
-### The allocation numbers
-
-Sweeping the density slider end to end at 1440×900 walks 35 distinct node
-counts. Measured before and after, per sweep:
-
-| | before | after |
-|---|---|---|
-| first sweep | 35 link + 35 grid reallocations, ~550 KB | 4 link + 9 grid, 126 KB |
-| every later drag | ~34 + ~34, ~530 KB | **0, nothing** |
-| held at rest | 36.8 KiB | 49 KiB |
-
-The fix is a high-water mark plus a band: `ensureLinkCapacity()` and
-`allocateGrid()` grow only, and round the node count up to the next sixteen.
-Growing to the *exact* figure was tried first and only took the first sweep from
-35 to 24 — each rising step still needs one more row than the last, so exact
-growth allocates on nearly every one of them. The band is what makes a drag
-inside it free. It costs 12 KiB of headroom.
-
-The eager string tables in `edge-labels.js` now build on first draw:
-**5,034 strings, ~0.3 ms**, previously built at module import for every visitor.
-A persisted Stats-off or dimensions-off session now avoids them; the default
-session still builds them on its first info frame. That number is small and the
-comment in that file says so. The argument for moving it is not the 0.3 ms, it
-is that the cost is now conditional.
-
-### What phase 2 deliberately did not change
-
-The renderer's behaviour. The suite passed unchanged at every step, the module
-graph is still a DAG (the checker above reports no cycles across 31 modules), and
-the panel's strings were compared against the running app before and after the
-move.
-
----
-
-## Phase 3: measured before moved
-
-Phase 3 turned the profiling handover into
-`tests/profile-still-field.mjs`: a fixed-seed, eight-second-warmup harness over
-native desktop and 4×-throttled desktop/mobile controls. It samples the
-renderer’s existing exponentially smoothed stage telemetry 48 times over twelve
-seconds and can serve another worktree through `PROFILE_ROOT`, so before and
-after use the same browser, harness and seeded graph.
-
-The result rejected the proposed struct-of-arrays rewrite. At 150 nodes under
-4× throttling, node update and paint were not the dominant work:
-
-| Focused desktop overlay | Info median | Info p95 |
-|---|---:|---:|
-| None | 0.050 ms | 0.105 ms |
-| Callouts | 0.744 ms | 1.032 ms |
-| Dimensions | 0.670 ms | 0.797 ms |
-| Source | **1.154 ms** | **1.423 ms** |
-
-The source ticker was repainting about 69 stable text runs every frame: 24 line
-numbers, 24 source statements and 21 live-value columns. Its values refresh once
-a second; its transcript changes only with theme, layout or DPR.
-
-`code-ticker.js` now rasterises that stable body into one lazy
-`OffscreenCanvas`, draws the bitmap each visible frame, and reuses individual
-cached rows for the heat brightening. The heat wash, accent overprint, stage
-rails, header and footer remain live. A direct-paint fallback remains for
-browsers without `OffscreenCanvas`.
-
-The matched 150-node source-only case moved from 1.154 → 0.881 ms median
-(−23.7%) and 1.423 → 1.049 ms p95 (−26.3%) for the info stage. Whole-frame
-median moved 2.419 → 2.113 ms (−12.6%). The native default moved 0.530 → 0.492
-ms median for the whole frame. The mobile control was unchanged because the
-source listing is not visible below 1000 px.
-
-The trade is a bitmap allocated only after an expanded wide-screen source
-listing becomes visible: about 434 KiB at DPR 1, or 1.7 MiB at the renderer’s
-DPR 2 cap. The exact protocol, complete matrix, discarded exact-alpha prototype
-and uncertainty are recorded in
-[`STILL_FIELD_PHASE_3_HANDOVER.md`](./handover/STILL_FIELD_PHASE_3_HANDOVER.md).
-
-The review pass that followed found that sentence was only half true in the
-code: the bitmap was allocated on the first qualifying frame and then never
-released, so folding the listing, switching the overlay off, narrowing below
-1000 px, turning Stats off or locking the phone all left 1.7 MiB resident for an
-overlay nobody could see. `code-ticker.js` now releases it on every one of those
-paths, and `stats.js` reports it — see
-[`STILL_FIELD_PHASE_4_HANDOVER.md`](./handover/STILL_FIELD_PHASE_4_HANDOVER.md).
-
-## Handover: what a later phase should pick up
-
-Do not proceed directly to struct-of-arrays. Phase 3 measured links as the
-largest non-information stage at the 150-node ceiling, but its median remained
-below one millisecond under 4× throttling. Re-run the checked-in harness on the
-target device before accepting the readability cost of a new node
-representation.
-
-The smaller seams remain:
-
-- `nodes.js` imports `edge-labels.js` only so a population change can free
-  dimension slots. It is a DAG edge in the right direction; one call still does
-  not justify an event system.
-- The transcript remains a hand-maintained claim about the renderer, but its
-  live values no longer rely on two lists of magic indices agreeing by eye.
-  `code-lines.js` names every slot and validates that each line value is used
-  once; `code-ticker.js` supplies a producer for every name through
-  `defineCodeValueMap()`. The check runs at module load, while the resulting
-  integer array keeps the paint path allocation-free.
-- `edge-labels.js` sizes the distance/radius text tables at 2,001 by assumption.
-  The clamp is safe but can silently pin a value if a future world exceeds it.
-- The HUD key seam is now guarded in both directions; see
-  [`STILL_FIELD_PHASE_5_HANDOVER.md`](./handover/STILL_FIELD_PHASE_5_HANDOVER.md).
-
-The post-merge review of phases 1–3 closed the raster-lifetime gap above and
-made the Buffers row count every buffer. Everything it looked at and chose *not*
-to change — with the reasoning — is in
-[`STILL_FIELD_PHASE_4_HANDOVER.md`](./handover/STILL_FIELD_PHASE_4_HANDOVER.md).
+The software stays calm. The documentation is allowed to be chaotic. That is the
+deal — and the mechanics of keeping that balance stay outside the public
+repository.

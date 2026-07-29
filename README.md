@@ -10,7 +10,7 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 > Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases — Scientist energy, calibrated for residual outlines), Arty (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
-[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [All docs](docs/)
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/INFO_LAYER.md) · [Still Field Architecture](docs/STILL_FIELD_ARCHITECTURE.md) · [All docs](docs/)
 
 A pure client-side procedural noise generator (Brown, Pink, White, Green, Fan, Rain) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 

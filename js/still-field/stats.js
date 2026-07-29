@@ -16,7 +16,7 @@
 import { settings } from './settings.js';
 import { view } from './view.js';
 import { world } from './world.js';
-import { grid } from './grid.js';
+import { grid, gridBytes } from './grid.js';
 import { clock } from './clock.js';
 import { population } from './nodes.js';
 import { telemetry, dominantStageName } from './telemetry.js';
@@ -27,6 +27,7 @@ import { labelCapacity } from './callouts.js';
 import { MAX_GLOW_NODES } from './node-pass.js';
 import { LINK_ATTACK_RATE } from './link-pass.js';
 import { keepOutCount } from './keep-outs.js';
+import { codeRasterBytes } from './code-ticker.js';
 
 const snapshot = {
   fps: 0, fpsCap: 30, frameMs: 0, dt: 0,
@@ -46,7 +47,8 @@ const snapshot = {
   codeOverlay: true, calloutsOn: true, edgesOn: true, codeFolded: false,
   linkRadius: 0, zWorld: 0, worldW: 0, worldH: 0, minScale: 0,
   gridCell: 0, occupancy: 0, viewportW: 0, viewportH: 0, dpr: 1,
-  linkBytes: 0, clock: 0, realClock: 0, keepOuts: 0,
+  linkBytes: 0, gridBytes: 0, rasterBytes: 0,
+  clock: 0, realClock: 0, keepOuts: 0,
   probeId: 0, probeZ: 0, probeScale: 0, probeEnergy: 0,
   probeBreath: 0, probeWave: 0, probeAudio: 0,
   sampleDistance: 0, sampleTarget: 0, sampleStrength: 0, attackK: 0,
@@ -126,7 +128,14 @@ export function getStillFieldStats() {
   snapshot.viewportW = view.w;
   snapshot.viewportH = view.h;
   snapshot.dpr = view.dpr;
+  // Three figures rather than one. The renderer's scratch memory is not only
+  // the link buffer: the grid's five arrays are high-water-marked beside it, and
+  // the source listing can be holding a multi-megabyte raster. A "Buffers" row
+  // that reported 36 KiB while the page held 1.7 MiB of transcript bitmap was
+  // technically true and practically a lie.
   snapshot.linkBytes = population.links.byteLength;
+  snapshot.gridBytes = gridBytes();
+  snapshot.rasterBytes = codeRasterBytes();
   snapshot.clock = clock.drift;
   snapshot.realClock = clock.real;
   snapshot.keepOuts = keepOutCount();

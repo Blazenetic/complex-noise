@@ -122,30 +122,78 @@ const edgeSlotEnergy = new Uint8Array(MAX_EDGE_LABELS);   // mean E, 0–100
 const edgeSlotDeltaE = new Uint8Array(MAX_EDGE_LABELS);   // |ΔE|, 0–100
 const edgeSlotDegrees2 = new Uint8Array(MAX_EDGE_LABELS); // summed endpoint degree
 
-// Quantised once at module load. Edge annotations can then paint changing
-// measurements without allocating strings in the render loop — and there are
-// four kinds of dimension, so there are four families of table.
-const DISTANCE_TEXT = new Array(2001);
-for (let i = 0; i < DISTANCE_TEXT.length; i++) DISTANCE_TEXT[i] = `${i} u`;
-const RADIUS_TEXT = new Array(2001);
-for (let i = 0; i < RADIUS_TEXT.length; i++) RADIUS_TEXT[i] = `r ${i} u`;
-const ANGLE_TEXT = new Array(361);
-for (let i = 0; i < ANGLE_TEXT.length; i++) ANGLE_TEXT[i] = `θ ${i - 180}°`;
-
+/**
+ * Quantised text, built once and then only looked up.
+ *
+ * A dimension's value changes every frame; its *string* must not be rebuilt
+ * every frame, so every kind reads out of a table indexed by the quantised
+ * measurement. There are four kinds of dimension, so there are four families of
+ * table, and together they are 5,034 strings.
+ *
+ * ## Why they are built on first draw rather than at module load
+ *
+ * They used to be built when this file was imported — which is at boot, for
+ * every visitor. A session with Stats or edge dimensions disabled never reaches
+ * the first draw; the default session still does. Measured on a desktop
+ * Chromium: **5,034 strings, ~0.3 ms** of construction (0.1–3.9 ms across runs,
+ * the spread being when the collector notices).
+ *
+ * That is not a large number and this note is not going to pretend it is. The
+ * argument for moving it is that it is 0.3 ms and five thousand live objects on
+ * the import path of a page whose first job is to start playing audio, even when
+ * the overlay is disabled. What it costs instead is one boolean test per frame
+ * in `drawEdgeAnnotations()`, which is unmeasurable. Where a cost is small either
+ * way, put it where it is conditional.
+ *
+ * The lengths are constants rather than `TABLE.length` because `writeEdgeSlot()`
+ * clamps against them on every tracked pair, every frame, and it must not depend
+ * on whether anything has drawn yet.
+ */
+const DISTANCE_TEXT_LEN = 2001;
+const RADIUS_TEXT_LEN = 2001;
+const ANGLE_TEXT_LEN = 361;
+const DEGREE_TEXT_LEN = 65;
 /** `prefix` + a 0.00–1.00 value, for every hundredth. */
+const UNIT_TEXT_LEN = 101;
+
+let DISTANCE_TEXT = null;
+let RADIUS_TEXT = null;
+let ANGLE_TEXT = null;
+let DZ_TEXT = null;
+let STRENGTH_TEXT = null;
+let TARGET_TEXT = null;
+let REACH_TEXT = null;
+let ENERGY_TEXT = null;
+let DELTA_E_TEXT = null;
+let DEGREE_TEXT = null;
+
 function unitTable(prefix) {
-  const out = new Array(101);
-  for (let i = 0; i < 101; i++) out[i] = `${prefix}${(i / 100).toFixed(2)}`;
+  const out = new Array(UNIT_TEXT_LEN);
+  for (let i = 0; i < UNIT_TEXT_LEN; i++) out[i] = `${prefix}${(i / 100).toFixed(2)}`;
   return out;
 }
-const DZ_TEXT = unitTable('Δz ');
-const STRENGTH_TEXT = unitTable('κ ');
-const TARGET_TEXT = unitTable('t ');
-const REACH_TEXT = unitTable('d/r ');
-const ENERGY_TEXT = unitTable('E ');
-const DELTA_E_TEXT = unitTable('ΔE ');
-const DEGREE_TEXT = new Array(65);
-for (let i = 0; i < DEGREE_TEXT.length; i++) DEGREE_TEXT[i] = `deg ${i}`;
+
+/**
+ * Build the tables if they do not exist yet. Called once from the paint, which
+ * is the first moment any of these strings can reach a screen.
+ */
+function ensureEdgeTables() {
+  if (DISTANCE_TEXT) return;
+  DISTANCE_TEXT = new Array(DISTANCE_TEXT_LEN);
+  for (let i = 0; i < DISTANCE_TEXT_LEN; i++) DISTANCE_TEXT[i] = `${i} u`;
+  RADIUS_TEXT = new Array(RADIUS_TEXT_LEN);
+  for (let i = 0; i < RADIUS_TEXT_LEN; i++) RADIUS_TEXT[i] = `r ${i} u`;
+  ANGLE_TEXT = new Array(ANGLE_TEXT_LEN);
+  for (let i = 0; i < ANGLE_TEXT_LEN; i++) ANGLE_TEXT[i] = `θ ${i - 180}°`;
+  DZ_TEXT = unitTable('Δz ');
+  STRENGTH_TEXT = unitTable('κ ');
+  TARGET_TEXT = unitTable('t ');
+  REACH_TEXT = unitTable('d/r ');
+  ENERGY_TEXT = unitTable('E ');
+  DELTA_E_TEXT = unitTable('ΔE ');
+  DEGREE_TEXT = new Array(DEGREE_TEXT_LEN);
+  for (let i = 0; i < DEGREE_TEXT_LEN; i++) DEGREE_TEXT[i] = `deg ${i}`;
+}
 
 /** Free every slot. Used when the population or the setting changes shape. */
 export function resetEdgeSlots() {
@@ -262,7 +310,7 @@ function writeEdgeSlot(s, a, b, ax, ay, bx, by, distance, target, strength) {
   edgeSlotY[s] = (ay + by) * 0.5;
   edgeSlotAngle[s] = angle;
   edgeSlotLength[s] = Math.sqrt(dx * dx + dy * dy);
-  edgeSlotDistance[s] = clamp(Math.round(distance), 0, DISTANCE_TEXT.length - 1);
+  edgeSlotDistance[s] = clamp(Math.round(distance), 0, DISTANCE_TEXT_LEN - 1);
   edgeSlotDegrees[s] = clamp(Math.round(angle * RAD_TO_DEG), -180, 180);
   edgeSlotDz[s] = clamp(Math.round(Math.abs(a.z - b.z) * 100), 0, 100);
   edgeSlotStrength[s] = strength;
@@ -270,7 +318,7 @@ function writeEdgeSlot(s, a, b, ax, ay, bx, by, distance, target, strength) {
   edgeSlotReach[s] = clamp(Math.round(distance / Math.max(1, world.linkRadius) * 100), 0, 100);
   edgeSlotEnergy[s] = clamp(Math.round((a.energy + b.energy) * 50), 0, 100);
   edgeSlotDeltaE[s] = clamp(Math.round(Math.abs(a.energy - b.energy) * 100), 0, 100);
-  edgeSlotDegrees2[s] = clamp(a.degree + b.degree, 0, DEGREE_TEXT.length - 1);
+  edgeSlotDegrees2[s] = clamp(a.degree + b.degree, 0, DEGREE_TEXT_LEN - 1);
 }
 
 /**
@@ -280,6 +328,7 @@ function writeEdgeSlot(s, a, b, ax, ay, bx, by, distance, target, strength) {
  * @returns {number} how many were drawn, for the stats readout
  */
 export function drawEdgeAnnotations(ctx, dt) {
+  ensureEdgeTables();
   const attackK = 1 - Math.exp(-EDGE_LABEL_ATTACK * dt);
   const releaseK = 1 - Math.exp(-EDGE_LABEL_RELEASE * dt);
   let shown = 0;
@@ -357,7 +406,7 @@ export function drawEdgeAnnotations(ctx, dt) {
       right = DZ_TEXT[edgeSlotDz[s]];
     } else if (kind === EDGE_KIND_REACH) {
       lead = REACH_TEXT[edgeSlotReach[s]];
-      left = RADIUS_TEXT[clamp(Math.round(world.linkRadius), 0, RADIUS_TEXT.length - 1)];
+      left = RADIUS_TEXT[clamp(Math.round(world.linkRadius), 0, RADIUS_TEXT_LEN - 1)];
       right = ANGLE_TEXT[edgeSlotDegrees[s] + 180];
     } else {
       lead = ENERGY_TEXT[edgeSlotEnergy[s]];

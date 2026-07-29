@@ -20,7 +20,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [TEACHINGS_AND_LEARNINGS.md](./TEACHINGS_AND_LEARNINGS.md) | **Living curriculum.** Headline feature: the night-shift reliability work (PR #33) — clocks you do not control, measuring the right thing, wake-lock races, wall-clock deadlines. Previous chapter: the calm info-layer pass (PR #32). Future sessions will add more. |
 | [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Who researched, who implemented under firm direction, who proposed the potato plans, who declared victory early, who restored order. Opens with the night-shift work. Grows over time. |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
-| [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the three rules that hold it together, where to make a given change, and the handover for the next phase |
+| [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for phase 3 |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |
@@ -34,7 +34,7 @@ The full Lab Voice style guide (cast, tone rules, how to write CHANGELOG entries
 
 ---
 
-## Current status (as of 28 July 2026)
+## Current status (as of 29 July 2026)
 
 The original Still Theme, Still Field and Still EQ features have been fully merged and substantially evolved on `main`:
 
@@ -48,6 +48,8 @@ The original Still Theme, Still Field and Still EQ features have been fully merg
 - Continuous sleep-timer slider (0–10 h) with absolute wall-clock deadline and visibility re-check; Still Equaliser open by default; theme as a two-sided Dark | Bone pill; Blazenetic branding throughout.
 - **Six first-class procedural colours** (Brown, Pink, White, Green, Fan, Rain) with seam passes, A-weighted loudness matching, headroom, whole-cycle LFOs where used, and cancellable coalesced colour-switch work.
 - **Night-shift reliability (PR #33):** stranded wake-lock race closed, sleep timer no longer trusts `setTimeout`, slider writes throttled, suite parallelised and de-flaked, CI gate that lets documentation PRs merge.
+- **The renderer is a directory (PR #34, phase 1):** `js/still-field.js` went from 3,327 lines to a 377-line front door over twenty modules, with no behaviour change; the trail stopped building a string every frame and a resize now drops link state.
+- **The split finished, and the allocations counted (PR #35, phase 2):** callout content separated from callout placement, the source transcript from the ticker that draws it, and the stats panel out of `app.js` into a pure `js/hud.js`. A density drag went from ~550 KB of garbage to none after the first sweep; the info layer's 5,034 quantised strings are built on first draw instead of at module import. First unit tests: three grouped module-level tests that run in under a second.
 
 Accessibility is partially addressed — controls are labelled and all touch targets clear 44 px — but a full audit (screen-reader walkthrough, contrast check beyond the current reduced-motion support) has not been done.
 
@@ -62,7 +64,7 @@ A fuller work report covering the intensive 26–28 July development lives in th
 3. Keep the wall: narrative surfaces may be chaotic; agent surfaces stay sterile.
 4. If you find a security issue, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-> **Arty:** I added extra links, the pair-test numbers, the Teachings page and the Blame page so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. The bounce is dead. The clocks we control are the ones we trust. I checked.  
+> **Arty:** I added extra links, the pair-test numbers, the Teachings page and the Blame page so nobody gets lost. The mode variety is visible in Live. The six colours are level-matched and seam-clean. The bounce is dead. The clocks we control are the ones we trust. The renderer is twenty-two files and the panel is strings. Every number in the phase-2 entry was measured twice, before and after. I checked.
 > **Baldrick:** My cunning plan was to hide the AGENTS.md link behind a potato.  
 > **Darling:** No.
 

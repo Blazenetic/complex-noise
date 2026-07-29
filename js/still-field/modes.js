@@ -12,7 +12,8 @@
  *
  * **Adding a mode** means adding a name here, a glyph to `MODE_HANDLE` (both
  * arrays must stay the same length), and the branch that fills its rows in
- * `callouts.js`. The weights and the per-node spread re-derive themselves.
+ * `callout-content.js`. The weights and the per-node spread re-derive
+ * themselves.
  */
 
 import { PHI } from './math.js';
@@ -58,6 +59,16 @@ export const MODE_WEIGHTS = new Float32Array(LABEL_MODE_COUNT);
 let modeWeightSum = 0;
 for (let k = 0; k < LABEL_MODE_COUNT; k++) {
   MODE_WEIGHTS[k] = 0.72 + 0.56 * (((k + 1) * PHI) % 1);
+  modeWeightSum += MODE_WEIGHTS[k];
+}
+// The raw golden-ratio samples only approach a mean of one; for eight modes
+// they average about 1.017. Normalise the finite set so the Lab's dwell control
+// means exactly what it says, and so adding a mode cannot silently change the
+// mean duration of every setting.
+const modeWeightScale = LABEL_MODE_COUNT / modeWeightSum;
+modeWeightSum = 0;
+for (let k = 0; k < LABEL_MODE_COUNT; k++) {
+  MODE_WEIGHTS[k] *= modeWeightScale;
   modeWeightSum += MODE_WEIGHTS[k];
 }
 

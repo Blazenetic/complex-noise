@@ -11,6 +11,7 @@
  *   storage.js      → safe, typed localStorage access
  *   constants.js    → shared numbers, defaults & storage keys
  *   ui-chrome.js    → immersion hide / show of the main controls
+ *   hud.js          → the stats panel's strings (pure; no DOM of its own)
  *
  * ## The rule that keeps this app correct
  *
@@ -27,6 +28,7 @@ import * as audio from './audio.js';
 import * as stillField from './still-field.js';
 import * as theme from './theme.js';
 import * as uiChrome from './ui-chrome.js';
+import * as hud from './hud.js';
 
 /** Compact play/pause icons for the minimised chrome (slightly smaller). */
 const MINI_PLAY_ICON = '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
@@ -326,16 +328,27 @@ function drawSpark(budgetMs) {
   return peak;
 }
 
-/** mm:ss, or h:mm:ss once it runs past an hour. */
-function formatUptime(ms) {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const s = total % 60;
-  const m = Math.floor(total / 60) % 60;
-  const h = Math.floor(total / 3600);
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
+/**
+ * Which row of each view goes into which element.
+ *
+ * `hud.js` builds an object of strings; this is the only place that knows an
+ * element corresponds to one of its keys. The Math view's, the meters' and the
+ * Code view's keys already match the shapes in `els`, so only the Live view
+ * needs a map of its own.
+ */
+const LIVE_ROW_ELS = {
+  fps: els.nerdFps, work: els.nerdWork, budget: els.nerdBudget,
+  nodes: els.nerdNodes, links: els.nerdLinks, pairs: els.nerdPairs,
+  grid: els.nerdGrid, occupancy: els.nerdOccupancy, degree: els.nerdDegree,
+  density: els.nerdDensity, turnover: els.nerdTurnover,
+  labels: els.nerdLabels, mode: els.nerdMode, dims: els.nerdDims,
+  overlays: els.nerdOverlays,
+  wave: els.nerdWave, world: els.nerdWorld, viewport: els.nerdViewport,
+  trail: els.nerdTrail, glow: els.nerdGlow, clock: els.nerdClock,
+  buffers: els.nerdBuffers,
+  energy: els.nerdEnergy, low: els.nerdLow, mid: els.nerdMid, high: els.nerdHigh,
+  source: els.nerdSource, drift: els.nerdDrift, uptime: els.nerdUptime,
+};
 
 /**
  * Which view the panel is showing and whether it is folded.
@@ -353,18 +366,8 @@ function updateNerdHud() {
   const budgetMs = 1000 / stats.fpsCap;
 
   // Health is the one thing the folded header still shows, so it is computed
-  // before the early return. Scaled to the chosen cap rather than to a fixed
-  // 30 fps, so choosing 60 does not read as "strained" the moment it is picked.
-  //
-  // Renderer work leads and the frame rate only moderates it. A cap is honoured
-  // by *waiting*, so the delivered rate wobbles a frame either side of it on any
-  // machine — reading that wobble as strain while the renderer is using 1% of
-  // its budget is the readout lying about its own measurements.
-  const load = stats.frameMs / budgetMs;
-  const rate = stats.fps / stats.fpsCap;
-  const health = stats.fps <= 0 ? 'sampling'
-    : load < 0.4 && rate >= 0.8 ? 'nominal'
-      : load < 0.75 && rate >= 0.6 ? 'loaded' : 'strained';
+  // before the early return.
+  const health = hud.healthLevel(stats, budgetMs);
   if (els.nerdHud) els.nerdHud.dataset.health = health;
   setText(els.nerdHealth, health);
 
@@ -381,125 +384,28 @@ function updateLiveView(stats, budgetMs) {
   const audioState = audio.getState();
   const ctx = audio.getAudioContext();
 
-  setText(els.nerdFps, stats.fps > 0
-    ? `${stats.fps.toFixed(1)} / ${stats.fpsCap} fps${stats.reducedMotion ? ' · reduced' : ''}`
-    : 'idle');
-  setText(els.nerdWork, stats.frameMs > 0
-    ? `${stats.frameMs.toFixed(2)} ms · ${Math.round(stats.frameMs / budgetMs * 100)}% budget`
-    : 'idle');
-  setText(els.nerdBudget, stats.frameMs > 0
-    ? `${budgetMs.toFixed(1)} ms · ${Math.max(0, Math.round((1 - stats.frameMs / budgetMs) * 100))}% headroom`
-    : `${budgetMs.toFixed(1)} ms`);
+  const rows = hud.liveRows(
+    stats,
+    metrics,
+    { type: audioState.type, sampleRate: ctx ? ctx.sampleRate : 0 },
+    budgetMs,
+    // Uptime is a display concern, so the elapsed time is derived here and the
+    // formatting belongs to the HUD. −1 is "not playing".
+    playingSinceMs > 0 ? performance.now() - playingSinceMs : -1,
+  );
+  for (const key in rows) setText(LIVE_ROW_ELS[key], rows[key]);
 
-  setText(els.nerdNodes, `${stats.nodes} · ${stats.densityScale.toFixed(2)}×`);
-  // Painted edges *and* how many paths carried them: the batching ratio is the
-  // difference between a claim about efficiency and a measurement of it.
-  setText(els.nerdLinks, stats.batches > 0
-    ? `${stats.edges} · ${stats.batches} paths · ${(stats.edges / stats.batches).toFixed(1)}×`
-    : String(stats.edges));
-  // The interesting number is not how many pairs we tested but how many we did
-  // not have to: the grid is the whole reason the node count is a control.
-  setText(els.nerdPairs, stats.bruteTests > 0
-    ? `${stats.pairTests} / ${stats.bruteTests} · ${(stats.bruteTests / Math.max(1, stats.pairTests)).toFixed(1)}× saved`
-    : '—');
-  setText(els.nerdGrid, `${stats.gridCells} cells · r ${Math.round(stats.linkRadius)} u`);
-  setText(els.nerdOccupancy, `${stats.occupancy.toFixed(2)} /cell · ${Math.round(stats.gridCell)} u`);
-  setText(els.nerdDegree, `x̄ ${stats.meanDegree.toFixed(2)} · max ${stats.maxDegree}`);
-  setText(els.nerdDensity, `${(stats.density * 100).toFixed(1)}%`);
-  setText(els.nerdTurnover, stats.turnover > 0
-    ? `${stats.turnover.toFixed(1)}/min · life ${stats.meanLifeS.toFixed(0)} s`
-    : 'settling');
-
-  // The side count is cumulative on purpose. A rate would read as noise; a
-  // total that sits still for minutes is the honest way to show that the
-  // placement has settled, and the one that moves if the hysteresis breaks.
-  setText(els.nerdLabels, stats.calloutsOn
-    ? `${stats.labels} of ${stats.labelCapacity} placed · ${stats.calloutFlips} side`
-    : 'off');
-  setText(els.nerdMode, stats.calloutsOn
-    ? `${stats.labelMode} · ${stats.modesOnScreen}/${stats.modeCount} · ${stats.modeRemaining.toFixed(1)} s`
-    : `${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s`);
-  setText(els.nerdDims, stats.edgesOn
-    ? `${stats.edgeLabels} shown · ${stats.edgeSlots} slots held`
-    : 'off');
-  setText(els.nerdOverlays, describeOverlays(stats));
-
-  setText(els.nerdWave, `${stats.wavePhase.toFixed(0)}° · ∠${stats.waveAngle.toFixed(1)}° · λ ${Math.round(stats.waveLength)} u`);
-  setText(els.nerdWorld, `${Math.round(stats.worldW)} × ${Math.round(stats.worldH)} u · s ${stats.minScale.toFixed(2)}`);
-  setText(els.nerdViewport, `${stats.viewportW} × ${stats.viewportH} · dpr ${stats.dpr}`);
-  setText(els.nerdTrail, `τ ${(1 / stats.trail).toFixed(2)} s · ${stats.trail.toFixed(1)}/s`);
-  setText(els.nerdGlow, `${stats.glowNodes} of ${stats.glowCap}${stats.reducedMotion ? ' · suppressed' : ''}`);
-  setText(els.nerdClock, `drift ${Math.round(stats.clock)} s · real ${Math.round(stats.realClock)} s`);
-  // The allocation figure is a claim the renderer is written to keep, so it is
-  // stated where it can be argued with rather than only in a comment.
-  setText(els.nerdBuffers, `${(stats.linkBytes / 1024).toFixed(1)} KiB · 0 alloc/frame`);
-
-  setText(els.nerdEnergy, stats.energy.toFixed(3));
-  setText(els.nerdLow, metrics.low.toFixed(3));
-  setText(els.nerdMid, metrics.mid.toFixed(3));
-  setText(els.nerdHigh, metrics.high.toFixed(3));
-  setMeter(els.nerdMeters.low, metrics.low);
-  setMeter(els.nerdMeters.mid, metrics.mid);
-  setMeter(els.nerdMeters.high, metrics.high);
-  setMeter(els.nerdMeters.energy, stats.energy);
-
-  const typeName = audioState.type.charAt(0).toUpperCase() + audioState.type.slice(1);
-  setText(els.nerdSource, ctx
-    ? `${typeName} · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`
-    : `${typeName} · idle`);
-
-  setText(els.nerdDrift, `${stats.speed.toFixed(2)}× · ${Math.round(stats.intensity * 100)}%`);
-  setText(els.nerdUptime, playingSinceMs > 0
-    ? formatUptime(performance.now() - playingSinceMs)
-    : '—');
+  const meters = hud.liveMeters(stats, metrics);
+  for (const key in meters) setMeter(els.nerdMeters[key], meters[key]);
 
   pushSparkSample(stats.frameMs);
   const peak = drawSpark(budgetMs);
-  setText(els.nerdSparkCaption,
-    `17 s · peak ${peak.toFixed(2)} ms · ${budgetMs.toFixed(1)} ms budget · ${stats.stage} heaviest`);
+  setText(els.nerdSparkCaption, hud.sparkCaption(stats, peak, budgetMs));
 }
 
-/** "callouts · dimensions · source", with whatever is off struck out as "—". */
-function describeOverlays(stats) {
-  const on = [];
-  if (stats.calloutsOn) on.push('callouts');
-  if (stats.edgesOn) on.push('dimensions');
-  if (stats.codeOverlay) on.push(stats.codeFolded ? 'source (folded)' : 'source');
-  return on.length ? on.join(' · ') : 'none';
-}
-
-/**
- * The Math view's second line: the same equation, with the numbers the renderer
- * is putting through it right now. A formula nobody can check against live
- * values is decoration; a formula with its operands beside it is instrumentation.
- */
 function updateMathView(stats) {
-  const e = els.nerdEval;
-  setText(e.project, `z ${stats.probeZ.toFixed(3)} · δ ${stats.depth.toFixed(2)} → s ${stats.probeScale.toFixed(3)}`);
-  setText(e.energy, `b ${stats.probeBreath.toFixed(2)} · w ${stats.probeWave.toFixed(2)} · a ${stats.probeAudio.toFixed(2)} → ${stats.probeEnergy.toFixed(3)}`);
-  setText(e.distance, `d ${stats.sampleDistance.toFixed(0)} u · z_w ${Math.round(stats.zWorld)} u`);
-  setText(e.target, `r ${Math.round(stats.linkRadius)} u → t ${stats.sampleTarget.toFixed(3)}`);
-  setText(e.envelope, `λ 3.2 · Δt ${stats.dt.toFixed(4)} → k ${stats.attackK.toFixed(3)} · s ${stats.sampleStrength.toFixed(3)}`);
-  setText(e.wave, `ω 0.55 · ψ ${stats.wavePhase.toFixed(0)}° · λ ${Math.round(stats.waveLength)} u`);
-  setText(e.schedule, `D ${stats.dwell} s · ${stats.labelMode} · ${stats.modeRemaining.toFixed(1)} s left`);
-  setText(e.grid, `${stats.pairTests} of ${stats.bruteTests} pairs · ${stats.gridCells} cells`);
-  setText(e.life, `f_in 0.10 · f_out 0.16 · x̄ life ${stats.meanLifeS.toFixed(0)} s`);
-  setText(e.spawn, `1/g 0.7549 · 1/g² 0.5698 · ${stats.turnover.toFixed(1)} spawns/min`);
-  setText(e.trail, `r ${stats.trail.toFixed(1)}/s · Δt ${stats.dt.toFixed(4)} → α ${(1 - Math.exp(-stats.trail * stats.dt)).toFixed(3)}`);
-  // The expectation is what the link radius is *derived* from, so printing it
-  // next to the measured mean degree is a check on the derivation, not trivia.
-  setText(e.neighbours, `r ${Math.round(stats.linkRadius)} u → E[deg] ${expectedDegree(stats).toFixed(2)} · x̄ ${stats.meanDegree.toFixed(2)}`);
-  setText(e.detail, `M ${stats.modeCount} · base ${stats.labelMode} · ${stats.modesOnScreen} distinct on screen`);
-}
-
-/**
- * Neighbours a node should expect inside the link radius, from the mean spacing
- * the world plane implies: `π(r / spacing)² − 1`.
- */
-function expectedDegree(stats) {
-  if (!stats.nodes || !stats.worldW || !stats.worldH) return 0;
-  const spacing = Math.sqrt((stats.worldW * stats.worldH) / stats.nodes);
-  return Math.max(0, Math.PI * (stats.linkRadius / spacing) ** 2 - 1);
+  const rows = hud.mathRows(stats);
+  for (const key in rows) setText(els.nerdEval[key], rows[key]);
 }
 
 /**
@@ -508,33 +414,18 @@ function expectedDegree(stats) {
  * currently dominates, which is the same signal that paces the on-canvas ticker.
  */
 function updateCodeView(stats, budgetMs) {
-  const total = stats.msUpdate + stats.msLinks + stats.msNodes + stats.msInfo;
-  const s = els.nerdStage;
-  paintStage(s.update, stats.msUpdate, total, stats.stage === 'update',
-    `n ${stats.nodes} · dt ${(stats.dt * 1000).toFixed(1)} ms`,
-    `z ${stats.probeZ.toFixed(3)} → s ${stats.probeScale.toFixed(3)} · ${stats.turnover.toFixed(1)} spawns/min`);
-  paintStage(s.links, stats.msLinks, total, stats.stage === 'links',
-    `${stats.pairTests} pairs · ${stats.edges} edges · ${stats.batches} paths`,
-    `x̄ deg ${stats.meanDegree.toFixed(2)} · max ${stats.maxDegree} · ${stats.gridCells} cells`);
-  paintStage(s.nodes, stats.msNodes, total, stats.stage === 'nodes',
-    `${stats.nodes} arcs · E ${stats.probeEnergy.toFixed(2)}`,
-    `${stats.glowNodes} of ${stats.glowCap} glow · shadowBlur rationed`);
-  paintStage(s.info, stats.msInfo, total, stats.stage === 'info',
-    `${stats.labels} callouts · ${stats.edgeLabels} dimensions`,
-    `${stats.modesOnScreen} of ${stats.modeCount} modes · ${describeOverlays(stats)}`);
-  setText(els.nerdStageTotal, total > 0
-    ? `${total.toFixed(2)} ms of ${budgetMs.toFixed(1)} ms · ${Math.round(total / budgetMs * 100)}%`
-    : '—');
+  const { stages, total } = hud.codeStages(stats, budgetMs);
+  for (const key in stages) paintStage(els.nerdStage[key], stages[key]);
+  setText(els.nerdStageTotal, total);
 }
 
-function paintStage(stage, ms, total, hot, live, live2) {
+function paintStage(stage, row) {
   if (!stage || !stage.root) return;
-  const share = total > 0 ? ms / total : 0;
-  setText(stage.ms, total > 0 ? `${ms.toFixed(2)} ms · ${Math.round(share * 100)}%` : '—');
-  setMeter(stage.bar, share);
-  setText(stage.live, live);
-  setText(stage.live2, live2);
-  const flag = hot ? 'true' : 'false';
+  setText(stage.ms, row.ms);
+  setMeter(stage.bar, row.share);
+  setText(stage.live, row.live);
+  setText(stage.live2, row.live2);
+  const flag = row.hot ? 'true' : 'false';
   if (stage.root.dataset.hot !== flag) stage.root.dataset.hot = flag;
 }
 
@@ -1110,6 +1001,9 @@ function boot() {
     getFieldState: stillField.getState,
     getFieldStats: stillField.getStillFieldStats,
     getChromeState: uiChrome.getState,
+    // Re-seed the population without a reload. No control reaches this — it is
+    // here so a test or an agent can return the field to a known state.
+    reseedNodes: () => stillField.initStillFieldNodes(true),
     getIsPlaying: audio.getIsPlaying,
     getCurrentType: audio.getCurrentType,
     getAudioContext: audio.getAudioContext,

@@ -45,15 +45,25 @@ your head* smaller, which is a different and more useful property.
 | `energy.js` | the three energy layers, the CSS mirror | `math`, `clock` |
 | `modes.js` | the callout detail modes and their rotation | `math`, `settings` |
 | `audio-metrics.js` | frequency-band energy | `audio.js` |
-| `code-ticker.js` | the on-canvas source listing | view, settings, clock, palette, keep-outs, telemetry, grid, modes |
+| `code-lines.js` | the transcript the source overlay prints | nothing |
+| `code-ticker.js` | the on-canvas source listing | view, settings, clock, palette, keep-outs, telemetry, grid, modes, code-lines |
 | `edge-labels.js` | edge dimension slots and their text tables | + `world`, `code-ticker` |
-| `callouts.js` | node callouts: selection, placement, paint | + `edge-labels`, `energy` |
+| `callout-content.js` | what a callout *says*: the eight mode branches | `math`, `world`, `clock`, `telemetry`, `energy`, `modes` |
+| `callouts.js` | node callouts: selection, placement, paint | + `edge-labels`, `callout-content` |
 | `node-pass.js` | the node paint, flat then glowing | view, world, settings, palette, telemetry |
 | `nodes.js` | the population: model, lifecycle, one step | + `grid`, `energy`, `callouts`, `edge-labels` |
 | `link-pass.js` | the lattice, envelopes, batching, telemetry | + `nodes`, `edge-labels` |
 | `loop.js` | one frame, and loop control | most of the above |
 | `stats.js` | the public statistics snapshot | everything |
 | `../still-field.js` | the public API, and the order side effects happen in | everything |
+
+One module sits outside the renderer entirely:
+
+| Module | Owns | Reads |
+|---|---|---|
+| `js/hud.js` | every string the `#nerdHud` panel shows | nothing — it is handed a stats snapshot |
+
+`hud.js` imports nothing and touches no DOM. See "Where the panel lives" below.
 
 Read it top to bottom: each row may only depend on rows above it. That is the
 whole layering rule, and it is checkable — see "Keeping the graph a DAG" below.
@@ -206,11 +216,13 @@ failure for a rule you have to remember.
 | change how nodes move, are born or die | `nodes.js` |
 | change how links are found or drawn | `link-pass.js` |
 | change how nodes are drawn or which ones glow | `node-pass.js` |
-| add a node detail mode | `modes.js` (name + glyph), then `callouts.js` (the branch) |
+| add a node detail mode | `modes.js` (name + glyph), then `callout-content.js` (the branch) |
+| move a callout, or change when one is shown | `callouts.js` |
 | add an edge dimension kind | `edge-labels.js` |
-| change the source listing | `code-ticker.js` |
+| correct a line of the source listing | `code-lines.js` |
+| change how the source listing is drawn | `code-ticker.js` |
 | change the perspective, the world size, the link radius | `world.js` |
-| add a number to the HUD | `telemetry.js` (the counter), `stats.js` (the field), `../app.js` (the row) |
+| add a number to the HUD | `telemetry.js` (the counter), `stats.js` (the field), `../hud.js` (the string), `../app.js` (the element it lands in) |
 | restyle the field | `css/styles.css` — the tokens `palette.js` reads |
 | change the frame budget, the cap, or the stage order | `loop.js` |
 
@@ -233,96 +245,149 @@ commit messages.
 
 ---
 
-## Handover: what phase 2 should pick up
+## Rule 4 — the panel is strings, `app.js` is elements
 
-Phase 1 was the structural move. The list below is what was seen along the way
-and deliberately left, roughly in the order it is worth doing.
+Phase 2 moved the `#nerdHud` panel out of `app.js` and into `js/hud.js`, which
+needed a boundary that does not break the one architectural rule.
 
-### 1. Finish the info layer's split
+The tempting split is a `hud.js` that owns `#nerdHud` the way `still-field.js`
+owns its two canvases. It was rejected: the rule says `app.js` is the only module
+that touches the app's DOM, and a second module with an exception is an exception
+the *third* one can cite.
 
-`callouts.js` is still the largest module (~570 lines) and does three separable
-jobs: **content** (`refreshNodeCallout`, the eight mode branches), **layout**
-(selection, the hysteretic side, collision), and **paint** (plates, leaders,
-rows). Those are three different kinds of change with three different risks —
-adding a mode should not put the placement hysteresis in the diff.
+So the line is drawn somewhere else. **`hud.js` turns numbers into strings;
+`app.js` puts strings into elements.**
 
-Suggested boundary: `callout-content.js` (mode branches + the row cache),
-leaving selection/placement/paint together, because they share the pre-sized
-arrays and splitting them would mean exporting those.
+```js
+// hud.js — pure. Same stats in, same strings out.
+export function liveRows(stats, metrics, source, budgetMs, uptimeMs) {
+  return { fps: …, work: …, nodes: …, /* one key per row */ };
+}
 
-`code-ticker.js` (~430 lines) has a similar seam: `CODE_LINES` is a transcript of
-the renderer, not code, and could be a data module the paint imports.
+// app.js — the only file that knows a key corresponds to an element.
+const LIVE_ROW_ELS = { fps: els.nerdFps, work: els.nerdWork, /* … */ };
+for (const key in rows) setText(LIVE_ROW_ELS[key], rows[key]);
+```
 
-**Risk: low.** Both are covered by existing tests.
+Three things follow, and the third is the one to remember:
 
-### 2. Lift the HUD out of `app.js`
+- Every formatting decision is testable without a DOM. `tests/run.mjs` asserts
+  the strings directly, including the ones that only appear in states that are
+  awkward to reach in a browser — a stopped renderer, an audio context that does
+  not exist yet, callouts switched off.
+- The builders return **fresh objects**, unlike `getStillFieldStats()`, which
+  reuses one snapshot. That is not an inconsistency: the snapshot is read by the
+  render loop's contract of allocating nothing, while these run four times a
+  second on a panel that is open and visible. A builder that mutated a shared
+  object could not be tested by comparing two calls.
+- **A key with no element is silently dropped.** No exception, no console
+  warning: the row simply keeps the `—` that `index.html` seeded it with, which
+  looks exactly like a measurement that happens to be unavailable. The test
+  `every stats-panel row reaches an element` exists solely for this — it plays
+  the field, opens each view, and fails naming any row still reading `—`.
 
-`app.js` is now the largest file in the project (1,123 lines), and a large slice
-of it is the Live / Math / Code views of `#nerdHud` — which is the other half of
-the info layer, wired to the DOM. Moving it to `js/hud.js` would leave `app.js`
-as event wiring plus renderers, which is what its own header says it is.
+---
 
-**Careful:** the one architectural rule says `app.js` is the only module that
-touches the app's DOM. A `hud.js` would be a second one. Either state the
-exception explicitly (it owns exactly `#nerdHud`, the way `still-field` owns
-exactly two canvases), or have `hud.js` export a pure "given stats, produce
-rows" function and leave the DOM writing in `app.js`. The second is more honest
-and also unit-testable. Prefer it.
+## Phase 2, and what it found
 
-**Risk: medium.** The 250 ms interval, the folded/hidden guards and the
-per-view rendering are all battery-relevant; read the HUD notes in AGENTS.md
-first.
+Phase 1 was the structural move. Phase 2 finished the info layer's split, lifted
+the panel out of `app.js`, added the first unit tests, and did the two allocation
+fixes that had numbers attached. What follows is what it left.
 
-### 3. Fast unit tests for the pure functions
+### What was done
 
-The browser suite is excellent at behaviour and slow for arithmetic. The split
-left a set of genuinely pure functions behind — `smoothstep`, `modeAt`,
-`targetNodeCount`, `parseColor`, `buildPalette`, the R2 sequence — and the new
-facade test proves the pattern works: a Playwright test can
-`await import('/js/still-field/modes.js')` and assert on the module directly,
-with no DOM at all.
+1. **`callouts.js` split.** `callout-content.js` holds the eight mode branches
+   and the row cache; `callouts.js` keeps selection, the hysteretic placement and
+   the paint. Adding a detail mode no longer puts the placement hysteresis in the
+   diff. `code-ticker.js` split the same way: `code-lines.js` is the transcript,
+   which is maintained by eye against the renderer, and the ticker is the paint.
+2. **`hud.js`**, per Rule 4 above. `app.js` is 1,123 → 1,017 lines.
+3. **Unit tests.** Three grouped tests over the pure functions, running in under
+   a second between them, plus the row-coverage guard.
+4. **Two allocation fixes, measured.** Both are described below.
 
-A dozen of those would catch the class of bug the browser tests cannot see
-cheaply: an off-by-one in a quantisation table, a mode weight that stops
-averaging 1, a colour string the regex does not accept.
+### The allocation numbers
 
-**Risk: none.** Additive.
+Sweeping the density slider end to end at 1440×900 walks 35 distinct node
+counts. Measured before and after, per sweep:
 
-### 4. Performance, with measurement
+| | before | after |
+|---|---|---|
+| first sweep | 35 link + 35 grid reallocations, ~550 KB | 4 link + 9 grid, 126 KB |
+| every later drag | ~34 + ~34, ~530 KB | **0, nothing** |
+| held at rest | 36.8 KiB | 49 KiB |
 
-Deliberately not done in phase 1, because the brief was structure and because
-each of these needs a number attached before and after:
+The fix is a high-water mark plus a band: `ensureLinkCapacity()` and
+`allocateGrid()` grow only, and round the node count up to the next sixteen.
+Growing to the *exact* figure was tried first and only took the first sweep from
+35 to 24 — each rising step still needs one more row than the last, so exact
+growth allocates on nearly every one of them. The band is what makes a drag
+inside it free. It costs 12 KiB of headroom.
 
-- **What the frame actually costs, measured.** The HUD already reports the four
-  stage timings; nobody has yet sat with them at 150 nodes on a throttled CPU
-  and written down which stage wins. Do that before optimising anything below,
-  because the obvious candidates are not obviously right — the analyser scan,
-  for instance, looks like a fixed per-frame cost until you notice `fftSize` is
-  256, so it is 128 iterations and almost certainly noise.
-- **Eager string tables.** `edge-labels.js` builds ~5,000 strings at module load,
-  including two 2,001-entry tables indexed by a distance that cannot exceed the
-  link radius. They are built even when Stats is off. Either size them from a
-  documented bound or build them the first time the info layer draws.
-- **Allocation on slider drags.** `applyNodeCount()` allocates a new
-  `Float32Array(n²)` and `measureWorld()` may reallocate the grid arrays, both
-  on `input` events that fire at pointer-move rate. Not in the render loop, so
-  not a per-frame cost, but it is garbage generated by dragging a slider.
-- **Struct-of-arrays for the node hot fields.** `x, y, z, vx, vy, energy, fade,
-  sx, sy, scale` in parallel `Float32Array`s would be more cache-friendly than
-  150 objects with forty fields each. This is a real change with a real risk of
-  making the code worse to read, and it should not be attempted without a
-  measurement showing it matters. Phase 3 at the earliest.
+The eager string tables in `edge-labels.js` now build on first draw:
+**5,034 strings, ~0.3 ms**, previously built at module import for every visitor.
+A persisted Stats-off or dimensions-off session now avoids them; the default
+session still builds them on its first info frame. That number is small and the
+comment in that file says so. The argument for moving it is not the 0.3 ms, it
+is that the cost is now conditional.
 
-### 5. Housekeeping
+### What phase 2 deliberately did not change
 
-- `initStillFieldNodes` is exported by the front door and called by nobody. It
-  is a reasonable debugging handle, but if it stays it should be used by
-  something or documented as deliberate. `startStillFieldLoop` *is* used —
-  `togglePlayback()` calls it after `audio.play()` resolves, so a field that
-  stopped while paused comes back with the sound — which is worth knowing before
-  anybody decides it looks redundant next to `initStillField`.
-- The `nodes.js` → `edge-labels.js` import exists only so a population change
-  can free the dimension slots. It is a DAG edge in the right direction but it
-  is the one place a simulation module reaches into an overlay. If phase 2
-  introduces any kind of event or lifecycle hook, that call is the first
-  candidate to move onto it.
+The renderer's behaviour. The suite passed unchanged at every step, the module
+graph is still a DAG (the checker above reports no cycles across 31 modules), and
+the panel's strings were compared against the running app before and after the
+move.
+
+---
+
+## Handover: what phase 3 should pick up
+
+### 1. Frame cost, measured on a throttled CPU
+
+Still the first thing worth doing, and phase 2 did not do it either. What it did
+do is write down one figure from a desktop run at default settings: **the info
+layer is about 75% of the frame** (0.70 ms of 0.94 ms; update 0.09, links 0.11,
+nodes 0.04). That is one machine, one viewport, 44 nodes, everything switched on
+— not a result, but it is a place to start, and it says the interesting stage is
+the one people assume is free.
+
+Take the four stage timings to 150 nodes on a throttled CPU before optimising
+anything. The obvious candidates are not obviously right: the analyser scan looks
+like a fixed per-frame cost until you notice `fftSize` is 256, so it is 128
+iterations and almost certainly noise.
+
+### 2. Struct-of-arrays for the node hot fields
+
+`x, y, z, vx, vy, energy, fade, sx, sy, scale` in parallel `Float32Array`s would
+be more cache-friendly than 150 objects with forty fields each. This is a real
+change with a real risk of making the code worse to read, and it should not be
+attempted without a measurement showing it matters — which is what item 1 is for.
+
+Note that phase 2 made this *harder* in one small way and easier in another: the
+callout row cache is now reached through `calloutRowKey`/`calloutRowValue` in
+`callout-content.js`, so the string fields could move without touching the paint,
+but the node object is still one literal in `makeNode()` and must stay that way
+until the whole thing changes at once.
+
+### 3. The remaining seam in `nodes.js`
+
+`nodes.js` imports `edge-labels.js` only so a population change can free the
+dimension slots. It is a DAG edge in the right direction, but it is the one place
+a simulation module reaches into an overlay. Phase 2 did not introduce an event
+system to fix it, because one call does not justify one — if phase 3 grows a
+lifecycle hook for another reason, this is its first customer.
+
+### 4. Smaller things seen and left
+
+- `code-lines.js` is checked against the renderer **by eye**. There is no test
+  that a line still describes real code, and there cannot easily be one. If the
+  transcript drifts, the overlay becomes confidently wrong. A future phase could
+  at least assert that every `CODE_SLOT` a line names is one `refreshCodeValues()`
+  actually fills.
+- `edge-labels.js` still sizes `DISTANCE_TEXT` and `RADIUS_TEXT` at 2,001 by
+  assumption rather than from a bound on the link radius. The clamp keeps it
+  safe, but the number is a guess, and a world large enough to exceed it would
+  silently pin every dimension at "2000 u".
+- `hud.js` returns objects whose keys must match `app.js`'s element maps. The
+  test catches a missing element; nothing catches an element mapped to a key
+  nothing produces (it simply never updates, which is the same symptom).

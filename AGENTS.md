@@ -1,7 +1,10 @@
 # Working on Complex Noise
 
-Orientation for AI coding agents and humans. Read this before your first edit;
-it is short on purpose.
+Authoritative technical contract for AI coding agents and humans. Read this
+before your first edit, then use
+[`docs/agent-operations.md`](docs/agent-operations.md) for the repeatable
+session workflow, task router, validation ladder and handover template. A
+project skill is available at `.agents/skills/complex-noise/`.
 
 ## What this is
 
@@ -34,6 +37,9 @@ npm test -- --workers=1         # serialise, e.g. when bisecting a flake
 npm test -- --repeat=20         # run the selection 20x to hunt a flake
 npm test -- --headed            # watch it (implies --workers=1)
 npm test -- --list              # print test names and exit
+npm run test:list               # stable alias for test discovery
+npm run test:serial             # stable alias for a one-worker full run
+npm run check                   # CI-equivalent lint + browser suite
 npm run profile:still-field     # evidence, not pass/fail; ~3 minutes
 npm run profile:still-field -- --churn          # interaction churn only
 npm run profile:still-field -- --churn --dpr=2  # largest transcript raster

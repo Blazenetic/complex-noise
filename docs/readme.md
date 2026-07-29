@@ -22,6 +22,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [archaeology.md](./archaeology.md) | **Taxonomy of interesting findings.** Dig site for the weird, the measured, the accidental, and the properly unhinged discoveries. Not history. Not curriculum. The fun bit. |
 | [info-layer.md](./info-layer.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [still-field-architecture.md](./still-field-architecture.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for later phases |
+| [agent-operations.md](./agent-operations.md) | **Agent operations.** Session bootstrap, task-specific reading routes, reusable commands, validation ladder and durable handover template |
 | [product-requirements.md](./product-requirements.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [screenshots.md](./screenshots.md) | Stable screenshot catalog and capture principles |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |

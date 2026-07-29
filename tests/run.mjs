@@ -432,6 +432,53 @@ test('the source ticker reuses its stable text raster', async page => {
     `stable transcript text is being rasterised again: ${(counts.fillText / counts.frames).toFixed(1)} fillText calls/frame`);
 });
 
+test('the source ticker gives its raster back when the listing goes away', async page => {
+  // The raster is 1.7 MiB at the renderer's DPR 2 cap, and the argument for
+  // paying that was always "only a visible, expanded, wide-screen listing does".
+  // It was allocated on the first wide frame and then held for the life of the
+  // page: folding the listing, switching the overlay off, narrowing below the
+  // 1000 px threshold, turning Stats off or locking the phone all left it
+  // resident for an overlay nobody could see. The Buffers row reports it, so the
+  // whole lifecycle is observable from the public stats snapshot.
+  const raster = () => page.evaluate(() => window.complexNoiseStill.getFieldStats().rasterBytes);
+
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await page.evaluate(async () => {
+    const field = await import('/js/still-field.js');
+    field.setStillFieldCode(true);
+    field.setCodeFolded(false);
+  });
+  await page.click('#uiChromeMinimise');
+  await until(page, 'window.complexNoiseStill.getFieldStats().rasterBytes > 0',
+    10000, 'the expanded wide-screen listing never built its raster');
+  const held = await raster();
+  assert(held > 100_000, `expected a real transcript bitmap, got ${held} bytes`);
+
+  // Folding leaves the header bar and nothing the cache holds.
+  await page.evaluate(async () => (await import('/js/still-field.js')).setCodeFolded(true));
+  await until(page, 'window.complexNoiseStill.getFieldStats().rasterBytes === 0',
+    5000, 'a folded listing kept its transcript raster');
+
+  await page.evaluate(async () => (await import('/js/still-field.js')).setCodeFolded(false));
+  await until(page, 'window.complexNoiseStill.getFieldStats().rasterBytes > 0',
+    10000, 'unfolding did not re-earn the raster');
+
+  // Below the listing's viewport threshold there is no listing at all.
+  await page.setViewportSize({ width: 800, height: 950 });
+  await until(page, 'window.complexNoiseStill.getFieldStats().rasterBytes === 0',
+    5000, 'a viewport too narrow for the listing kept its raster');
+
+  await page.setViewportSize({ width: 1400, height: 950 });
+  await until(page, 'window.complexNoiseStill.getFieldStats().rasterBytes > 0',
+    10000, 'widening again did not re-earn the raster');
+
+  // Stopping the loop is the path a locked phone takes, and the one that
+  // matters most: eight hours of holding a bitmap for a field that is not
+  // drawing is exactly the overnight cost this renderer is written to avoid.
+  await page.evaluate(async () => (await import('/js/still-field.js')).setStillFieldEnabled(false));
+  assertEqual(await raster(), 0, 'switching the field off must release the transcript raster');
+});
+
 test('the Still Field facade keeps its whole public API', async page => {
   // The renderer is a directory now, and `js/still-field.js` is the front door
   // that re-composes it. `app.js` imports that door as one namespace, so an
@@ -683,7 +730,8 @@ test('unit: the stats panel formats what the renderer measured', async page => {
       codeOverlay: true, calloutsOn: true, edgesOn: true, codeFolded: false,
       linkRadius: 345, zWorld: 330, worldW: 2520, worldH: 1575, minScale: 0.571,
       gridCell: 345, occupancy: 1.1, viewportW: 1440, viewportH: 900, dpr: 1,
-      linkBytes: 7744, clock: 8, realClock: 4, keepOuts: 3,
+      linkBytes: 7744, gridBytes: 640, rasterBytes: 0,
+      clock: 8, realClock: 4, keepOuts: 3,
       probeZ: 0.469, probeScale: 0.74, probeEnergy: 0.842,
       probeBreath: 0.98, probeWave: 0.99, probeAudio: 0.68,
       sampleDistance: 260, sampleTarget: 0.402, sampleStrength: 0.4, attackK: 0.148,
@@ -702,6 +750,14 @@ test('unit: the stats panel formats what the renderer measured', async page => {
         loaded: hud.healthLevel({ ...base, frameMs: 10, fps: 22 }, 1000 / 30),
         strained: hud.healthLevel({ ...base, frameMs: 30, fps: 12 }, 1000 / 30),
       },
+      bytes: [
+        hud.formatBytes(0), hud.formatBytes(7744), hud.formatBytes(1024 * 1024 - 1),
+        hud.formatBytes(1_785_856),
+      ],
+      // The Buffers row has to show the transcript raster when it exists and
+      // stop showing it when it does not — that visible difference is how the
+      // release is checked from the panel rather than only from a comment.
+      withRaster: hud.liveRows({ ...base, rasterBytes: 1_785_856 }, metrics, source, 1000 / 30, 0).buffers,
       uptime: [
         hud.formatUptime(-1), hud.formatUptime(0), hud.formatUptime(59_400),
         hud.formatUptime(3_600_000), hud.formatUptime(28_921_000),
@@ -751,7 +807,13 @@ test('unit: the stats panel formats what the renderer measured', async page => {
   assertEqual(r.rows.budget, '33.3 ms · 98% headroom', 'the budget row');
   assertEqual(r.rows.pairs, '179 / 946 · 5.3× saved', 'the grid saving is the point of the grid');
   assertEqual(r.rows.labels, '3 of 8 placed · 0 side', 'the cumulative side count guards the hysteresis');
-  assertEqual(r.rows.buffers, '7.6 KiB · 0 alloc/frame', 'the allocation claim is stated, not implied');
+  assertEqual(r.bytes.join(' | '), '0.0 KiB | 7.6 KiB | 1024.0 KiB | 1.70 MiB',
+    'bytes read as KiB until a fourth digit would appear, then as MiB');
+  // 7744 + 640 = 8384 bytes: the link buffer *and* the grid, because both are
+  // held for the session and reporting one of them was the row's old lie.
+  assertEqual(r.rows.buffers, '8.2 KiB · 0 alloc/frame', 'the allocation claim is stated, not implied');
+  assertEqual(r.withRaster, '8.2 KiB · 1.70 MiB raster · 0 alloc/frame',
+    'a live transcript raster must appear in the row that claims to count buffers');
   assertEqual(r.rows.uptime, '00:03', 'uptime comes from the elapsed milliseconds app.js measures');
   assertEqual(r.rows.source, 'Brown · 44.1 kHz', 'the colour is capitalised and the rate is in kHz');
   assertEqual(r.idle.fps, 'idle', 'a stopped renderer reads idle, not 0.0 fps');

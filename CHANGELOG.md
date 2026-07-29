@@ -6,6 +6,86 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — measure first, cache the thing that was actually expensive (phase 3)
+
+Phase 3 arrived with a tempting plan to turn every node into parallel typed
+arrays. It left without doing that. The measurements said the node model was not
+the problem; the 24-line source listing was repainting about 69 stable text runs
+every frame.
+
+### Performance
+
+- **A checked-in profiling matrix now decides performance work.**
+  `npm run profile:still-field` runs fixed-seed native/throttled desktop and
+  mobile scenarios, warms each field for eight seconds and records 48
+  observations over twelve seconds. `PROFILE_ROOT` points the same harness at a
+  before-worktree, so the browser, graph geometry and sampling protocol stay the
+  same across a comparison. These are device-local observations, not CI
+  thresholds.
+- **The source ticker was the measured winner.** At 150 nodes and Chromium's 4×
+  CPU throttle, focused info medians were 0.050 ms with overlays off, 0.744 ms
+  for callouts, 0.670 ms for dimensions and **1.154 ms for source alone**.
+  Update and node paint were smaller still, so the struct-of-arrays proposal was
+  rejected before it could make forty-field nodes harder to teach.
+- **Stable source text is rasterised once, not sixty-nine times per frame.**
+  The line numbers, transcript and once-per-second value columns now live in a
+  lazy `OffscreenCanvas` bitmap. The heat wash, active accent, measured stage
+  rails, header and footer remain live; browsers without `OffscreenCanvas`
+  retain the direct painter.
+- **Matched source-only result:** info time 1.154 → 0.881 ms median
+  (**−23.7%**) and 1.423 → 1.049 ms p95 (**−26.3%**); whole-frame time
+  2.419 → 2.113 ms median (**−12.6%**) and 2.772 → 2.429 ms p95
+  (**−12.4%**). At the native 44-node default, the all-overlay frame moved
+  0.530 → 0.492 ms median. The mobile control stayed effectively flat because
+  the listing does not exist below 1000 px.
+- **The memory bill is written down.** The scratch bitmap exists only for an
+  expanded, visible wide-screen listing: about 434 KiB at DPR 1 and 1.7 MiB at
+  the renderer's DPR 2 cap. Folded, hidden and mobile sessions do not build it.
+
+### Added
+
+- A browser regression guard measures the visible info context itself: a source
+  frame must use the cached bitmap and remain below 30 `fillText()` calls per
+  frame. It catches the specific regression this optimisation removes without
+  pretending a millisecond threshold is portable across machines.
+- The complete matrix, environment, counters, p95 values, memory trade and
+  discarded prototype live in
+  [`docs/STILL_FIELD_PHASE_3_HANDOVER.md`](docs/STILL_FIELD_PHASE_3_HANDOVER.md).
+
+### Discarded
+
+- The first cache prototype repainted three text columns per warm line to
+  reproduce every old alpha equation exactly. It improved the repeated
+  source-only median by only about 6% and did not move p95 reliably. That was not
+  enough for a 434 KiB–1.7 MiB bitmap, so it did not land. Reusing the cached row
+  for brightness and retaining only the accent text as live raster work produced
+  the repeatable result above.
+
+### Lab Log
+
+**Melchett:** I was promised arrays! Great shining columns of numbers!
+
+**Blazenetic:** You were promised a measurement. The node pass was 0.206 ms.
+The source listing was 1.154 ms by itself.
+
+**Darling:** So the teaching overlay was spending more time explaining the
+renderer than the renderer spent drawing the nodes.
+
+**Arty:** Sixty-nine stable text runs per frame, sir. The values only change
+once a second. I counted them and then made the browser count them too.
+
+**Baldrick:** My plan was to improve the frame time by deleting the educational
+material.
+
+**Blazenetic:** We cached it. The lesson stays; the repeated rasterisation goes.
+That distinction is why we profile before Baldrick gets a branch.
+
+**Melchett:** And the typed arrays?
+
+**Darling:** Remain a proposal, because evidence outranks enthusiasm.
+
+---
+
 ## [Unreleased] — finishing the split, and the allocations nobody was counting (phase 2)
 
 Phase 1 made the renderer a directory. This one finishes the two modules that

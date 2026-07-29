@@ -381,7 +381,7 @@ The trade is a bitmap allocated only after an expanded wide-screen source
 listing becomes visible: about 434 KiB at DPR 1, or 1.7 MiB at the renderer’s
 DPR 2 cap. The exact protocol, complete matrix, discarded exact-alpha prototype
 and uncertainty are recorded in
-[`STILL_FIELD_PHASE_3_HANDOVER.md`](./STILL_FIELD_PHASE_3_HANDOVER.md).
+[`STILL_FIELD_PHASE_3_HANDOVER.md`](./handover/STILL_FIELD_PHASE_3_HANDOVER.md).
 
 The review pass that followed found that sentence was only half true in the
 code: the bitmap was allocated on the first qualifying frame and then never
@@ -389,7 +389,7 @@ released, so folding the listing, switching the overlay off, narrowing below
 1000 px, turning Stats off or locking the phone all left 1.7 MiB resident for an
 overlay nobody could see. `code-ticker.js` now releases it on every one of those
 paths, and `stats.js` reports it — see
-[`STILL_FIELD_PHASE_4_HANDOVER.md`](./STILL_FIELD_PHASE_4_HANDOVER.md).
+[`STILL_FIELD_PHASE_4_HANDOVER.md`](./handover/STILL_FIELD_PHASE_4_HANDOVER.md).
 
 ## Handover: what a later phase should pick up
 
@@ -410,9 +410,9 @@ The smaller seams remain:
 - `edge-labels.js` sizes the distance/radius text tables at 2,001 by assumption.
   The clamp is safe but can silently pin a value if a future world exceeds it.
 - The HUD key seam is now guarded in both directions; see
-  [`STILL_FIELD_PHASE_5_HANDOVER.md`](./STILL_FIELD_PHASE_5_HANDOVER.md).
+  [`STILL_FIELD_PHASE_5_HANDOVER.md`](./handover/STILL_FIELD_PHASE_5_HANDOVER.md).
 
 The post-merge review of phases 1–3 closed the raster-lifetime gap above and
 made the Buffers row count every buffer. Everything it looked at and chose *not*
 to change — with the reasoning — is in
-[`STILL_FIELD_PHASE_4_HANDOVER.md`](./STILL_FIELD_PHASE_4_HANDOVER.md).
+[`STILL_FIELD_PHASE_4_HANDOVER.md`](./handover/STILL_FIELD_PHASE_4_HANDOVER.md).

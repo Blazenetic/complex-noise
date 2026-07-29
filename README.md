@@ -142,7 +142,8 @@ complex-noise/
 │   ├── storage.js          # Safe, typed localStorage access
 │   ├── noise.js            # generateNoiseBuffer() — white / brown / pink / green / fan / rain
 │   ├── audio.js            # AudioContext, EQ chain, play/stop, volume, timer, wake lock
-│   ├── still-field.js      # Canvas 3D nodes+edges visualisation driven by analyser
+│   ├── still-field.js      # Front door to the field renderer — public API only
+│   ├── still-field/        # The renderer itself: 20 modules, one per concern
 │   ├── theme.js            # Still Theme (dark ↔ bone) + glass mode + meta updates
 │   ├── ui-chrome.js        # Immersion hide/show of the main controls
 │   └── app.js              # DOM wiring, event listeners, boot sequence
@@ -195,7 +196,7 @@ Transparency is a second axis alongside the theme (`data-glass="standard|ultra"`
 - `js/noise.js` → add a generator + a `data-type` button; `app.js` wires it automatically. New colours must match A-weighted loudness, leave headroom, and be periodic over the buffer (use the seam pass and `lfoStep()`).
 - `css/styles.css` → CSS custom properties — rebrand colours and the Still Field palette in one place
 - `js/audio.js` — insert additional nodes in `ensureAudio()`
-- `js/still-field.js` — swap the rendering model while keeping the same enable / intensity / analyser hooks
+- `js/still-field/` — the renderer, one module per concern; `js/still-field.js` is the front door and the public API. See [docs/STILL_FIELD_ARCHITECTURE.md](./docs/STILL_FIELD_ARCHITECTURE.md) for the map and the rules
 
 See [AGENTS.md](./AGENTS.md#common-tasks) for the recipes. Do the recipes. Do not freestyle a second pair-scan in the render loop. Battery life is a feature.
 

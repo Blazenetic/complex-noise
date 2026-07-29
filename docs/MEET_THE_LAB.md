@@ -3,7 +3,7 @@
 You found the door that says “research”.  
 Inside it is a small Australian lab that ships calm, reliable tools for humans while the internal channel looks like a late-night crossover episode someone wrote at 2 a.m. and then decided to keep — after roughly fifty-two wall-clock hours of furious multi-agent work, 187 commits, one overnight bootstrap, and then a five-phase wild ride that turned a 3,327-line Still Field into a laboratory of twenty-two modules without changing a single pixel.
 
-**Quick links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [All docs](./) · [Changelog](../CHANGELOG.md) · [Info Layer](./INFO_LAYER.md) · [Teachings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md)
+**Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Changelog](../CHANGELOG.md) · [Contributing](../CONTRIBUTING.md) · [AGENTS.md](../AGENTS.md) · [Info Layer](./INFO_LAYER.md) · [All docs](./)
 
 ---
 
@@ -106,7 +106,7 @@ If you want to know who is responsible for the residual outlines still refusing 
 
 If you want to help, see [CONTRIBUTING.md](../CONTRIBUTING.md). Fork it. Open an issue. Open a PR. Message the Lab. Point your AI agent at [AGENTS.md](../AGENTS.md) first.
 
-Further reading: [History](./HISTORY.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Info Layer contract](./INFO_LAYER.md) · [Still Field Architecture](./STILL_FIELD_ARCHITECTURE.md) · [Changelog](../CHANGELOG.md)
+Further reading: [History](./HISTORY.md) · [Teachings & Learnings](./TEACHINGS_AND_LEARNINGS.md) · [Blame](./BLAME.md) · [Info Layer contract](./INFO_LAYER.md) · [Still Field Architecture](./STILL_FIELD_ARCHITECTURE.md) · [Changelog](../CHANGELOG.md) · [All docs](./)
 
 Maths first. Modules second. Tubers last.  
 The residual outlines still refuse to sink. You’re welcome.  

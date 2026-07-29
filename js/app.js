@@ -124,19 +124,19 @@ const els = {
   nerdLow: document.getElementById('nerdLow'),
   nerdMid: document.getElementById('nerdMid'),
   nerdHigh: document.getElementById('nerdHigh'),
-  nerdMeters: {
+  nerdMeters: hud.defineRowMap('meters', {
     low: document.getElementById('nerdMeterLow'),
     mid: document.getElementById('nerdMeterMid'),
     high: document.getElementById('nerdMeterHigh'),
     energy: document.getElementById('nerdMeterEnergy'),
-  },
+  }),
   nerdSource: document.getElementById('nerdSource'),
   nerdDrift: document.getElementById('nerdDrift'),
   nerdUptime: document.getElementById('nerdUptime'),
   nerdSpark: document.getElementById('nerdSpark'),
   nerdSparkCaption: document.getElementById('nerdSparkCaption'),
   // Math view — the symbolic rows each carry a live evaluation
-  nerdEval: {
+  nerdEval: hud.defineRowMap('math', {
     project: document.getElementById('nerdEvalProject'),
     energy: document.getElementById('nerdEvalEnergy'),
     distance: document.getElementById('nerdEvalDistance'),
@@ -150,9 +150,9 @@ const els = {
     trail: document.getElementById('nerdEvalTrail'),
     neighbours: document.getElementById('nerdEvalNeighbours'),
     detail: document.getElementById('nerdEvalDetail'),
-  },
+  }),
   // Code view — one block per pipeline stage
-  nerdStage: {
+  nerdStage: hud.defineRowMap('stages', {
     update: {
       root: document.getElementById('nerdStageUpdate'),
       ms: document.getElementById('nerdMsUpdate'),
@@ -181,7 +181,7 @@ const els = {
       live: document.getElementById('nerdLiveInfo'),
       live2: document.getElementById('nerdLiveInfo2'),
     },
-  },
+  }),
   nerdStageTotal: document.getElementById('nerdStageTotal'),
   header: document.querySelector('header'),
   main: document.querySelector('main'),
@@ -336,7 +336,7 @@ function drawSpark(budgetMs) {
  * Code view's keys already match the shapes in `els`, so only the Live view
  * needs a map of its own.
  */
-const LIVE_ROW_ELS = {
+const LIVE_ROW_ELS = hud.defineRowMap('live', {
   fps: els.nerdFps, work: els.nerdWork, budget: els.nerdBudget,
   nodes: els.nerdNodes, links: els.nerdLinks, pairs: els.nerdPairs,
   grid: els.nerdGrid, occupancy: els.nerdOccupancy, degree: els.nerdDegree,
@@ -348,7 +348,7 @@ const LIVE_ROW_ELS = {
   buffers: els.nerdBuffers,
   energy: els.nerdEnergy, low: els.nerdLow, mid: els.nerdMid, high: els.nerdHigh,
   source: els.nerdSource, drift: els.nerdDrift, uptime: els.nerdUptime,
-};
+});
 
 /**
  * Which view the panel is showing and whether it is folded.

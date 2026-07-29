@@ -780,6 +780,26 @@ test('unit: the stats panel formats what the renderer measured', async page => {
       code: hud.codeStages(base, 1000 / 30),
       spark: hud.sparkCaption(base, 4.01, 1000 / 30),
       meters: hud.liveMeters(base, metrics),
+      contracts: {
+        live: Object.keys(rows),
+        meters: Object.keys(hud.liveMeters(base, metrics)),
+        math: Object.keys(hud.mathRows(base)),
+        stages: Object.keys(hud.codeStages(base, 1000 / 30).stages),
+      },
+      rowKeys: hud.HUD_ROW_KEYS,
+      mapErrors: ['live', 'math'].map(view => {
+        const keys = hud.HUD_ROW_KEYS[view];
+        const missing = Object.fromEntries(keys.slice(1).map(key => [key, null]));
+        const extra = Object.fromEntries([...keys, 'retired'].map(key => [key, null]));
+        return [missing, extra].map(candidate => {
+          try {
+            hud.defineRowMap(view, candidate);
+            return '';
+          } catch (error) {
+            return error.message;
+          }
+        });
+      }),
       // Pure: two calls on the same input must agree exactly.
       stable: JSON.stringify(hud.liveRows(base, metrics, source, 1000 / 30, 3400)) === JSON.stringify(rows),
     };
@@ -836,15 +856,21 @@ test('unit: the stats panel formats what the renderer measured', async page => {
 
   assertEqual(r.spark, '17 s · peak 4.01 ms · 33.3 ms budget · info heaviest', 'the trace caption');
   assertEqual(r.meters.energy, 0.277, 'the energy meter reads the field, not a band');
+  for (const view of ['live', 'meters', 'math', 'stages']) {
+    assertEqual(r.contracts[view].join(','), r.rowKeys[view].join(','),
+      `${view} builder keys must match the app-side row contract`);
+  }
+  assert(r.mapErrors[0][0].includes('missing fps'), 'a missing Live mapping must fail at boot');
+  assert(r.mapErrors[0][1].includes('extra retired'), 'an extra Live mapping must fail at boot');
+  assert(r.mapErrors[1][0].includes('missing project'), 'a missing Math mapping must fail at boot');
+  assert(r.mapErrors[1][1].includes('extra retired'), 'an extra Math mapping must fail at boot');
 });
 
 test('every stats-panel row reaches an element', async page => {
   // `hud.js` produces an object of strings and `app.js` maps each key to an
-  // element. That indirection has one failure mode the type system cannot see:
-  // a key with no element is *silently dropped*, and the row sits on the "—"
-  // index.html seeded it with, forever, looking like a measurement that happens
-  // to be unavailable. Every row has a real value once the field is running, so
-  // a lingering "—" is exactly that bug.
+  // element. `defineRowMap()` rejects missing and retired keys at boot; this
+  // interaction guard proves the other half of the contract, that every mapped
+  // element really receives a value from the running application.
   await page.setViewportSize({ width: 1440, height: 900 });
   // The panel boots folded at this suite's phone-sized default viewport, and a
   // folded panel deliberately paints nothing into a `display: none` body.

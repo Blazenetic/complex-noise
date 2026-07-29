@@ -87,6 +87,15 @@ let codeValueVersion = 0;
  * listings never need its body, and browsers without OffscreenCanvas retain
  * the direct paint below. At DPR 2 the bitmap is about 1.7 MiB; that explicit
  * memory trade removes dozens of text rasterisations per visible frame.
+ *
+ * **It is also released.** "Only a visible, expanded, wide-screen listing pays
+ * for this" is the whole justification for the trade, and a cache that is
+ * allocated on the first wide frame and then held for the life of the page does
+ * not keep it. A tablet that crossed 1000 px once, or a phone locked at 3 a.m.,
+ * would hold 1.7 MiB all night for a listing nobody can see. `releaseCodeBody()`
+ * runs whenever the listing stops printing its transcript; re-earning it costs
+ * one allocation and one re-raster, which is the same cost a theme change or a
+ * DPR change already pays.
  */
 let codeBodyCache = null;
 let codeBodyCtx = null;
@@ -120,9 +129,21 @@ const CODE_CORNERS_X = Int8Array.from([1, 1, -1, -1]);   // +1 right, −1 left
 const CODE_CORNERS_Y = Int8Array.from([1, -1, 1, -1]);   // +1 bottom, −1 top
 
 export function layoutCodeTicker() {
-  codeVisible = false;
-  if (!settings.code) return;
-  if (view.w < CODE_MIN_VIEWPORT) return;
+  codeVisible = findCodeCorner();
+  // A listing that is not printing its transcript this frame has no use for the
+  // transcript's raster — see the note on `codeBodyCache`. Folded counts: the
+  // fold leaves the header bar and nothing the cache holds.
+  if (!codeVisible || settings.codeFolded) releaseCodeBody();
+}
+
+/**
+ * Try each corner in turn, recording the winner in `codeLeft` / `codeTop` /
+ * `codeHeight`.
+ * @returns {boolean} whether the listing found anywhere to go
+ */
+function findCodeCorner() {
+  if (!settings.code) return false;
+  if (view.w < CODE_MIN_VIEWPORT) return false;
 
   // Folded, the listing is just its header bar — small enough that it always
   // fits, which is the point: the corner is freed without the overlay
@@ -130,7 +151,7 @@ export function layoutCodeTicker() {
   const height = settings.codeFolded
     ? CODE_HEAD_H
     : CODE_HEAD_H + CODE_LINES.length * CODE_LINE_H + CODE_FOOT_H;
-  if (height + 48 > view.h) return;
+  if (height + 48 > view.h) return false;
 
   for (let c = 0; c < 4; c++) {
     const left = CODE_CORNERS_X[c] > 0 ? view.w - CODE_BLOCK_W - 20 : 20;
@@ -140,9 +161,44 @@ export function layoutCodeTicker() {
     codeLeft = left;
     codeTop = top;
     codeHeight = height;
-    codeVisible = true;
-    return;
+    return true;
   }
+  return false;
+}
+
+/**
+ * The listing is not on screen at all: forget where it was, and drop its raster.
+ *
+ * Both halves matter. `layoutCodeTicker()` only runs while the info layer is
+ * drawing, so when the loop stops — the field switched off, the intensity at
+ * zero, the page hidden, Stats turned off — `codeVisible` and the corner it
+ * recorded would otherwise stay frozen at last frame's values. That is a live
+ * hit target for `handleOverlayPointer()` over a listing that is no longer
+ * painted, and a `hitsCodeBlock()` keep-out for an overlay that is not there.
+ */
+export function forgetCodeTicker() {
+  codeVisible = false;
+  releaseCodeBody();
+}
+
+/** Bytes the transcript raster is holding, or 0 when it is not allocated. */
+export function codeRasterBytes() {
+  // Four bytes per device pixel — the honest figure for an RGBA backing store,
+  // and the one the HUD's Buffers row reports.
+  return codeBodyCache ? codeBodyCache.width * codeBodyCache.height * 4 : 0;
+}
+
+/** Drop the scratch bitmap and every key that describes what is in it. */
+function releaseCodeBody() {
+  if (!codeBodyCache) return;
+  codeBodyCache = null;
+  codeBodyCtx = null;
+  codeBodyDpr = 0;
+  codeBodyLeft = NaN;
+  codeBodyTop = NaN;
+  codeBodyValueVersion = -1;
+  codeBodyInk = '';
+  codeBodyInkMuted = '';
 }
 
 /**

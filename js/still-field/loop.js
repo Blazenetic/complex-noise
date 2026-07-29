@@ -38,7 +38,7 @@ import { drawLinks } from './link-pass.js';
 import { drawNodes } from './node-pass.js';
 import { beginCalloutFrame, drawCallouts } from './callouts.js';
 import { drawEdgeAnnotations } from './edge-labels.js';
-import { layoutCodeTicker, drawCodeTicker, isCodeVisible } from './code-ticker.js';
+import { layoutCodeTicker, drawCodeTicker, isCodeVisible, forgetCodeTicker } from './code-ticker.js';
 
 /** Longest timestep we will integrate in one go, after a stall or a hidden tab. */
 const MAX_STEP_S = 0.1;
@@ -165,6 +165,11 @@ function draw(adt, dt, instrumented, tAfterUpdate, smoothK) {
     telemetry.labels = 0;
     telemetry.edgeLabels = 0;
     telemetry.edgeSlots = 0;
+    // Nothing is laying the listing out any more, so its recorded corner is
+    // stale from here on — and its raster is a megabyte held for an overlay
+    // that is off. Both self-guard, so calling this every frame is two
+    // comparisons.
+    forgetCodeTicker();
     clearInfoCanvas();
   }
 
@@ -216,6 +221,10 @@ export function stopLoop() {
     rafId = null;
   }
   resetTelemetry();
+  // The one place every way of stopping converges: the field switched off, the
+  // intensity dragged to zero, or the page hidden. A locked phone should not be
+  // holding a 1.7 MiB transcript raster for the rest of the night.
+  forgetCodeTicker();
 }
 
 export function startLoop() {

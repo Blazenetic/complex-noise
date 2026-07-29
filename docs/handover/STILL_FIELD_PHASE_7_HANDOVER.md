@@ -85,7 +85,10 @@ git diff --check             # clean
 The focused test also drives `drawEdgeAnnotations()` with an oversized live
 radius and proves the guard throws before touching the canvas.
 
-GitHub Actions: pending after the final handover push.
+GitHub Actions run
+[`30458215098`](https://github.com/Blazenetic/complex-noise/actions/runs/30458215098)
+passed on PR head `9b90019`: classification, Browser smoke tests, and the
+required `CI` report all succeeded.
 
 No overnight profile comparison was run because the two tables remain lazy,
 the existing tracked-pair paint path still performs numeric array lookups, and

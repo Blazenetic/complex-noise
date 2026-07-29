@@ -1,11 +1,12 @@
 # Still Field phase 4 — post-merge review of phases 1–3, and what is left
 
-Status: review complete; fixes landed
+Status: review complete; fixes landed; profiling of raster release pending target machine
 Base: `main` at `65ef1d0` (the merge of [PR #36](https://github.com/Blazenetic/complex-noise/pull/36))
 Reviewed: [PR #34](https://github.com/Blazenetic/complex-noise/pull/34),
 [PR #35](https://github.com/Blazenetic/complex-noise/pull/35),
 [PR #36](https://github.com/Blazenetic/complex-noise/pull/36)
 Prepared: 29 July 2026
+Updated: 29 July 2026 (issue #38 status)
 
 Read [`AGENTS.md`](../AGENTS.md) and
 [`STILL_FIELD_ARCHITECTURE.md`](./STILL_FIELD_ARCHITECTURE.md) before editing
@@ -172,6 +173,17 @@ In rough order of value.
    `PROFILE_ROOT` at a pre-change worktree for the matched comparison. If the
    fold path turns out to matter, the answer is a short grace period before the
    release, not putting the leak back.
+
+   **Status (issue #38, 29 July 2026):** Measurement could not be completed in the
+   agent sandbox (identical class of limitation to the hosted Work Mode note in
+   the issue — no network for Playwright Chromium binary or full tree
+   materialisation). Code inspection of the current release path confirms the
+   only incremental cost is the one-shot allocation + 24-line raster on the first
+   qualifying frame after release. Immediate release therefore remains the
+   default. Attach target-machine numbers (info-stage median/p95, whole-frame
+   median/p95, post-GC heap delta, browser/OS/hardware, plus a short fold/unfold
+   and field stop/start observation) to #38 when available; only then evaluate a
+   grace period.
 2. **The inverse HUD mapping guard.** `tests/run.mjs` catches a `hud.js` row key
    with no element in `app.js`. It does not catch an element mapped to a key no
    builder produces — that row silently keeps whatever `index.html` seeded it

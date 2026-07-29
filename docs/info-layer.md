@@ -227,6 +227,16 @@ statement from `js/still-field/loop.js` and its passes, printed with the value i
 producing — `dt`, the node count, the grid cell count, the live `d`, `t` and `s`
 of the link envelope, the edge and callout counts.
 
+Those live values have names even though the paint path ultimately reads an
+integer-indexed array. `code-lines.js` assigns each statement a named
+`CODE_VALUE_SLOT`; `code-ticker.js` must provide exactly one producer for every
+name. Missing and retired producers fail once at boot, and duplicate or unused
+line slots fail when the transcript module loads. The once-per-second refresh
+pays the small function-dispatch cost so the per-frame raster path does not.
+This is the same design lesson as the HUD row contract: instrumentation should
+fail loudly when its wiring drifts, because a confident wrong number teaches
+more damage than an unavailable one.
+
 The counter is not decorative timing. Each stage’s share of the sweep is its
 **measured** share of the frame’s work, sampled with `performance.now()` around
 `update()`, `drawLinks()`, `drawNodes()` and `drawInfoLayer()`. The marker

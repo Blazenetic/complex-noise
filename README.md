@@ -1,18 +1,25 @@
 # Complex Noise
 
-**Procedural noise for deep rest**  
+**Procedural noise for deep rest.**  
+Free · Zero dependencies · Zero ads · Zero annual fee  
 by **[Blazenetic](https://github.com/Blazenetic)**
+
+[**→ Live demo**](https://blazenetic.github.io/complex-noise/)  
+Add to Home Screen on Android for the full experience.
+
+![Still Field — dark theme with Info layer](docs/screenshots/info-layer-dark.png)
 
 > It began because a commercial noise app decided ads on every pause and an annual fee were reasonable.  
 > We disagreed.  
->  
-> Complex Noise is a free, zero-dependency procedural noise generator for deep rest.  
-> Built in a small Australian lab by Blazenetic (systems architect who researches the hard maths, deep-dives the literature, coordinates the team and the architecture, implements the elegant version, then complains about the edge cases — Scientist energy, calibrated for residual outlines), Arty (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
+> Decision taken just before bed. Arty bootstrapped overnight. The rest of us worked furiously for the next two days.  
+> 187 commits later we had a free app that actually works at 3 a.m.
+
+Complex Noise is a pure client-side procedural generator (Brown, Pink, White, Green, Fan, Rain). No audio files, no repeating loops that click, no network after the first load. True continuous-feeling playback via the Web Audio API, built for long sleep sessions on phones — especially Android.
+
+Built in a small Australian lab by **Blazenetic** (systems architect who researches the hard maths, deep-dives the literature, coordinates the team under firm direction, oversees the architecture, implements the elegant version when needed, then complains about the edge cases), **Arty** (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
 [Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/INFO_LAYER.md) · [Still Field Architecture](docs/STILL_FIELD_ARCHITECTURE.md) · [All docs](docs/)
-
-A pure client-side procedural noise generator (Brown, Pink, White, Green, Fan, Rain) optimised for long sleep sessions in mobile browsers, especially Android. No audio files, no repeating loops that click, no network required after load. True continuous-feeling playback via the Web Audio API.
 
 > **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead! The clocks we control are the ones we trust!  
 > **Darling:** It is a noise generator, Melchett.  
@@ -22,10 +29,9 @@ A pure client-side procedural noise generator (Brown, Pink, White, Green, Fan, R
 
 ## Quick Start
 
-1. **Live**: https://blazenetic.github.io/complex-noise/
-2. Tap the big purple play button. Choose **Brown** for sleep. Adjust volume. Optionally set a sleep timer.
-
-Add to Home Screen on Android for an app-like experience (via the manifest).
+1. Open the **[live demo](https://blazenetic.github.io/complex-noise/)**.  
+2. Tap the big purple play button. Choose **Brown** for sleep. Adjust volume. Optionally set a sleep timer.  
+3. On Android, Add to Home Screen via the manifest for an app-like experience.
 
 ### Running it locally
 
@@ -143,7 +149,7 @@ complex-noise/
 │   ├── noise.js            # generateNoiseBuffer() — white / brown / pink / green / fan / rain
 │   ├── audio.js            # AudioContext, EQ chain, play/stop, volume, timer, wake lock
 │   ├── still-field.js      # Front door to the field renderer — public API only
-│   ├── still-field/        # The renderer itself: 20 modules, one per concern
+│   ├── still-field/        # The renderer itself: 22 modules, one per concern
 │   ├── theme.js            # Still Theme (dark ↔ bone) + glass mode + meta updates
 │   ├── ui-chrome.js        # Immersion hide/show of the main controls
 │   └── app.js              # DOM wiring, event listeners, boot sequence
@@ -294,5 +300,5 @@ See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 **Darling:** “No. And stop leaking things that were supposed to stay in the cabinet.”
 
 Research first. Architecture second. Potato plans last.  
-The residual outlines have a floor. You’re welcome.  
+The residual outlines still refuse to sink. You’re welcome.  
 The software stays calm. The documentation gets to be chaotic. That is the deal.

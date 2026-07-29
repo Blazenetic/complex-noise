@@ -21,45 +21,107 @@
  *                counter spreads each stage's *measured* cost across its lines.
  *   CODE_INDENT  nesting depth, in twelve-pixel steps.
  *   CODE_TEXT    the statement itself.
- *   CODE_SLOT    which live value is printed against it, or −1 for none.
+ *   CODE_SLOT    which named live value is printed against it, or −1 for none.
  *
- * A slot index has no meaning here — `refreshCodeValues()` in `code-ticker.js`
- * decides what each one holds. Adding a line with a new slot means raising
- * `CODE_VALUE_COUNT` and filling it there.
+ * The renderer ultimately needs an integer here because this table is walked
+ * while painting. `CODE_VALUE_SLOT` gives those integers names, and
+ * `defineCodeValueMap()` makes the producer in `code-ticker.js` account for
+ * every name exactly once. That keeps the per-frame lookup cheap without
+ * leaving two unrelated lists of magic indices to agree by eye.
  */
 
 export const CODE_STAGE = 0, CODE_INDENT = 1, CODE_TEXT = 2, CODE_SLOT = 3;
 
-export const CODE_LINES = [
-  [0, 0, 'dt = min((now - last) / 1000, 0.1);', 0],
-  [0, 0, 'clock += dt * speed;', 1],
-  [0, 0, 'for (const node of nodes) {', 2],
-  [0, 1, 'node.vx += (rand() - .5) * J * dt;', 3],
-  [0, 1, 'node.vx *= exp(-0.55 * dt);', -1],
-  [0, 1, 'node.z = zBase + sin(zPhase) * zAmp;', 4],
-  [0, 1, 'node.scale = 1 / (1 + node.z * δ);', 5],
-  [0, 1, 'node.E = .30b + .24w + .46a;', 12],
-  [0, 1, 'if (node.life >= 1) respawn(node);', 16],
-  [0, 0, '}', -1],
-  [1, 0, 'grid.rebuild(nodes);', 6],
-  [1, 0, 'for (const [a, b] of grid.pairs()) {', 7],
-  [1, 1, 'd = hypot(dx, dy, dz * zWorld);', 8],
-  [1, 1, 't = pow(1 - d / radius, 0.65);', 9],
-  [1, 1, 's += (t - s) * (1 - exp(-λ * dt));', 10],
-  [1, 1, 'a.deg++; b.deg++; a.κ += s;', 17],
-  [1, 1, 'batch.stroke(a, b, shade(s));', 11],
-  [1, 0, '}', -1],
-  [2, 0, 'shade = pow(node.energy, 1.35);', 18],
-  [2, 0, 'ctx.arc(sx, sy, radius, 0, TAU);', 13],
-  [3, 0, 'info.clearRect(0, 0, w, h);', 14],
-  [3, 0, 'mode = (base + node.slot) % 8;', 20],
-  [3, 0, 'label.α += (target - label.α) * k;', 15],
-  [3, 0, 'dimension(a, b, kind(idA + idB·φ));', 19],
-];
+/**
+ * Ordered names for every live value in the source listing.
+ *
+ * `summary` belongs to the footer rather than to a transcript line. Keeping it
+ * in the same contract means the footer cannot quietly become one more
+ * independently-numbered slot.
+ */
+export const CODE_VALUE_KEYS = Object.freeze([
+  'dt', 'drift', 'nodeCount', 'jitter', 'probeZ', 'probeScale',
+  'gridCells', 'pairTests', 'sampleDistance', 'sampleTarget', 'sampleStrength',
+  'batches', 'probeEnergy', 'edges', 'fps', 'labels', 'respawnRate',
+  'degree', 'glow', 'dimensions', 'mode', 'summary',
+]);
+
+/** Named integer slots retained by the allocation-sensitive paint path. */
+export const CODE_VALUE_SLOT = Object.freeze(Object.fromEntries(
+  CODE_VALUE_KEYS.map((key, index) => [key, index]),
+));
 
 /** How many live-value slots the listing addresses, and which one is the total. */
-export const CODE_VALUE_COUNT = 22;
-export const CODE_SUMMARY_SLOT = 21;
+export const CODE_VALUE_COUNT = CODE_VALUE_KEYS.length;
+export const CODE_SUMMARY_SLOT = CODE_VALUE_SLOT.summary;
+
+/**
+ * Validate and order one producer-side map of source-listing values.
+ *
+ * This runs once while modules load. Missing and retired values are programming
+ * errors: either one would otherwise leave a plausible source statement beside
+ * the wrong measurement.
+ */
+export function defineCodeValueMap(values) {
+  const actual = Object.keys(values);
+  const missing = CODE_VALUE_KEYS.filter(key => !Object.hasOwn(values, key));
+  const extra = actual.filter(key => !Object.hasOwn(CODE_VALUE_SLOT, key));
+  if (missing.length || extra.length) {
+    const detail = [
+      missing.length ? `missing ${missing.join(', ')}` : '',
+      extra.length ? `extra ${extra.join(', ')}` : '',
+    ].filter(Boolean).join('; ');
+    throw new Error(`Source listing values do not match their slots: ${detail}`);
+  }
+  return CODE_VALUE_KEYS.map(key => values[key]);
+}
+
+export const CODE_LINES = [
+  [0, 0, 'dt = min((now - last) / 1000, 0.1);', CODE_VALUE_SLOT.dt],
+  [0, 0, 'clock += dt * speed;', CODE_VALUE_SLOT.drift],
+  [0, 0, 'for (const node of nodes) {', CODE_VALUE_SLOT.nodeCount],
+  [0, 1, 'node.vx += (rand() - .5) * J * dt;', CODE_VALUE_SLOT.jitter],
+  [0, 1, 'node.vx *= exp(-0.55 * dt);', -1],
+  [0, 1, 'node.z = zBase + sin(zPhase) * zAmp;', CODE_VALUE_SLOT.probeZ],
+  [0, 1, 'node.scale = 1 / (1 + node.z * δ);', CODE_VALUE_SLOT.probeScale],
+  [0, 1, 'node.E = .30b + .24w + .46a;', CODE_VALUE_SLOT.probeEnergy],
+  [0, 1, 'if (node.life >= 1) respawn(node);', CODE_VALUE_SLOT.respawnRate],
+  [0, 0, '}', -1],
+  [1, 0, 'grid.rebuild(nodes);', CODE_VALUE_SLOT.gridCells],
+  [1, 0, 'for (const [a, b] of grid.pairs()) {', CODE_VALUE_SLOT.pairTests],
+  [1, 1, 'd = hypot(dx, dy, dz * zWorld);', CODE_VALUE_SLOT.sampleDistance],
+  [1, 1, 't = pow(1 - d / radius, 0.65);', CODE_VALUE_SLOT.sampleTarget],
+  [1, 1, 's += (t - s) * (1 - exp(-λ * dt));', CODE_VALUE_SLOT.sampleStrength],
+  [1, 1, 'a.deg++; b.deg++; a.κ += s;', CODE_VALUE_SLOT.degree],
+  [1, 1, 'batch.stroke(a, b, shade(s));', CODE_VALUE_SLOT.batches],
+  [1, 0, '}', -1],
+  [2, 0, 'shade = pow(node.energy, 1.35);', CODE_VALUE_SLOT.glow],
+  [2, 0, 'ctx.arc(sx, sy, radius, 0, TAU);', CODE_VALUE_SLOT.edges],
+  [3, 0, 'info.clearRect(0, 0, w, h);', CODE_VALUE_SLOT.fps],
+  [3, 0, 'mode = (base + node.slot) % 8;', CODE_VALUE_SLOT.mode],
+  [3, 0, 'label.α += (target - label.α) * k;', CODE_VALUE_SLOT.labels],
+  [3, 0, 'dimension(a, b, kind(idA + idB·φ));', CODE_VALUE_SLOT.dimensions],
+];
+
+// A duplicate integer necessarily leaves another named line value unused. Catch
+// both sides here, once, before the overlay can confidently print the wrong
+// measurement for the rest of the session.
+const codeSlotUses = new Uint8Array(CODE_VALUE_COUNT);
+for (const line of CODE_LINES) {
+  const slot = line[CODE_SLOT];
+  if (slot === -1) continue;
+  if (!Number.isInteger(slot) || slot >= CODE_SUMMARY_SLOT) {
+    throw new Error(`Invalid source listing slot: ${slot}`);
+  }
+  codeSlotUses[slot]++;
+}
+for (let slot = 0; slot < CODE_SUMMARY_SLOT; slot++) {
+  if (codeSlotUses[slot] !== 1) {
+    throw new Error(
+      `Source listing slot ${CODE_VALUE_KEYS[slot]} is used ${codeSlotUses[slot]} times`,
+    );
+  }
+}
 
 /** How many pipeline stages the transcript is grouped into. */
 export const CODE_STAGE_COUNT = 4;

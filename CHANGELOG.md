@@ -37,6 +37,27 @@ sized dots.
 
 The Still Field stopped being a single 3,327-line monster and became a laboratory of twenty-two modules. No pixel changed. The suite stayed green at every step because the code was moved, not rewritten. Measurement vetoed fashion. Three self-claims the code was making about itself were brought into line with reality.
 
+### Phase 6 — give the source listing a checked vocabulary
+
+The on-canvas transcript paired each source statement with a live measurement
+through a bare integer. Its producer used a separate list of integer
+assignments. Both lists were individually valid, but swapping or duplicating an
+index could put the wrong number beside the right statement indefinitely.
+
+**Fixed**
+- Every live value now has a name in `CODE_VALUE_SLOT`. Transcript lines and
+  their once-per-second producers share that vocabulary.
+- Module-load checks reject missing, retired, duplicate and unused slots with
+  the offending names. The resulting values are still an integer-indexed array,
+  so the per-frame paint path stays allocation-free.
+- A direct module test exercises both contract directions and proves every line
+  slot is unique while the footer summary remains part of the same contract.
+
+**Teaching note**
+- Names and validation live on the cold path; compact indices remain on the hot
+  path. The useful choice was not "safety or performance", but deciding where
+  each cost belongs.
+
 ### Phase 5 — make every HUD row prove it belongs
 
 Phase 2 separated the stats panel’s strings from its DOM. Its browser guard caught a new builder key with no element (the row stayed on `—`). It did not catch the inverse: an element left in the map after its builder stopped producing the key. That retired row looked like a plausible unavailable measurement forever.

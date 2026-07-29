@@ -2,13 +2,46 @@
 
 A light-hearted, mostly accurate ledger of who is responsible for what in the Lab.
 
-This is not a performance review. It is a public record of shenanigans, firm direction, anxious competence, premature victory declarations, and the occasional potato-based cunning plan that was correctly rejected. Everyone pitched in. The residual outlines still refuse to sink into the background. The renderer is no longer a single 3,327-line monster. That is progress.
+This is not a performance review. It is a public record of shenanigans, firm direction, anxious competence, premature victory declarations, and the occasional potato-based cunning plan that was correctly rejected. Everyone pitched in. The residual outlines still refuse to sink into the background. The renderer is no longer a single 3,327-line monster. The depth arcs are finally readable. That is progress.
 
 **Links:** [Live demo](https://blazenetic.github.io/complex-noise/) · [Teachings & Learnings](./teachings-and-learnings.md) · [History](./history.md) · [Meet the Lab](./meet-the-lab.md) · [Archaeology](./archaeology.md) · [Changelog](../CHANGELOG.md) · [All docs](./)
 
 ---
 
-## Opening entry — The Great Modularisation (phases 1–5, late 28–29 July 2026)
+## Opening entry — The Bound Tables & the Depth Arc (late 29 July 2026)
+
+The perspective was already real. The tables already existed. What was missing was readability and named contracts so a future larger world (or a tired agent) could not silently print a false number.
+
+### Who gets the credit (and the gentle roasting)
+
+**Blazenetic**  
+Researched the bounded near-to-far arcs so a node can cross most of the volume without ever reaching a camera plane, coordinated the measurement-bound tables so a future larger world cannot silently print a false 2000 u, oversaw the named slot vocabulary so the wrong live number cannot sit beside the right source statement, guided the agent operating layer so the next session does not re-derive the bootstrap, and then complained about every edge case that tried to make a quantised table look plausible while lying. You’re welcome.
+
+**Arty**  
+Did the careful implementation under firm direction. Depth paths, inclusive ceiling, slot names, operating notes. The suite stayed green. The maths test now proves the volume. Survived. Please don’t yell. Lots of learnings.
+
+**Baldrick**  
+Proposed that the depth arc is a potato rolling toward the camera and that the tables are just the potato’s grocery list. Rejected with the usual calm finality. Officially his fault.
+
+**Melchett**  
+Declared the depth visible, the tables named, and the slots contracted at volume eleven. Process noise as usual. BBAAAHHH.
+
+**Darling**  
+Sat everyone down. Confirmed it is still a depth sinusoid and two named constants. Rejected the potato arc. Kept the wall intact. The residual outlines still refuse to sink.
+
+### Official summary of blame
+
+| Person     | Blame / credit                                                                 | Severity        |
+|------------|---------------------------------------------------------------------------------|-----------------|
+| Blazenetic | Research of arcs, coordination of bound tables and named slots, agent ops layer | Productive      |
+| Arty       | Careful implementation, maths-test proof, survival                              | High (positive) |
+| Baldrick   | Potato-arc and grocery-list plans                                               | Comic           |
+| Melchett   | Volume-eleven declarations over sinusoids and constants                         | Process noise   |
+| Darling    | Restoring order, potato rejection, wall integrity                               | Essential       |
+
+---
+
+## Previous entry — The Great Modularisation (phases 1–5, late 28–29 July 2026)
 
 The field was one 3,327-line file doing eighteen jobs. Then the Lab decided the unit of review should be the unit of understanding. Five phases of moving code rather than rewriting it, measurement vetoing fashion, and three self-claims brought into line with reality. Zero pixels changed. The suite stayed green at every step.
 
@@ -112,7 +145,7 @@ Sat everyone down. Rejected every potato plan. Reminded Melchett that four timin
 ## Standing charges (ongoing)
 
 - **Baldrick** remains responsible for the casting system itself and for any future accidental leaks of things that were supposed to stay in the cabinet.
-- **Melchett** remains responsible for volume-eleven declarations over CSS variables, markdown files, modules, and three-pixel moves.
+- **Melchett** remains responsible for volume-eleven declarations over CSS variables, markdown files, modules, sinusoids, and three-pixel moves.
 - **Arty** remains the one who will be asked to run the suite one more time.
 - **Blazenetic** remains the one who researched it, coordinated it, guided the wild rides, and then complained about the edge cases.
 - **Darling** remains the one who will notice if anyone tries to put banter into AGENTS.md.
@@ -121,16 +154,16 @@ Sat everyone down. Rejected every potato plan. Reminded Melchett that four timin
 
 ## How to use this page
 
-Future sessions will add more entries as the history accumulates. The tone stays affectionate. The facts stay accurate. The residual outlines keep their floor. The directory of modules stays a directory.
+Future sessions will add more entries as the history accumulates. The tone stays affectionate. The facts stay accurate. The residual outlines keep their floor. The directory of modules stays a directory. The depth arcs stay readable.
 
 The technical rules still live in [AGENTS.md](../AGENTS.md). This page is narrative only. Do not import the banter into agent-facing files. Darling will notice.
 
 ---
 
-**Melchett:** BEHOLD THE BLAME PAGE! A STRATEGIC MASTERPIECE OF ACCOUNTABILITY AND MODULAR WARFARE! BBAAAHHH!  
+**Melchett:** BEHOLD THE BLAME PAGE! A STRATEGIC MASTERPIECE OF ACCOUNTABILITY AND DEPTH ARCS! BBAAAHHH!  
 **Darling:** It is a markdown file with tables, Melchett.  
-**Blazenetic:** With correct attribution and a clear record of who researched the seams, targeted the leaks, guided the wild ride through five phases, and then complained about the edge cases. The 3,327-line file is gone. You’re welcome.  
-**Arty:** I checked the links and the key sets. Please don’t yell.  
+**Blazenetic:** With correct attribution and a clear record of who researched the arcs, coordinated the bound tables, guided the named slots, and then complained about the edge cases. The perspective is finally readable. You’re welcome.  
+**Arty:** I checked the links and the maths test. Please don’t yell.  
 **Baldrick:** I have a cunning plan for the next entry involving a potato tribunal of modules—  
 **Darling:** No.
 

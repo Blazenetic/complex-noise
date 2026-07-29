@@ -18,11 +18,11 @@ to obtain it.
 - Expected worktree:
   `/home/blazenetic/.codex/worktrees/9c01/complex-noise`
 - Expected branch: `codex/issue-38-profile-raster-release`
-- Expected base or head: `c540c8ec7346e4c26f4cce6022d67e0a664d1a19`
-  (`origin/main` when this handover was prepared)
-- Expected Git state: intentionally uncommitted preparation changes in
-  `.github/workflows/ci.yml`, `.gitignore`, `AGENTS.md`, `CONTRIBUTING.md`,
-  `README.md`, `package-lock.json`, and this handover
+- Expected base: `c540c8ec7346e4c26f4cce6022d67e0a664d1a19`
+  (`main` when the work began)
+- Expected head: `origin/codex/issue-38-profile-raster-release`, the head of
+  draft [PR #41](https://github.com/Blazenetic/complex-noise/pull/41)
+- Expected Git state: committed and clean, tracking the remote feature branch
 - Matched control worktree:
   `/home/blazenetic/.codex/worktrees/issue38-control/complex-noise`
 - Matched control head: `65ef1d0c628988f90170cde90a2d59c1d9b54e80`
@@ -30,8 +30,8 @@ to obtain it.
 
 ## Authority
 
-- Governing request: prepare the repository and a durable handover before
-  working on issue #38 directly.
+- Governing request: take issue #38's prepared environment through matched
+  measurement and a solid pull request.
 - Governing issue: [GitHub issue #38](https://github.com/Blazenetic/complex-noise/issues/38),
   “Profile the transcript raster release on a target browser”.
 - Governing technical decision:
@@ -40,9 +40,10 @@ to obtain it.
   period.
 - Approval status: issue #38's measurement protocol is complete. The measured
   churn did not earn a raster-lifetime implementation.
-- Authorized change categories for the preparation session: development-only
-  dependency reproducibility, setup instructions, and profiling-harness
-  operability. Do not add runtime dependencies or a build step.
+- Authorized change categories: development-only dependency reproducibility,
+  setup instructions, profiling-harness operability, durable results, commit,
+  push, and draft pull-request publication. Do not add runtime dependencies or
+  a build step.
 
 ## Read First
 
@@ -94,6 +95,9 @@ to obtain it.
   missed.
 - Added `--dpr=<value>` support and measured both DPR 1 and the renderer's DPR 2
   cap.
+- Committed the reviewed change set, pushed
+  `codex/issue-38-profile-raster-release`, and opened draft
+  [PR #41](https://github.com/Blazenetic/complex-noise/pull/41).
 
 ## Current Gate
 
@@ -113,12 +117,16 @@ The rebuild is measurable under a deliberately adversarial four-interactions-
 per-second loop, but it did not miss a frame budget even at 4× throttle and DPR
 2. A grace timer would keep the 1.7 MiB cache alive after normal single
 interactions to optimise a pattern that users would have to repeat aggressively.
-Issue #38's “normal interaction” threshold is therefore not crossed.
+Issue #38's “normal interaction” threshold is therefore not crossed. Draft PR
+#41 is open and mergeable; CI and human review are the remaining acceptance
+gates.
 
 ## Next Safe Action
 
-Review and publish this profiling/tooling change. To reproduce the matched
-steady-state and worst-density churn observations:
+Inspect draft PR #41's current CI result, then review the nine-file change set.
+If review accepts the evidence and tooling scope, fresh authority may mark the
+PR ready or merge it. To reproduce the matched steady-state and worst-density
+churn observations:
 
 ```bash
 PROFILE_ROOT=/home/blazenetic/.codex/worktrees/issue38-control/complex-noise \
@@ -223,7 +231,6 @@ PASS
   `AGENTS.md`, `CONTRIBUTING.md`, `README.md`, `docs/README.md`,
   `docs/ISSUE_38_PROFILE_RESULTS.md`, `package-lock.json`, and
   `tests/profile-still-field.mjs`.
-- Final Git-state requirement after profiling: committed and clean, or
-  intentionally uncommitted with an exact handover inventory.
+- Final Git-state requirement after profiling: committed and clean.
 - External actions still requiring fresh approval after PR publication: merge,
   deployment, issue closure, or unrelated GitHub changes.

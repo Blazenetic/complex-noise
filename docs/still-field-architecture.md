@@ -404,9 +404,12 @@ The smaller seams remain:
 - `nodes.js` imports `edge-labels.js` only so a population change can free
   dimension slots. It is a DAG edge in the right direction; one call still does
   not justify an event system.
-- `code-lines.js` is checked against the renderer by eye. If work touches the
-  source values again, a consistency guard between `CODE_SLOT` and
-  `refreshCodeValues()` is the first earned addition.
+- The transcript remains a hand-maintained claim about the renderer, but its
+  live values no longer rely on two lists of magic indices agreeing by eye.
+  `code-lines.js` names every slot and validates that each line value is used
+  once; `code-ticker.js` supplies a producer for every name through
+  `defineCodeValueMap()`. The check runs at module load, while the resulting
+  integer array keeps the paint path allocation-free.
 - `edge-labels.js` sizes the distance/radius text tables at 2,001 by assumption.
   The clamp is safe but can silently pin a value if a future world exceeds it.
 - The HUD key seam is now guarded in both directions; see

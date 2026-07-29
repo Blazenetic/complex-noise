@@ -30,6 +30,7 @@ import {
   CODE_LINES, CODE_STAGE, CODE_INDENT, CODE_TEXT, CODE_SLOT,
   CODE_VALUE_COUNT, CODE_SUMMARY_SLOT, CODE_STAGE_COUNT,
   CODE_STAGE_LINES, CODE_STAGE_FIRST, CODE_STAGE_LAST,
+  defineCodeValueMap,
 } from './code-lines.js';
 
 const CODE_FONT = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
@@ -105,6 +106,48 @@ let codeBodyTop = NaN;
 let codeBodyValueVersion = -1;
 let codeBodyInk = '';
 let codeBodyInkMuted = '';
+
+/**
+ * One producer for every named value slot in `code-lines.js`.
+ *
+ * These functions run once a second, not in the paint loop. The indirection is
+ * intentionally paid on the cold path so `defineCodeValueMap()` can reject a
+ * missing or retired producer at boot while the hot path keeps its integer
+ * array lookup.
+ */
+const codeValueBuilders = defineCodeValueMap({
+  dt: () => telemetry.dt.toFixed(4),
+  drift: () => `${(clock.drift % 1000).toFixed(1)} s`,
+  nodeCount: () => `n = ${telemetry.nodes}`,
+  jitter: () => `J = ${telemetry.jitter.toFixed(1)}`,
+  probeZ: () => `z = ${telemetry.probeZ.toFixed(3)}`,
+  probeScale: () => `s = ${telemetry.probeScale.toFixed(3)}`,
+  gridCells: () => `${grid.cellCount} cells`,
+  pairTests: () => {
+    const n = telemetry.nodes;
+    return `${telemetry.pairTests} of ${(n * (n - 1) / 2) | 0}`;
+  },
+  sampleDistance: () => `d = ${telemetry.sampleDistance.toFixed(0)}`,
+  sampleTarget: () => `t = ${telemetry.sampleTarget.toFixed(3)}`,
+  sampleStrength: () => `s = ${telemetry.sampleStrength.toFixed(3)}`,
+  batches: () => `${telemetry.batches} batches`,
+  probeEnergy: () => `E = ${telemetry.probeEnergy.toFixed(3)}`,
+  edges: () => `${telemetry.edges} edges`,
+  fps: () => `${telemetry.fps.toFixed(0)} fps`,
+  labels: () => `${telemetry.labels} shown`,
+  respawnRate: () => clock.real > 1
+    ? `${(telemetry.respawns / clock.real * 60).toFixed(1)}/min`
+    : 'settling',
+  degree: () => {
+    const n = telemetry.nodes;
+    return `x̄ ${(n ? telemetry.edges * 2 / n : 0).toFixed(2)} · ↑${telemetry.maxDegree}`;
+  },
+  glow: () => `${telemetry.glowNodes}/${MAX_GLOW_NODES} glow`,
+  dimensions: () => `${telemetry.edgeLabels} dims`,
+  mode: () => `${LABEL_MODE_NAMES[modeAt(clock.real)]} +${telemetry.modesOnScreen}`,
+  summary: () => `u ${telemetry.msUpdate.toFixed(2)} · l ${telemetry.msLinks.toFixed(2)}`
+    + ` · n ${telemetry.msNodes.toFixed(2)} · i ${telemetry.msInfo.toFixed(2)} ms`,
+});
 
 /** Where the listing landed this frame, so callouts can stay off it. */
 let codeVisible = false;
@@ -236,32 +279,9 @@ function refreshCodeValues() {
   if (clock.real < codeValueNextUpdate) return;
   codeValueNextUpdate = clock.real + VALUE_REFRESH_S;
 
-  const n = telemetry.nodes;
-  codeValueText[0] = telemetry.dt.toFixed(4);
-  codeValueText[1] = `${(clock.drift % 1000).toFixed(1)} s`;
-  codeValueText[2] = `n = ${n}`;
-  codeValueText[3] = `J = ${telemetry.jitter.toFixed(1)}`;
-  codeValueText[4] = `z = ${telemetry.probeZ.toFixed(3)}`;
-  codeValueText[5] = `s = ${telemetry.probeScale.toFixed(3)}`;
-  codeValueText[6] = `${grid.cellCount} cells`;
-  codeValueText[7] = `${telemetry.pairTests} of ${(n * (n - 1) / 2) | 0}`;
-  codeValueText[8] = `d = ${telemetry.sampleDistance.toFixed(0)}`;
-  codeValueText[9] = `t = ${telemetry.sampleTarget.toFixed(3)}`;
-  codeValueText[10] = `s = ${telemetry.sampleStrength.toFixed(3)}`;
-  codeValueText[11] = `${telemetry.batches} batches`;
-  codeValueText[12] = `E = ${telemetry.probeEnergy.toFixed(3)}`;
-  codeValueText[13] = `${telemetry.edges} edges`;
-  codeValueText[14] = `${telemetry.fps.toFixed(0)} fps`;
-  codeValueText[15] = `${telemetry.labels} shown`;
-  codeValueText[16] = clock.real > 1
-    ? `${(telemetry.respawns / clock.real * 60).toFixed(1)}/min`
-    : 'settling';
-  codeValueText[17] = `x̄ ${(n ? telemetry.edges * 2 / n : 0).toFixed(2)} · ↑${telemetry.maxDegree}`;
-  codeValueText[18] = `${telemetry.glowNodes}/${MAX_GLOW_NODES} glow`;
-  codeValueText[19] = `${telemetry.edgeLabels} dims`;
-  codeValueText[20] = `${LABEL_MODE_NAMES[modeAt(clock.real)]} +${telemetry.modesOnScreen}`;
-  codeValueText[CODE_SUMMARY_SLOT] = `u ${telemetry.msUpdate.toFixed(2)} · l ${telemetry.msLinks.toFixed(2)}`
-    + ` · n ${telemetry.msNodes.toFixed(2)} · i ${telemetry.msInfo.toFixed(2)} ms`;
+  for (let slot = 0; slot < CODE_VALUE_COUNT; slot++) {
+    codeValueText[slot] = codeValueBuilders[slot]();
+  }
   codeValueVersion++;
 }
 

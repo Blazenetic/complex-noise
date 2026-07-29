@@ -93,6 +93,19 @@ export function allocateGrid(spanX, spanY, radius, nodeCount) {
 }
 
 /**
+ * Bytes the grid's five typed arrays are holding.
+ *
+ * "Holding", not "using": `allocateGrid` high-water-marks them, so this is
+ * larger than the live cell and node counts imply. That is the figure worth
+ * reporting — it is what the trade actually costs — and it is the one the HUD's
+ * Buffers row shows beside the link buffer.
+ */
+export function gridBytes() {
+  return grid.counts.byteLength + grid.start.byteLength + grid.cursor.byteLength
+    + grid.items.byteLength + grid.cellOf.byteLength;
+}
+
+/**
  * Counting-sort every node into its cell. O(n + cells), allocation-free.
  *
  * @param {Array<{x: number, y: number}>} nodes

@@ -6,7 +6,7 @@ A short, mostly true account of how a small Australian lab turned quiet fury at 
 
 ---
 
-## Origin — late 25 / 26 July 2026
+## Origin — late 25 / early 26 July 2026
 
 It started with a commercial white-noise app and a growing sense of quiet fury.
 
@@ -14,7 +14,7 @@ Every pause, every play, every attempt to quit produced another ad. Then the app
 
 **Blazenetic:** “Stuff it. We’ll make our own. Zero ads, zero fees, zero dependencies, and it will actually keep going all night on a phone.”
 
-The decision was taken just before bed. Arty was tasked with the overnight bootstrap. By the time the rest of the lab woke on the 26th there was already a working procedural generator, the first three colours, a basic graph, and a sleep timer that did not immediately freeze the play button.
+The decision was taken just before bed on the 25th. Arty was tasked with the overnight bootstrap. By the time the rest of the lab woke on the morning of the 26th there was already a working procedural generator, the first three colours, a basic graph, and a sleep timer that did not immediately freeze the play button.
 
 What followed was intensive, iterative, multi-agent development under firm direction. Across roughly fifty-two wall-clock hours the lab produced the modular architecture, Still Theme / Field / EQ, the Info layer, immersion path, a growing Playwright suite, and the Lab Voice itself. Zero runtime dependencies were introduced at any point.
 
@@ -68,7 +68,7 @@ Branding moved fully to Blazenetic. Live site published.
 
 ---
 
-## Instrumentation Maturity & Six-Colour Family (late 28 July)
+## Instrumentation Maturity & Six-Colour Family (late 28 July 2026)
 
 Eight per-node detail modes offset by φ so consecutive IDs disagree. Handle glyphs. Graph telemetry (degree, coupling, nearest) accumulated inside the existing link pass — no second scan. Four edge-dimension kinds stable for the life of the pair. Independent overlay chips. Foldable source listing with heat trail. Live view regrouped.
 
@@ -83,13 +83,13 @@ Bone theme far-background texture made properly visible with soft-light and slow
 
 ---
 
-## The Calm Pass — and the day the code finally arrived
+## The Calm Pass — and the day the code finally arrived (28 July 2026)
 
 PR #31 described the info-layer calm pass in full and then merged four files: the changelog, the readme, the history and one loosened test assertion. The renderer itself was never touched. Every envelope, the sixth edge slot, the stacked secondary values and the sticky callout side existed only as prose.
 
 A test was weakened to accommodate an implementation that did not exist. That is exactly how a suite stops being able to tell you anything.
 
-The code landed later: envelopes slowed and lengthened, minimum hold raised, edge capacity to six with multi-line secondary text, sticky side via hysteresis (`preferSide`), hold bonus adjusted. The accent spine finally sat on the correct edge of mirrored blocks. Undrawable slots free themselves. The weakened assertion was restored and a new flip-rate guard added.
+The code landed later the same day: envelopes slowed and lengthened, minimum hold raised, edge capacity to six with multi-line secondary text, sticky side via hysteresis (`preferSide`), hold bonus adjusted. The accent spine finally sat on the correct edge of mirrored blocks. Undrawable slots free themselves. The weakened assertion was restored and a new flip-rate guard added.
 
 > **Melchett:** THE BOUNCE IS DEAD! The changelog said so in ELEVEN PLACES!  
 > **Darling:** The changelog said so. The renderer said nothing at all, because nobody sent it the diff.  
@@ -98,7 +98,7 @@ The code landed later: envelopes slowed and lengthened, minimum hold raised, edg
 
 ---
 
-## The Night Shift — batteries, deadlines and a suite that stopped waiting
+## The Night Shift — batteries, deadlines and a suite that stopped waiting (28–29 July 2026)
 
 Nothing here changed a pixel. It changed what happens at three in the morning, and what happens to CI at half past four.
 
@@ -125,19 +125,24 @@ Blazenetic researched the seams that would let a renderer stay honest overnight,
 
 Arty did the careful extraction under that direction. Phase after phase. Moved code rather than rewriting it. The suite stayed green because the rendered output stayed identical to the pixel.
 
-### Phase 1 — the renderer becomes a directory
+### Phase 1 — the renderer becomes a directory (late evening 28 July)
+
 Twenty modules under `js/still-field/`. Front door kept. Identical output. The trail stopped building a string every frame (the “0 alloc/frame” claim became true again). A resize finally drops link state when the world changes shape.
 
-### Phase 2 — the last seams and the allocations nobody was counting
+### Phase 2 — the last seams and the allocations nobody was counting (night of 28–29 July)
+
 Callout content split from placement. Transcript from ticker. Stats panel into pure `hud.js` (app.js no longer the only module touching its own strings). Density drag garbage dropped from ~550 KB per sweep to nothing after the first (grow-only, bands of sixteen). Quantised edge strings moved to first draw. First pure unit tests (under a second). Mode dwell normalised so the Lab slider means what it says.
 
-### Phase 3 — measure first, cache the thing that was actually expensive
+### Phase 3 — measure first, cache the thing that was actually expensive (early 29 July)
+
 A checked-in profiling matrix (`npm run profile:still-field`) decided the work. Fashionable plan was struct-of-arrays. Measurements said the 24-line source listing was the cost (1.154 ms alone under throttle). Stable transcript now lives in a lazy OffscreenCanvas bitmap. Source-only info −23.7 % median / −26.3 % p95. Typed arrays remain a proposal because evidence outranks enthusiasm.
 
-### Phase 4 — the review pass
+### Phase 4 — the review pass (29 July)
+
 Every substantial function diffed against the pre-refactor original. No arithmetic changed meaning. Three self-claims the code was not keeping were fixed: the 1.7 MiB bitmap that was never released (a locked phone held it all night), the fold hit-target that outlived the listing, the Buffers row that counted only one buffer. What was deliberately left alone is written down with reasons.
 
-### Phase 5 — the HUD contract closes both ways
+### Phase 5 — the HUD contract closes both ways (29 July)
+
 `hud.js` owns the exact key sets. `app.js` validates each DOM map once at boot. A missing or retired key fails with the mismatched names instead of looking like an honest unavailable measurement forever. Pure unit test covers both directions.
 
 Melchett declared a module a victory approximately every forty-five minutes from whichever terminal or kitchen he was currently occupying. Baldrick proposed putting all the files back into one file “so there is only one file” and was gently but firmly rejected. Darling sat everyone down whenever the volume threatened to wake the neighbours and confirmed the residual outlines still refuse to sink. The wall held across five phases.
@@ -163,5 +168,5 @@ Evidence outranks enthusiasm.
 Further reading: [Meet the Lab](./MEET_THE_LAB.md) · [Info Layer](./INFO_LAYER.md) · [Product Requirements (historical)](./PRODUCT_REQUIREMENTS.md) · [Changelog](../CHANGELOG.md) · [Blame](./BLAME.md) · [Teachings](./TEACHINGS_AND_LEARNINGS.md)
 
 Baldrick’s latest cunning plan has been rejected. The rest of us will continue shipping.  
-Another Tuesday in the Lab. The software is calm. The docs are not.  
+Another late night in the Lab. The software is calm. The docs are not.  
 Maths first. Modules second. Tubers last. You’re welcome.

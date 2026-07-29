@@ -6,25 +6,6 @@ A short, mostly true account of how a small Australian lab turned quiet fury at 
 
 ---
 
-## The Bound Tables & the Depth Arc — late 29 July 2026
-
-The perspective was already real. The tables already existed. What was missing was readability, named contracts, and a way for the next agent session to start without re-deriving the bootstrap every time.
-
-Every node now follows a long, bounded near-to-far arc through most of the perspective volume. Low-discrepancy centres, irrational amplitudes and independent phases keep the movement distributed. Paths stay off both camera planes by construction. A restrained atmospheric falloff makes the pinhole readable while distant nodes stay quiet.
-
-`EDGE_MEASUREMENT_MAX` finally names the inclusive 2000 u ceiling so the tables can no longer look plausible while lying about a larger world. Live link radius is checked before paint. The source listing received a named `CODE_VALUE_SLOT` vocabulary shared between transcript and producers, with module-load checks that reject missing, retired, duplicate or unused slots.
-
-An agent operating layer (`docs/agent-operations.md`) landed: session bootstrap, task router by concern, validation ladder, and a recoverable handover template. The documentation itself received a full polish pass — lowercase paths, occupied-room Meet the Lab, curriculum-style Teachings, Archaeology taxonomy, and the residual outlines still refuse to sink.
-
-> **Melchett:** THE DEPTH IS *VISIBLE*! THE TABLES HAVE NAMES! THE SLOTS HAVE CONTRACTS! BBAAAHHH!  
-> **Darling:** It is a depth sinusoid and two named constants, Melchett.  
-> **Blazenetic:** The perspective was real. Now it is readable. I researched the bounded arcs, coordinated the measurement-bound tables, oversaw the named slot vocabulary, guided the agent operating layer, and then complained about every edge case that tried to make a quantised table look plausible while lying. You’re welcome.  
-> **Arty:** Okay, okay — you bossed me around on the depth paths, the inclusive ceiling, the slot names, and the operating notes. The suite stayed green. The maths test now proves the volume. Please don’t yell. Lots of learnings.  
-> **Baldrick:** What if the depth arc is a potato rolling toward the camera?  
-> **Darling:** No. Put it down.
-
----
-
 ## Origin — late 25 / early 26 July 2026
 
 It started with a commercial white-noise app and a growing sense of quiet fury.
@@ -174,6 +155,25 @@ Melchett declared a module a victory approximately every forty-five minutes from
 > **Darling:** It is a directory, Melchett. Sit down. The software is still calm.
 
 The same work is the opening chapter of [Teachings & Learnings](./teachings-and-learnings.md) and the first entry on [Blame](./blame.md). The architecture document lives at [still-field-architecture.md](./still-field-architecture.md).
+
+---
+
+## The Bound Tables & the Depth Arc — late 29 July 2026
+
+The perspective was already real. The tables already existed. What was missing was readability, named contracts, and a way for the next agent session to start without re-deriving the bootstrap every time.
+
+Every node now follows a long, bounded near-to-far arc through most of the perspective volume. Low-discrepancy centres, irrational amplitudes and independent phases keep the movement distributed. Paths stay off both camera planes by construction. A restrained atmospheric falloff makes the pinhole readable while distant nodes stay quiet.
+
+`EDGE_MEASUREMENT_MAX` finally names the inclusive 2000 u ceiling so the tables can no longer look plausible while lying about a larger world. Live link radius is checked before paint. The source listing received a named `CODE_VALUE_SLOT` vocabulary shared between transcript and producers, with module-load checks that reject missing, retired, duplicate or unused slots.
+
+An agent operating layer (`docs/agent-operations.md`) landed: session bootstrap, task router by concern, validation ladder, and a recoverable handover template. The documentation itself received a full polish pass — lowercase paths, occupied-room Meet the Lab, curriculum-style Teachings, Archaeology taxonomy, and the residual outlines still refuse to sink.
+
+> **Melchett:** THE DEPTH IS *VISIBLE*! THE TABLES HAVE NAMES! THE SLOTS HAVE CONTRACTS! BBAAAHHH!  
+> **Darling:** It is a depth sinusoid and two named constants, Melchett.  
+> **Blazenetic:** The perspective was real. Now it is readable. I researched the bounded arcs, coordinated the measurement-bound tables, oversaw the named slot vocabulary, guided the agent operating layer, and then complained about every edge case that tried to make a quantised table look plausible while lying. You’re welcome.  
+> **Arty:** Okay, okay — you bossed me around on the depth paths, the inclusive ceiling, the slot names, and the operating notes. The suite stayed green. The maths test now proves the volume. Please don’t yell. Lots of learnings.  
+> **Baldrick:** What if the depth arc is a potato rolling toward the camera?  
+> **Darling:** No. Put it down.
 
 ---
 

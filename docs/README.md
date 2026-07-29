@@ -21,6 +21,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [BLAME.md](./BLAME.md) | **Light-hearted accountability ledger.** Who researched, who implemented under firm direction, who proposed the potato plans, who declared victory early, who restored order. Opens with the night-shift work. Grows over time. |
 | [INFO_LAYER.md](./INFO_LAYER.md) | Current Still Field metrics, canvas callouts (eight modes + φ offset), edge dimensions, equations, accessibility and performance contract |
 | [STILL_FIELD_ARCHITECTURE.md](./STILL_FIELD_ARCHITECTURE.md) | **Agent surface.** How the renderer is split across `js/still-field/`, the four rules that hold it together, where to make a given change, what phase 2 measured, and the handover for phase 3 |
+| [STILL_FIELD_PHASE_3_HANDOVER.md](./STILL_FIELD_PHASE_3_HANDOVER.md) | **Active execution brief.** Phase-three profiling matrix, decision gates, invariants, validation and definition of done |
 | [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [FINDINGS_AND_CONTEXT.md](./FINDINGS_AND_CONTEXT.md) | Analysis of the codebase at the time of the Still upgrades, architecture notes, and implementation guidance (historical) |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |

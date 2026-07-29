@@ -21,7 +21,7 @@ Complex Noise is a pure client-side procedural generator (Brown, Pink, White, Gr
 Built in a small Australian lab by **Blazenetic** (systems architect who researches the hard maths, deep-dives the literature, coordinates the team under firm direction, oversees the architecture, implements the elegant version when needed, then complains about the edge cases), **Arty** (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
-[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/MEET_THE_LAB.md) · [History](docs/HISTORY.md) · [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) · [Blame](docs/BLAME.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/INFO_LAYER.md) · [Still Field Architecture](docs/STILL_FIELD_ARCHITECTURE.md) · [All docs](docs/)
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/meet-the-lab.md) · [History](docs/history.md) · [Teachings & Learnings](docs/teachings-and-learnings.md) · [Blame](docs/blame.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/info-layer.md) · [Still Field Architecture](docs/still-field-architecture.md) · [All docs](docs/)
 
 > **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead! The clocks we control are the ones we trust!  
 > **Darling:** It is a noise generator, Melchett.  
@@ -130,7 +130,7 @@ On wide viewports the field itself carries a column of the renderer’s own sour
 
 Callouts and edge dimensions have received a calm pass. Attack and release envelopes slowed and lengthened so cards stay readable and fade cleanly. Minimum hold raised. Edge slots increased to six with staggered secondary values on distinct lines. Nodes now remember their preferred side and only flip when that side is clearly unusable. The left/right bounce is gone. The continuous-time envelopes discretise exactly via `1 - Math.exp(-rate * dt)`, so the field remains identical at any frame cap. The sticky side is classical hysteresis applied to a placement contest.
 
-Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
+Full contract: [docs/info-layer.md](docs/info-layer.md).
 
 > **Blazenetic:** I researched the continuous-rate envelopes and the sticky-side hysteresis. I coordinated the capacity increase and the multi-line stagger. Then I complained about the left/right bounce and the sandbox that sulked at a hundred-and-twenty-five-kilobyte source file. You’re welcome.  
 > **Arty:** Distinct modes. Independent toggles. Fold works. Sticky side. The bounce is dead. I checked three times. Please don’t yell.  
@@ -225,7 +225,7 @@ Two full-viewport Canvas 2D layers behind the UI. No WebGL. No library. The dept
 - **Energy.** Three layers that never line up. Violet stays calm under brown; white pushes cyan.
 - **Battery.** 30 fps default, motion integrated from real elapsed time, loop stops when the page is hidden, zero per-frame allocation, `shadowBlur` rationed. `prefers-reduced-motion` slows it and drops the glow.
 
-See [Info Layer](./docs/INFO_LAYER.md) for the full instrumentation contract — including the eight modes, the φ offset, the heat trail and the fold.
+See [Info Layer](./docs/info-layer.md) for the full instrumentation contract — including the eight modes, the φ offset, the heat trail and the fold.
 
 **Glass surfaces**  
 Transparency is a second axis alongside the theme (`data-glass="standard|ultra"`). Both combine freely with either theme. Text, the play button and the active noise type keep their contrast in all four combinations. Ultra is not a gimmick; it is for people who want the field to be the only thing left.
@@ -234,7 +234,7 @@ Transparency is a second axis alongside the theme (`data-glass="standard|ultra"`
 - `js/noise.js` → add a generator + a `data-type` button; `app.js` wires it automatically. New colours must match A-weighted loudness, leave headroom, and be periodic over the buffer (use the seam pass and `lfoStep()`).
 - `css/styles.css` → CSS custom properties — rebrand colours and the Still Field palette in one place
 - `js/audio.js` — insert additional nodes in `ensureAudio()`
-- `js/still-field/` — the renderer, one module per concern; `js/still-field.js` is the front door and the public API. See [docs/STILL_FIELD_ARCHITECTURE.md](./docs/STILL_FIELD_ARCHITECTURE.md) for the map and the rules
+- `js/still-field/` — the renderer, one module per concern; `js/still-field.js` is the front door and the public API. See [docs/still-field-architecture.md](./docs/still-field-architecture.md) for the map and the rules
 
 See [AGENTS.md](./AGENTS.md#common-tasks) for the recipes. Do the recipes. Do not freestyle a second pair-scan in the render loop. Battery life is a feature.
 
@@ -329,7 +329,7 @@ Do whatever you want with the code. Just don’t put ads on the pause button. We
 ---
 
 Made in a small Australian lab by Blazenetic, Arty, and a supporting cast of increasingly questionable decision-makers.  
-See [Meet the Lab](docs/MEET_THE_LAB.md) for the cast list, [History](docs/HISTORY.md) for how we got here, [Teachings & Learnings](docs/TEACHINGS_AND_LEARNINGS.md) for the curriculum, and [Blame](docs/BLAME.md) for the affectionate ledger.  
+See [Meet the Lab](docs/meet-the-lab.md) for the cast list, [History](docs/history.md) for how we got here, [Teachings & Learnings](docs/teachings-and-learnings.md) for the curriculum, and [Blame](docs/blame.md) for the affectionate ledger.  
 See [Contributing](CONTRIBUTING.md) if you want to join the chaos productively.
 
 **Blazenetic:** “I research the maths. I deep-dive the papers. I coordinate the architecture. I implement the elegant version. Then I complain about the edge cases. That is the job. The multiverse of identical callouts is slightly smaller today. Six colours. Zero ticks. Sticky sides. The bounce is dead. The clocks we control are the ones we trust. You’re welcome.”  

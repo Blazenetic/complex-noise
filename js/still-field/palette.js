@@ -49,10 +49,16 @@ export const paint = {
  * Parse the `rgb()`, `rgba()` and `#rgb`/`#rrggbb` forms our theme tokens use.
  * Returns null for anything else so callers can fall back rather than paint
  * `NaN` into the canvas.
+ *
+ * Exported for `tests/run.mjs`, which checks it against every form the theme
+ * tokens actually use. A colour this regex quietly rejects does not throw — it
+ * falls back to a hard-coded default, so the field simply stops following the
+ * theme, which is the kind of failure only a direct test catches.
+ *
  * @param {string} value
  * @returns {{r: number, g: number, b: number, a: number}|null}
  */
-function parseColor(value) {
+export function parseColor(value) {
   if (!value) return null;
   const str = value.trim();
 
@@ -92,6 +98,10 @@ function rgbaString(c, alpha) {
 /**
  * Build a quantised colour ramp from `base` to `spark` through `mid`.
  *
+ * Exported for the same reason as `parseColor`: an off-by-one here shows up as
+ * a ramp that never reaches its spark, which is invisible on a canvas and
+ * obvious in an assertion.
+ *
  * The midpoint matters: a straight lerp from a cool violet-grey to cyan passes
  * through a desaturated blue that reads as dirty rather than electric. Bending
  * the ramp through the bright purple accent keeps luminance and saturation up
@@ -100,7 +110,7 @@ function rgbaString(c, alpha) {
  *
  * @param {string[]} out array of COLOR_STEPS strings, written in place
  */
-function buildPalette(out, base, mid, spark) {
+export function buildPalette(out, base, mid, spark) {
   for (let k = 0; k < COLOR_STEPS; k++) {
     const t = k / (COLOR_STEPS - 1);
     let r, g, b;

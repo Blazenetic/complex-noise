@@ -6,6 +6,137 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## [Unreleased] — finishing the split, and the allocations nobody was counting (phase 2)
+
+Phase 1 made the renderer a directory. This one finishes the two modules that
+were still doing several jobs, moves the stats panel out of `app.js`, gives the
+pure functions their first tests, and fixes two allocation paths — both with a
+number measured before and after, because "this should be faster" is not a
+result.
+
+Still no pixel changes. The suite passed unchanged at every step again.
+
+### Changed
+
+- **Mode dwell now means the advertised mean seconds per mode.** The raw finite
+  golden-ratio sample averaged about 1.017 for eight modes. It is normalised to
+  exactly one now, so adding a mode cannot silently shift every dwell setting.
+- **`callouts.js` split along the seam it was always going to split on.**
+  `callout-content.js` holds the eight detail-mode branches and the row cache;
+  `callouts.js` keeps selection, the hysteretic placement and the paint. Adding
+  a detail mode is a content change, and it no longer drags the most delicate
+  code in the info layer into the diff for review.
+- **`code-lines.js` is the transcript, `code-ticker.js` is the paint.** The
+  source overlay prints real statements from the renderer, transcribed by hand
+  and checked by eye. Keeping that transcript honest is a different job from
+  drawing a comet down a column, and the two no longer share a file.
+- **The stats panel lives in `js/hud.js`.** It is pure: it turns a stats
+  snapshot into an object of strings and touches no DOM at all. `app.js` maps
+  each key to an element and does the writing, which is what keeps the one
+  architectural rule intact — a `hud.js` that wrote into `#nerdHud` would be a
+  second module touching the app's DOM, and the exception would then be citable
+  by a third. `app.js` is 1,123 → 1,017 lines.
+
+### Fixed
+
+- **Dragging the density slider allocated about 550 KB.** Every step that
+  changed the node count replaced the link buffer and five grid arrays. A full
+  sweep at 1440×900 walks 35 distinct counts, so that is 35 link buffers and 35
+  grid arrays *per drag*, at pointer-move rate. The arrays now only grow, and
+  grow in bands of sixteen nodes: the first sweep of a session costs 4 + 9
+  allocations totalling 126 KB, and **every drag after it allocates nothing**.
+  Growing to the exact size was tried first and only got the first sweep to 24 —
+  each rising step needs one more row than the last. The price is 12 KiB of
+  headroom held at rest.
+- **5,034 strings were built at module import for an overlay that may be off.**
+  `edge-labels.js` quantises every dimension caption into lookup tables so the
+  render loop never builds a string. It was building all of them when the module
+  was imported — measured at ~0.3 ms — whether or not Stats was on. They are
+  built on first draw now, so a persisted Stats-off or dimensions-off session
+  does not pay for them; the default session still does on its first info frame.
+  The 0.3 ms is not the argument and the comment in that file says so; the
+  argument is that a cost you can make conditional should be conditional.
+
+### Added
+
+- **Unit tests.** Three grouped tests that import a module and call it — no DOM,
+  under a second between them: `smoothstep` and the quasi-periodic mode
+  schedule (including that `MODE_WEIGHTS` is normalised to an exact mean of 1,
+  which is what makes the Lab's dwell setting mean seconds), the node-count
+  target and its 26–44 window, the grow-only link buffer's reuse-and-clear
+  contract, `parseColor` against every form the theme tokens use, `buildPalette`
+  reaching both ends of its ramp, and all of `hud.js` including the states that
+  are awkward to reach in a browser — a stopped renderer, an audio context that
+  does not exist yet, callouts switched off.
+- **A guard for the one failure mode the HUD split introduces.** A row key with
+  no element behind it is *silently dropped*: the row keeps the `—` that
+  `index.html` seeded it with and looks exactly like a measurement that happens
+  to be unavailable. The new test plays the field, opens all three views, and
+  fails naming any row still reading `—`. It was checked by breaking a key on
+  purpose; it named the row.
+- `initStillFieldNodes` finally has a caller. It was exported and used by
+  nothing — a reasonable debugging handle with no user, which is how a handle
+  rots. It is on `window.complexNoiseStill.reseedNodes` now, and the facade test
+  exercises it.
+
+### Lab Log
+
+**Melchett:** BAAAH! Another twenty files?
+
+**Arty:** Two files, sir. And one outside the renderer.
+
+**Melchett:** Two! Is that all a whole phase buys?
+
+**Darling:** He also found the app throwing away half a megabyte every time
+somebody wiggles the density slider.
+
+**Melchett:** Wiggles the — who *wiggles* it?
+
+**Blazenetic:** Everyone, once. That is what a slider is for. And nobody would
+ever have seen it, because it is not in the render loop — it is not a frame
+cost, it is just rubbish, and rubbish gets collected later, on a phone, on
+battery. The interesting part is that the obvious fix was not good enough. Grow
+the buffer to exactly what you need and you still allocate on nearly every step,
+because every step needs one more row than the last. You have to grow in bands.
+
+**Baldrick:** I have a cunning plan. Never let anyone move the slider.
+
+**Darling:** Baldrick.
+
+**Baldrick:** Then it never allocates at all!
+
+**Blazenetic:** That is technically the fastest version of every program.
+
+**Melchett:** And the five thousand strings?
+
+**Arty:** Built at start-up, sir. For an overlay most people never switch on.
+
+**Melchett:** How much time did removing them save?
+
+**Blazenetic:** Three tenths of a millisecond.
+
+**Melchett:** THREE TENTHS?! I have had longer sneezes!
+
+**Blazenetic:** Which is why the comment in that file says so, in those words.
+The number is small and pretending otherwise would be the same lie as last
+sprint's "0 alloc/frame". The reason to move it is that it is now conditional —
+you only pay for the info layer if you use the info layer. Measure it, write the
+number down, and let the reader decide whether you were right. That is the whole
+discipline. The alternative is a changelog full of the word "optimised".
+
+**Darling:** He also wrote tests that finish in under a second.
+
+**Melchett:** Under a second! What could you possibly learn in under a second?
+
+**Blazenetic:** Whether the golden-ratio weights still average one. The dwell
+slider in the Lab claims to be the *mean* seconds per mode, and that is only
+true while they do. Somebody adds a ninth mode, the mean shifts, and every dwell
+setting quietly means something else — for as long as it takes a person to
+notice a screensaver is rotating slightly wrong. The browser suite would never
+catch that. An assertion catches it in nine milliseconds.
+
+---
+
 ## [Unreleased] — the renderer becomes a directory (phase 1 of 2–3)
 
 Nothing here changes a pixel either. It changes how much you have to read before

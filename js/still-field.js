@@ -103,6 +103,17 @@ export function initStillField(canvas, overlay) {
 
 /**
  * (Re)seed the field. `force = true` discards existing positions.
+ *
+ * Deliberately not called by any control. It exists so an agent or a test can
+ * put the field back to a known population without reloading the page — the R2
+ * spawn sequence, the lifetime stagger and the link buffer all reset together,
+ * which is otherwise only reachable at boot. `app.js` exposes it on
+ * `window.complexNoiseStill.reseedNodes` for exactly that.
+ *
+ * Not to be confused with `startStillFieldLoop`, which *is* on a path a user
+ * takes: `togglePlayback()` calls it after `audio.play()` resolves, so a field
+ * that stopped while the page was hidden comes back with the sound.
+ *
  * @param {boolean} [force=false]
  */
 export function initStillFieldNodes(force = false) {

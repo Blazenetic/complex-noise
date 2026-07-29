@@ -66,6 +66,52 @@ export const population = {
   links: new Float32Array(0),
 };
 
+/** Granularity the link buffer grows in. See `ensureLinkCapacity`. */
+const LINK_CAPACITY_STEP = 16;
+
+/**
+ * Size the link buffer for `count` nodes, and clear it.
+ *
+ * **The buffer only ever grows.** Every caller wants the strengths dropped
+ * anyway — the index space changes shape when the population does, so carrying
+ * old values into new pairs is worse than a brief re-attack nobody can see —
+ * which means the choice is between a fresh array and a `fill(0)`, and only one
+ * of those is garbage.
+ *
+ * That matters because the population is a live control. Sweeping the density
+ * slider from end to end at 1440×900 walks 35 distinct node counts, and each one
+ * used to allocate its own `Float32Array(n²)`: measured at **35 allocations
+ * totalling about 550 KB, on every drag**, from `input` events that fire at
+ * pointer-move rate. It is not in the render loop, so it was never a frame
+ * cost — it is simply garbage produced by dragging a slider, which is the kind
+ * of thing a phone pays for later.
+ *
+ * The buffer is therefore high-water-marked, and grows in **bands** rather than
+ * to the exact figure. Growing exactly still allocates on every *rising* step —
+ * the measured sweep only went from 35 allocations to 24, which is not much of a
+ * fix — because each new count needs one more row than the last. Rounding up to
+ * the next `LINK_CAPACITY_STEP` means any drag inside a band is free: the same
+ * sweep now costs four allocations, and every later drag costs none.
+ *
+ * What that buys is bounded by the band. The waste is `banded² − count²` floats,
+ * so it is largest just above a boundary — about 18 KB near the top of the
+ * range, less everywhere below it.
+ *
+ * `population.links.byteLength` is what the HUD's Buffers row reports, so that
+ * figure now means "held" rather than "in use". That is the more honest of the
+ * two readings for a row about buffers, and it is the one that shows this trade
+ * rather than hiding it.
+ */
+function ensureLinkCapacity(count) {
+  const needed = count * count;
+  if (population.links.length < needed) {
+    const banded = Math.ceil(count / LINK_CAPACITY_STEP) * LINK_CAPACITY_STEP;
+    population.links = new Float32Array(banded * banded);
+  } else {
+    population.links.fill(0);
+  }
+}
+
 let spawnIndex = 0;   // drives the R2 sequence
 let nodeSerial = 0;   // lifetime IDs, never reused
 
@@ -174,7 +220,7 @@ export function initNodes(force = false) {
     nodes[i] = n;
   }
   population.nodes = nodes;
-  population.links = new Float32Array(count * count);
+  ensureLinkCapacity(count);
 
   resetEdgeSlots();
   measureWorld(count);
@@ -206,7 +252,7 @@ export function applyNodeCount() {
     population.nodes.length = target;
   }
 
-  population.links = new Float32Array(target * target);
+  ensureLinkCapacity(target);
   resetEdgeSlots();
   measureWorld(target);
   telemetry.nodes = target;

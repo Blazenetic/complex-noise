@@ -7,7 +7,9 @@ by **[Blazenetic](https://github.com/Blazenetic)**
 [**→ Live demo**](https://blazenetic.github.io/complex-noise/)  
 Add to Home Screen on Android for the full experience.
 
-![Still Field — dark theme with Info layer](docs/screenshots/info-layer-dark.png)
+![Complex Noise playing Brown noise in the dark theme](docs/screenshots/hero-dark.png)
+
+*The default face of the Lab. Brown noise, a living field, no ads and no annual fee.*
 
 > It began because a commercial noise app decided ads on every pause and an annual fee were reasonable.  
 > We disagreed.  
@@ -49,6 +51,24 @@ python3 -m http.server 8123
 
 ---
 
+## Look
+
+![The full Complex Noise interface in the bone theme](docs/screenshots/hero-bone.png)
+
+*Same room, different light. Bone is the calm theme.*
+
+![Complex Noise in desktop immersion mode with field callouts](docs/screenshots/immersion-desktop.png)
+
+*Minimise the interface. The field stays; the restore cluster settles quietly in the corner.*
+
+<p align="center">
+  <img src="docs/screenshots/immersion-phone.png" width="390" alt="Complex Noise in phone immersion mode with the floating playback controls">
+</p>
+
+*It is a phone product first. Eight hours later, it should still be running.*
+
+---
+
 ## Features
 
 This is the part where most READMEs list bullet points like a product manager wrote them. We are not most READMEs.
@@ -81,6 +101,10 @@ The full-page nodes-and-edges visualisation that refuses to be a screensaver.
 
 Nodes drift through a shallow 3D volume with real perspective (pinhole camera, not a 3D engine). They breathe toward you and recede. They are born, they live 70–150 seconds, they fade. When a node dies its links retract into the surviving partners instead of vanishing like a bad animation. Quiet nodes keep a soft residual outline so they stay legible instead of dissolving into the background gradient.
 
+![Still Field callouts showing different phi-offset detail modes and edge dimensions](docs/screenshots/callouts-variety.png)
+
+*Eight detail modes offset by φ. Quiet nodes keep their outline; the lifecycle still gets the final word.*
+
 Colour rides a violet → cyan ramp driven by three non-aligning energy layers (per-node breath + irrational plane wave + analyser). Brown keeps the field calm and violet. White pushes it toward electric cyan. The field is alive even when the audio is paused — silence still has breath and wave.
 
 Default **on**. Intensity and speed controls (practical range 0.7–4.8). Battery-conscious 30 fps, stops completely when the page is hidden, respects `prefers-reduced-motion`.
@@ -91,6 +115,10 @@ Default **on**. Intensity and speed controls (practical range 0.7–4.8). Batter
 
 ### Stats / Info Layer
 Engineering-drawing callouts with leader lines, axis-coloured transform rows (X red, Y green, Z blue — the convention that actually makes sense), edge dimensions rotated onto the lines they measure, and a Live / Math / Code panel that shows real numbers, live equations with their operands evaluated, and per-stage timings.
+
+![The complete info layer in the dark theme](docs/screenshots/info-layer-dark.png)
+
+*Live telemetry, renderer source and the field itself, all reporting the same frame.*
 
 Eight detail modes (energy, transform, velocity, projection, wave, links, lifecycle, seed) instead of five. The mode a given node shows is the global rotation offset by its own lifetime ID through the golden ratio — consecutive IDs land far apart, so the callouts on screen reliably read different quantities and each still walks the full set over a few dwells. Handle glyphs follow the family: circle for scalar, square for transform, diamond for phase, crosshair for vector.
 
@@ -111,6 +139,10 @@ Full contract: [docs/INFO_LAYER.md](docs/INFO_LAYER.md).
 
 ### Field Lab
 The renderer’s own controls: node density, link reach, trail persistence, perspective strength, callout dwell, frame cap (30/45/60), and the three canvas overlays. All live. All persisted. Reset button included because sometimes you just want to go home again.
+
+![The complete Field Lab with all three canvas overlays enabled](docs/screenshots/field-lab-full.png)
+
+*Density, reach, trail, perspective, dwell, frame cap and three independent overlays. Reset is there because sometimes you just want to go home.*
 
 ### Glass UI & Immersion
 Translucent surfaces with backdrop blur so the living field shows through. An **ultra-transparent** mode that drops the panels almost to nothing when you want the field to be the entire world.

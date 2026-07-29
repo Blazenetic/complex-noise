@@ -42,8 +42,19 @@ async function clickPlay(page) {
 }
 
 async function setTheme(page, theme) {
-  await page.click(`.theme-seg[data-theme="${theme}"]`);
+  // Invoke the control without Playwright auto-scrolling it into view so paired
+  // hero captures retain identical framing.
+  await page.locator(`.theme-seg[data-theme="${theme}"]`).evaluate(button => button.click());
   await page.waitForTimeout(200);
+}
+
+async function setInfoLayer(page, enabled) {
+  const toggle = page.locator('#stillFieldNerdToggle');
+  const isEnabled = (await toggle.getAttribute('aria-pressed')) === 'true';
+  if (isEnabled !== enabled) {
+    await toggle.evaluate(button => button.click());
+    await page.waitForTimeout(200);
+  }
 }
 
 async function minimise(page) {
@@ -98,8 +109,9 @@ async function main() {
     args: ['--autoplay-policy=no-user-gesture-required'],
   });
 
-  console.log('Capturing Complex Noise screenshots…');
-  console.log(`Server: ${server.origin}`);
+  try {
+    console.log('Capturing Complex Noise screenshots…');
+    console.log(`Server: ${server.origin}`);
 
   // ------------------------------------------------------------------
   // Desktop heroes & immersion (1440×900, DPR 2)
@@ -117,21 +129,21 @@ async function main() {
     await clickPlay(page);
     await page.waitForTimeout(1200); // trail + residual settle
 
-    // Hero dark — full UI, clean. Fold Stats for less chrome noise if desired.
-    // Keep Stats visible for the learning value in some shots; fold for pure hero.
-    if (await page.getAttribute('#nerdFoldBtn', 'aria-expanded') === 'true') {
-      await page.click('#nerdFoldBtn');
-      await page.waitForTimeout(200);
-    }
+    // Hero dark — full UI, clean. Hide the instrumentation overlays so the
+    // product controls and field remain the focus.
+    await setInfoLayer(page, false);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await capture(page, 'hero-dark.png');
 
     // Bone hero — same framing
     await setTheme(page, 'bone');
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(300);
     await capture(page, 'hero-bone.png');
     await setTheme(page, 'dark');
 
     // Field Lab full (panel already open by default)
+    await setInfoLayer(page, true);
     await ensureFieldLabOpen(page);
     // Scroll the Field Lab into view if needed and wait for “n of 3”
     await page.evaluate(() => document.getElementById('labPanel')?.scrollIntoView({ block: 'center' }));
@@ -165,11 +177,14 @@ async function main() {
     await page.waitForTimeout(2000);
     await capture(page, 'residual-outlines.png');
 
-    // Quiet field (Stats + overlays off)
+    // Quiet field (Stats + overlays off). Re-enable the info layer briefly so
+    // its overlay controls are interactive, switch them off, then hide it.
     await restore(page);
+    await setInfoLayer(page, true);
     await page.click('#fieldCalloutToggle');
     await page.click('#fieldEdgeToggle');
     await page.click('#fieldCodeToggle');
+    await setInfoLayer(page, false);
     await page.waitForTimeout(200);
     await minimise(page);
     await page.waitForTimeout(1500);
@@ -251,9 +266,11 @@ async function main() {
     await context.close();
   }
 
-  await browser.close();
-  await server.close();
-  console.log('Done. Review docs/screenshots/ then update README + INFO_LAYER embeds.');
+    console.log('Done. Review docs/screenshots/ then update README + INFO_LAYER embeds.');
+  } finally {
+    await browser.close();
+    await server.close();
+  }
 }
 
 main().catch(err => {

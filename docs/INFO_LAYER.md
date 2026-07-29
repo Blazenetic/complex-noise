@@ -2,6 +2,10 @@
 
 ![The info layer in the dark theme](screenshots/info-layer-dark.png)
 
+The same instrumentation remains legible when the Still Theme changes:
+
+![The info layer in the bone theme](screenshots/info-layer-bone.png)
+
 **Navigation:** [Live demo](https://blazenetic.github.io/complex-noise/) · [History](./HISTORY.md) · [Meet the Lab](./MEET_THE_LAB.md) · [AGENTS.md](../AGENTS.md) · [Contributing](../CONTRIBUTING.md) · [All docs](./) · [Changelog](../CHANGELOG.md)
 
 > **Lab aside:** This document is the technical contract for the instrumentation layer. It is allowed a small amount of personality at the edges, but the rules, numbers and constraints stay precise. Baldrick is not permitted to rewrite the pair-scan budget. The spatial grid already publishes its own pair-test counts in the Live view so anyone can verify the ~10× reduction.
@@ -56,6 +60,13 @@ On/off is persisted (`complexNoise_stillFieldNerd`), as is each overlay
 (`complexNoise_stillFieldCallouts`, `…Edges`, `…Code`). Both folds are
 session-only.
 
+On a phone, minimising the interface removes the control-column keep-out and
+gives the field room for its capped set of callouts:
+
+<p align="center">
+  <img src="screenshots/immersion-phone.png" width="390" alt="Phone immersion mode with three engineering callouts and the compact playback cluster">
+</p>
+
 ## Node callouts
 
 Every node receives a stable lifetime ID such as `n042`. Respawning creates a
@@ -109,6 +120,8 @@ set over a few dwells. One global mode meant every callout on screen was a copy
 of its neighbour — a lot of pixels spent saying one thing. The Live view reports
 how many distinct modes are actually placed, which is the honest measure of
 whether the variety is working; `tests/run.mjs` asserts it.
+
+![Different phi-offset callout modes and edge dimensions sharing the field](screenshots/callouts-variety.png)
 
 A block is placed above its node and to one side, and is rejected outright if it
 would land on another block or on an edge dimension. Caps are 8 callouts on a
@@ -371,7 +384,7 @@ the four, against the budget the current cap allows.
 
 ## Field Lab
 
-![The Field Lab panel](screenshots/field-lab.png)
+![The complete Field Lab panel with all three canvas overlay chips enabled](screenshots/field-lab-full.png)
 
 | Control | Range | Default | Effect |
 |---|---|---|---|

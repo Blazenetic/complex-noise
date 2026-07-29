@@ -4,7 +4,7 @@
 Stable reference for the screenshot set used in the root README, `docs/INFO_LAYER.md`, learning material, and branding/marketing. This is a learning repository as well as a product, so the images must also illustrate interesting internals (residual outline floor, φ-offset modes, Field Lab chips, immersion cluster, battery-aware field) without turning the docs into a gallery.
 
 **Principles** (from the 2026-07-29 plan)
-- Coverage over quantity. Target 10–14 final images.
+- Coverage over quantity. Target 9–13 final images.
 - Product first: hero → immersion → Field Lab → instrumentation → residual/φ variety.
 - Dark / bone pairs where they earn their place.
 - Prefer real defaults or one clear intentional state (Brown preferred, field alive).
@@ -12,7 +12,7 @@ Stable reference for the screenshot set used in the root README, `docs/INFO_LAYE
 - Lab Voice only in captions on narrative surfaces; this file and AGENTS.md stay sterile.
 
 **Capture**  
-Prefer the temporary Playwright helper `scripts/capture-screenshots.mjs` (re-uses `tests/server.mjs`, deviceScaleFactor 2, deterministic sequencing). Manual DevTools is the fallback. After capture, update embeds + captions in the same PR as the PNGs. The human will drop the actual PNG files in a follow-up session; this catalog defines the names and intent so the set stays coherent.
+The Playwright helper `scripts/capture-screenshots.mjs` re-uses `tests/server.mjs`, captures at deviceScaleFactor 2 and sequences the product state deterministically. The current set was produced with that helper. Re-run it when the interface changes, then review the PNGs and update embeds and captions in the same PR.
 
 ## Final set
 
@@ -46,7 +46,7 @@ Prefer the temporary Playwright helper `scripts/capture-screenshots.mjs` (re-use
 | `ultra-glass.png` | Ultra-transparent glass variant of a hero or immersion | Low priority; only if the glass reads clearly. | Theme exploration |
 | `type-grid-playing.png` | Type selector with a non-Brown colour active while playing | Shows the six colours and the exclusive press state. | Learning noise colours |
 
-Retire any file that becomes redundant once the new heroes and full Field Lab exist. Keep total ≤14.
+Retire any file that becomes redundant once the new heroes and full Field Lab exist. Keep total ≤13.
 
 ## README visual flow (guidance only)
 

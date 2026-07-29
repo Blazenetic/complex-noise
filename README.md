@@ -208,15 +208,22 @@ All keys are centralised in `js/constants.js` → `STORAGE_KEYS` and accessed on
 ## Tests
 
 ```bash
-npm install     # Playwright is the only dev dependency
+npm ci          # install the exact locked development dependencies
 npm test        # headless browser suite, ~15s with the worker pool
 npm test -- --headed
 npm test -- --filter=colour
 npm test -- --workers=1
 npm test -- --repeat=20
+npm run profile:still-field -- --filter=desktop-150-source
+npm run profile:still-field -- --churn --dpr=2
 ```
 
 `tests/run.mjs` drives a real Chromium against a real Web Audio graph and starts its own static server. It covers playback, the fade-out/restart race, the sleep timer (including simulated suspend), persistence (corrupt, zero, out-of-range), theming and glass, canvas transparency and battery stop, Info layer formats, graph metrics, keyboard navigation, spectral tilt of each noise colour, level matching, headroom, whole-cycle LFOs, rapid-switch races that count real buffers, wake-lock release on stop, throttled slider writes, and basic accessibility (labels + 44 px targets). Newer cases cover mode variety, independent overlay toggles, and the fold.
+
+`tests/profile-still-field.mjs` is evidence rather than a CI benchmark. The
+filtered command measures the steady source-overlay path; `--churn` separately
+measures repeated fold/unfold and field stop/start interactions. Add
+`PROFILE_ROOT=/path/to/control` for a matched worktree comparison.
 
 Several tests exist because a plausible-looking refactor broke playback in a way that only shows up minutes later. The sleep-timer test in particular is the result of lived experience.
 

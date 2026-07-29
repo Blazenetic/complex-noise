@@ -30,6 +30,7 @@ Fork freely. Clone your fork. Run it locally:
 ```bash
 git clone https://github.com/YOUR_USERNAME/complex-noise.git
 cd complex-noise
+npm ci             # install the exact locked development dependencies
 npm start          # http://localhost:8123
 # or: python3 -m http.server 8123
 ```

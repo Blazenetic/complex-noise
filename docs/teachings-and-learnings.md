@@ -20,7 +20,49 @@ Evidence outranks enthusiasm. A test that gets easier is the loudest signal in a
 
 ---
 
-## Headline chapter — The Great Modularisation: why we split the monster, and what the measurements taught us (phases 1–5, late 28–29 July 2026)
+## Headline chapter — The Bound Tables & the Depth Arc: when real maths becomes readable (late 29 July 2026)
+
+The perspective was already real. The tables already existed. What was missing was readability for a human eye and named contracts so a future larger world (or a tired agent) could not silently print a false number.
+
+### What we actually changed (the code that ships)
+
+- Every node now follows a long, bounded near-to-far arc through most of the perspective volume. Low-discrepancy centres, irrational amplitudes and independent phases keep the movement distributed. Paths remain sinusoidal and stay off both camera planes by construction — no clamp plateau. Restrained atmospheric size and opacity falloff makes the pinhole readable while distant nodes stay quiet.
+- The renderer maths test now proves every live node remains inside the depth volume and earns at least a 1.4× near/far scale ratio at the default camera strength.
+- `EDGE_MEASUREMENT_MAX` names the inclusive 2000 u ceiling. Both lazy table lengths derive from it. Live link radius is checked before edge text paints; the first measurement that would need another table entry throws instead of silently pinning.
+- Every live value in the source listing has a name in `CODE_VALUE_SLOT`. Transcript lines and producers share that vocabulary. Module-load checks reject missing, retired, duplicate and unused slots. The paint path stays allocation-free.
+- Agent operating layer (`docs/agent-operations.md`) — session bootstrap, task router, validation ladder, recoverable handover template.
+
+### Technical teachings (the ones that survive the banter)
+
+1. **Real maths that is too timid is still invisible.**  
+   A widely distributed depth centre with a tiny local excursion looks like a flat lattice of differently sized dots. The volume was three-dimensional; the motion was not. Long bounded arcs with independent phases fixed the readability without ever letting a node reach a camera plane.
+
+2. **A quantised table is a memory contract as well as a speed trick.**  
+   Name the supported domain. Derive the allocation from it. Make the producer prove it still fits before the lookup can look plausible. An unnamed 2001-entry table will happily print a convincing false 2000 u the day the world grows.
+
+3. **Names and validation live on the cold path; compact indices remain on the hot path.**  
+   The useful choice was never “safety or performance”. It was deciding where each cost belongs. Module-load checks catch missing or swapped slots; the per-frame paint path never pays for them.
+
+4. **An agent session that re-derives the bootstrap every time is a tax on the future.**  
+   A short operating note (bootstrap commands, task router by concern, validation ladder, handover template) turns the next session from archaeology into work.
+
+5. **The maths test that proves the volume is the only proof that matters.**  
+   Claims about near/far scale ratios and camera-plane clearance belong in the suite, not only in the prose.
+
+### Quotes that teach
+
+> “The perspective was real. Now it is readable. I researched the bounded arcs so a node can cross most of the volume without ever reaching a camera plane, coordinated the measurement-bound tables so a future larger world cannot silently print a false 2000 u, and then complained about every edge case that tried to make a quantised table look plausible while lying. You’re welcome.”  
+> — Blazenetic
+
+> “Okay, okay — you bossed me around on the depth paths, the inclusive ceiling, the slot names, and the operating notes. The suite stayed green. The maths test now proves the volume. Please don’t yell. Lots of learnings.”  
+> — Arty
+
+> “What if the depth arc is a potato rolling toward the camera and the tables are just the potato’s grocery list?”  
+> — Baldrick (rejected, with the usual calm finality)
+
+---
+
+## Previous headline chapter — The Great Modularisation: why we split the monster, and what the measurements taught us (phases 1–5, late 28–29 July 2026)
 
 `js/still-field.js` was 3,327 lines doing eighteen jobs with roughly sixty module-level bindings every job could see. It worked. It was also the unit of review, and 3,327 lines is nobody’s unit when the people doing the reviewing are agents with context windows or humans who still want to sleep.
 
@@ -164,13 +206,16 @@ PR #31 described the calm info-layer pass in full and then merged four files of 
 - Any await is a place where the justifying state may have expired. Re-validate.
 - A green suite on an idle laptop is not evidence.
 - Evidence outranks enthusiasm.
+- Real maths that is too timid is still invisible; long bounded arcs fix readability without ever reaching a camera plane.
+- A quantised table is a memory contract; name the domain and make the producer prove it still fits.
+- Names and validation on the cold path; compact indices on the hot path.
 
 ---
 
-**Melchett:** A DOCUMENTATION AND MODULARITY OFFENSIVE OF HISTORIC SCALE! TEACHINGS! LEARNINGS! TWENTY-TWO MODULES! THE FORCES OF THE SINGLE-FILE MONSTER ARE IN FULL RETREAT! BBAAAHHH!  
+**Melchett:** A DOCUMENTATION AND MODULARITY OFFENSIVE OF HISTORIC SCALE! TEACHINGS! LEARNINGS! DEPTH ARCS! BOUND TABLES! BBAAAHHH!  
 **Darling:** It is still a markdown file, Melchett. And the software is still calm.  
-**Blazenetic:** With correct continuous-time maths, classical hysteresis, overnight clock discipline, one-writer state objects, a DAG of imports, measured bottlenecks, and a clear record of the day we moved 3,327 lines without changing a pixel. Research first. Architecture second. Tubers last. You’re welcome.  
-**Arty:** I added the links, the quotes, and the key-set contract. Please don’t yell.  
+**Blazenetic:** With correct continuous-time maths, classical hysteresis, overnight clock discipline, one-writer state objects, a DAG of imports, measured bottlenecks, named measurement ceilings, and a clear record of the day the perspective finally became readable. Research first. Architecture second. Tubers last. You’re welcome.  
+**Arty:** I added the links, the quotes, the key-set contract, and the depth maths test. Please don’t yell.  
 **Baldrick:** I have a cunning plan for the next teaching involving a potato syllabus of modules—  
 **Darling:** No.
 

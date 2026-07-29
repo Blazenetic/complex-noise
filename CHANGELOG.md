@@ -9,6 +9,30 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## The Depth Pass — 29 July 2026
+
+The Still Field's camera maths was genuine, but the motion was too timid to
+show it. Each node lived at a widely distributed depth and moved through only a
+small local band, so the field often read as a flat lattice with differently
+sized dots.
+
+**Changed**
+- Every node now follows a long, bounded near-to-far arc through most of the
+  perspective volume. Low-discrepancy centres, irrational amplitudes and
+  independent phases keep the movement distributed instead of synchronised.
+- Depth paths remain sinusoidal and stay off both camera planes by construction,
+  with no clamp plateau at either turn.
+- A restrained atmospheric size and opacity falloff makes the pinhole
+  projection easier to read while keeping distant nodes quiet and the overall
+  field calm.
+- The renderer maths test now proves every live node remains inside the depth
+  volume and earns at least a 1.4× near/far scale ratio at the default camera
+  strength.
+
+**Blazenetic:** The perspective was real. Now it is visible. You’re welcome.
+
+---
+
 ## The Great Modularisation — late 28–29 July 2026
 
 The Still Field stopped being a single 3,327-line monster and became a laboratory of twenty-two modules. No pixel changed. The suite stayed green at every step because the code was moved, not rewritten. Measurement vetoed fashion. Three self-claims the code was making about itself were brought into line with reality.

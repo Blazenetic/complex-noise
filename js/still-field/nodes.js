@@ -24,7 +24,6 @@
  */
 
 import { PHI, TAU, smoothstep } from './math.js';
-import { clamp } from '../storage.js';
 import { view, surfaces, measureViewport } from './view.js';
 import { settings } from './settings.js';
 import { world, targetNodeCount, measureWorld, WORLD_MARGIN } from './world.js';
@@ -52,6 +51,24 @@ const LIFE_MAX_S = 150;
 /** Fractions of a lifetime spent fading in and out. */
 const FADE_IN = 0.1;
 const FADE_OUT = 0.16;
+
+/**
+ * Depth choreography.
+ *
+ * The first version gave each node a widely distributed depth centre but only
+ * a 0.06–0.16 local excursion. The volume was mathematically three-dimensional,
+ * yet an individual node changed scale so little that its motion often read as
+ * flat. Keep the same bounded sinusoid and pinhole camera, but let every node
+ * cross most of the volume. A narrow spread around the midpoint prevents the
+ * paths feeling mechanically identical; the amplitude bounds guarantee no
+ * path reaches either camera plane, so there is no clamp plateau at a turn.
+ */
+const DEPTH_BASE_MIN = 0.47;
+const DEPTH_BASE_SPAN = 0.06;
+const DEPTH_AMP_MIN = 0.34;
+const DEPTH_AMP_SPAN = 0.08;
+const DEPTH_RATE_MIN = 0.055;
+const DEPTH_RATE_SPAN = 0.05;
 
 /**
  * The population, and the link strengths between its members.
@@ -168,13 +185,14 @@ function respawnNode(n, seeded = false) {
     ((n.id * PHI) % 1) * LABEL_MODE_COUNT | 0,
   );
 
-  // Depth is the *centre* of this node's excursion, kept off both planes so it
-  // always has room to move toward and away from the viewer.
-  n.zBase = 0.16 + ((0.5 + R2_A3 * i) % 1) * 0.68;
-  n.zAmp = 0.06 + ((i * PHI) % 1) * 0.1;
-  n.zRate = 0.05 + ((i * R2_A2) % 1) * 0.07;   // rad/s — a full breath is 50–120 s
+  // Every node now makes a long, calm traverse instead of breathing inside one
+  // shallow depth band. The low-discrepancy centre, irrational amplitude and
+  // independent phase keep the field distributed rather than synchronised.
+  n.zBase = DEPTH_BASE_MIN + ((0.5 + R2_A3 * i) % 1) * DEPTH_BASE_SPAN;
+  n.zAmp = DEPTH_AMP_MIN + ((i * PHI) % 1) * DEPTH_AMP_SPAN;
+  n.zRate = DEPTH_RATE_MIN + ((i * R2_A2) % 1) * DEPTH_RATE_SPAN;
   n.zPhase = ((i * R2_A1) % 1) * TAU;
-  n.z = n.zBase;
+  n.z = n.zBase + Math.sin(n.zPhase) * n.zAmp;
 
   n.vx = (Math.random() - 0.5) * 6;            // world units/s
   n.vy = (Math.random() - 0.5) * 6;
@@ -365,9 +383,11 @@ export function stepNodes(adt, dt, audioBoost, audioOverall, collectGraph) {
 
     // Depth is a bounded sinusoid rather than an integrated velocity: nodes
     // drift toward the viewer and back without any chance of escaping the
-    // volume over an eight-hour night.
+    // volume over an eight-hour night. The spawn-time bounds keep the entire
+    // curve inside the planes, avoiding the stationary shelf a clamp would
+    // create at either turn.
     node.zPhase += node.zRate * adt;
-    node.z = clamp(node.zBase + Math.sin(node.zPhase) * node.zAmp, 0, 1);
+    node.z = node.zBase + Math.sin(node.zPhase) * node.zAmp;
 
     node.phase += node.phaseRate * adt;
     node.energy = computeNodeEnergy(node, audioBoost);

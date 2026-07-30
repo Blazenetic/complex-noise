@@ -11,7 +11,7 @@ Add to Home Screen on Android for the full experience.
 
 ![Still Field transform-mode callouts with axis-coloured rows](docs/screenshots/info-layer-transform.png)
 
-*Transform detail mode. Axis colours (X red, Y green, Z blue) on the callout rows. The field keeps its residual outlines.*
+*Transform detail mode. Axis detail! The field keeps its residual outlines.*
 
 > It began because a commercial noise app decided ads on every pause and an annual fee were reasonable.  
 > We disagreed.  

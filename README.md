@@ -11,7 +11,7 @@ Add to Home Screen on Android for the full experience.
 
 ![Still Field transform-mode callouts with axis-coloured rows](docs/screenshots/info-layer-transform.png)
 
-*Eight detail modes, four kinds of edge dimension and a source overlay! The field keeps its residual outlines.*
+*Eight detail modes, four kinds of edge dimension and a source overlay! Why? Calm learnings! This repo is full of them*
 
 > It began because a commercial noise app decided ads on every pause and an annual fee were reasonable.  
 > We disagreed.  

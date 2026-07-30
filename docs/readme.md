@@ -25,6 +25,7 @@ The documentation is allowed to have a little more personality. Sometimes a *lot
 | [agent-operations.md](./agent-operations.md) | **Agent operations.** Session bootstrap, task-specific reading routes, reusable commands, validation ladder and durable handover template |
 | [product-requirements.md](./product-requirements.md) | Original product requirements, acceptance criteria, and PR expectations for the Still Theme / Field / EQ work (historical) |
 | [screenshots.md](./screenshots.md) | Stable screenshot catalog and capture principles |
+| [release/](./release/) | **Soft Opening.** First public release strategy, checklist, announcement drafts, and out-of-the-box launch ideas |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to fork, report issues (including security), open PRs, and point your AI agent at AGENTS.md |
 | [../AGENTS.md](../AGENTS.md) | Technical orientation for humans and AI agents — clean, professional, zero banter |
 | [../CHANGELOG.md](../CHANGELOG.md) | What shipped + short Lab Log reactions — reverse-chronological, named campaigns, no Unreleased placeholders |

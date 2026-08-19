@@ -23,7 +23,7 @@ Complex Noise is a pure client-side procedural generator (Brown, Pink, White, Gr
 Built in a small Australian lab by **Blazenetic** (systems architect who researches the hard maths, deep-dives the literature, coordinates the team under firm direction, oversees the architecture, implements the elegant version when needed, then complains about the edge cases), **Arty** (the one who actually tests the sleep timer at 3 a.m. and looks up like someone is about to yell), and a supporting cast of increasingly questionable decision-makers.
 
 **Documents**  
-[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/meet-the-lab.md) · [History](docs/history.md) · [Teachings & Learnings](docs/teachings-and-learnings.md) · [Blame](docs/blame.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/info-layer.md) · [Still Field Architecture](docs/still-field-architecture.md) · [All docs](docs/)
+[Live demo](https://blazenetic.github.io/complex-noise/) · [Meet the Lab](docs/meet-the-lab.md) · [History](docs/history.md) · [Teachings & Learnings](docs/teachings-and-learnings.md) · [Blame](docs/blame.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [AGENTS.md](AGENTS.md) · [Info Layer](docs/info-layer.md) · [Still Field Architecture](docs/still-field-architecture.md) · [System map](https://blazenetic.github.io/complex-noise/docs/architecture-map.html) · [All docs](docs/)
 
 > **Melchett:** A mighty instrument in the war against sleeplessness! Six colours! Zero ticks! The bounce is dead! The clocks we control are the ones we trust! The depth is finally *visible*!  
 > **Darling:** It is a noise generator, Melchett.  
@@ -169,6 +169,8 @@ Dedicated **Minimise interface** button. When the chrome is gone a floating rest
 > The Lab Voice is deliberately absent from that document. The sleep timer depends on it remaining so. Do not “improve” AGENTS.md with banter. Darling will notice.
 
 Want to contribute? See **[CONTRIBUTING.md](./CONTRIBUTING.md)** — how to fork, report security issues, open PRs, and point your AI agent at the right place.
+
+Prefer to *look* at it first? **[System Plate 01](https://blazenetic.github.io/complex-noise/docs/architecture-map.html)** is an isometric site plan of this repository: every module is a solid whose height is its line count and whose shape says what kind of thing it is, and every wire is an import, a call or a payload that exists in the source. Hover a solid to isolate its wiring; run a trace to watch a payload move through cold boot, pressing play, a single frame, or a slider drag. It is one static file with no dependencies ([`docs/architecture-map.html`](./docs/architecture-map.html)).
 
 The codebase is intentionally modular so AI coding agents (and humans) can work on one concern at a time without navigating a single 40 kB file.
 

@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<!--
+  Complex Noise — System Plate 01
+  A standalone, zero-dependency architecture map of this repository.
+  Open it over http:// (npm start) or from GitHub Pages:
+  https://blazenetic.github.io/complex-noise/docs/architecture-map.html
+-->
+<title>Complex Noise Plate 01</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<meta name="description" content="An isometric system map of Complex Noise: every module as a solid, every import and payload as a wire." />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=Chivo:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+
+<style>
+/* ============================================================
+   Complex Noise — System Plate 01
+   Palette lifted wholesale from the app's own bone theme tokens
+   in css/styles.css (:root and [data-still-theme="bone"]).
+   ============================================================ */
+
+:root {
+  /* Sheet — the bone ground, css/styles.css:69-70 */
+  --sheet:        #E0D6C8;
+  --sheet-hi:     #E8DFD2;
+  --sheet-lo:     #D6CCBE;
+  --plate:        #F0EAE0;          /* --still-plate, css/styles.css:94 */
+  --plate-soft:   rgba(240, 234, 224, 0.74);
+  --card:         rgba(236, 228, 216, 0.72);
+
+  /* Ink — css/styles.css:74-76, 91-92 */
+  --ink:          #2A2A32;
+  --ink-2:        #4E4E58;
+  --ink-3:        #787880;
+
+  /* Titanium — the drawing rule, css/styles.css:73 */
+  --rule:         #B5AA9A;
+  --rule-soft:    rgba(181, 170, 154, 0.42);
+  --rule-faint:   rgba(181, 170, 154, 0.20);
+
+  /* Control violet / data cyan — the field's own energy ramp,
+     css/styles.css:86-87 */
+  --control:      #7C3AED;
+  --control-deep: #5B21B6;
+  --data:         #0E9BB5;
+
+  /* Axis triad — css/styles.css:95-97 */
+  --ax-x:         #C0393F;
+  --ax-y:         #4E8C2A;
+  --ax-z:         #2F5FAE;
+
+  /* District masonry: top / left / right face of every solid */
+  --d1-t: #C6CCDC; --d1-l: #A3ABC1; --d1-r: #8B93AA;   /* Shell     */
+  --d2-t: #DCC1BB; --d2-l: #C09C96; --d2-r: #A6827C;   /* Plant     */
+  --d3-t: #CEC3E5; --d3-l: #AEA0CE; --d3-r: #9486B5;   /* Field     */
+  --d4-t: #C7D4BD; --d4-l: #A6B69A; --d4-r: #8D9D81;   /* Proving   */
+
+  --ground:       rgba(181, 170, 154, 0.16);
+  --ground-line:  rgba(181, 170, 154, 0.34);
+  --shadow:       rgba(60, 52, 44, 0.13);
+  --focus:        #7C3AED;
+
+  --step: 1.5rem;
+  --sheet-max: 1560px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sheet:        #0C0C11;
+    --sheet-hi:     #14141E;
+    --sheet-lo:     #08080C;
+    --plate:        rgba(16, 16, 23, 0.92);
+    --plate-soft:   rgba(16, 16, 23, 0.72);
+    --card:         rgba(24, 24, 34, 0.68);
+
+    --ink:          #DCDCE6;
+    --ink-2:        #9A9AA8;
+    --ink-3:        #6E6E7C;
+
+    --rule:         #4C4C5C;
+    --rule-soft:    rgba(120, 120, 145, 0.30);
+    --rule-faint:   rgba(120, 120, 145, 0.15);
+
+    --control:      #A78BFA;
+    --control-deep: #7C3AED;
+    --data:         #22D3EE;
+
+    --ax-x:         #E8656B;
+    --ax-y:         #8BD05A;
+    --ax-z:         #6096E8;
+
+    --d1-t: #3D465B; --d1-l: #2C3344; --d1-r: #1F2532;
+    --d2-t: #573A3C; --d2-l: #412B2D; --d2-r: #2F2022;
+    --d3-t: #413764; --d3-l: #30284C; --d3-r: #241D39;
+    --d4-t: #3A4831; --d4-l: #2B3624; --d4-r: #20281B;
+
+    --ground:       rgba(120, 120, 145, 0.10);
+    --ground-line:  rgba(120, 120, 145, 0.22);
+    --shadow:       rgba(0, 0, 0, 0.45);
+    --focus:        #A78BFA;
+  }
+}
+
+:root[data-theme="dark"] {
+  --sheet:        #0C0C11;
+  --sheet-hi:     #14141E;
+  --sheet-lo:     #08080C;
+  --plate:        rgba(16, 16, 23, 0.92);
+  --plate-soft:   rgba(16, 16, 23, 0.72);
+  --card:         rgba(24, 24, 34, 0.68);
+  --ink:          #DCDCE6;
+  --ink-2:        #9A9AA8;
+  --ink-3:        #6E6E7C;
+  --rule:         #4C4C5C;
+  --rule-soft:    rgba(120, 120, 145, 0.30);
+  --rule-faint:   rgba(120, 120, 145, 0.15);
+  --control:      #A78BFA;
+  --control-deep: #7C3AED;
+  --data:         #22D3EE;
+  --ax-x:         #E8656B;
+  --ax-y:         #8BD05A;
+  --ax-z:         #6096E8;
+  --d1-t: #3D465B; --d1-l: #2C3344; --d1-r: #1F2532;
+  --d2-t: #573A3C; --d2-l: #412B2D; --d2-r: #2F2022;
+  --d3-t: #413764; --d3-l: #30284C; --d3-r: #241D39;
+  --d4-t: #3A4831; --d4-l: #2B3624; --d4-r: #20281B;
+  --ground:       rgba(120, 120, 145, 0.10);
+  --ground-line:  rgba(120, 120, 145, 0.22);
+  --shadow:       rgba(0, 0, 0, 0.45);
+  --focus:        #A78BFA;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--sheet);
+  background-image:
+    linear-gradient(165deg, var(--sheet-hi) 0%, var(--sheet-lo) 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: "Chivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: var(--sheet-max);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 3vw, 40px) 96px;
+}
+
+/* ---------- type ---------- */
+h1, h2, h3, .display {
+  font-family: "Archivo", "Archivo Expanded", ui-sans-serif, system-ui, sans-serif;
+  font-variation-settings: "wdth" 118;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  margin: 0;
+}
+h1 { font-size: clamp(2.1rem, 4.6vw, 3.5rem); line-height: 1.02; }
+h2 { font-size: clamp(1.35rem, 2.2vw, 1.9rem); line-height: 1.12; }
+h3 { font-size: 1.02rem; font-variation-settings: "wdth" 110; letter-spacing: 0; }
+
+.mono, code, .cite, .kv dt, .kv dd, .tick {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+p { margin: 0 0 0.85em; max-width: 66ch; color: var(--ink-2); }
+p.lede { color: var(--ink); font-size: 1.06rem; }
+a { color: var(--control-deep); }
+:root[data-theme="dark"] a { color: var(--control); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) a { color: var(--control); } }
+
+.cite {
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  letter-spacing: 0.01em;
+}
+.cite b { font-weight: 500; color: var(--ink-2); }
+
+/* ---------- drawing-sheet header ---------- */
+.sheet-head {
+  padding: clamp(40px, 7vh, 84px) 0 clamp(24px, 4vh, 40px);
+  border-bottom: 1px solid var(--rule-soft);
+  position: relative;
+}
+.sheet-head::after {
+  /* registration mark, bottom right of the header block */
+  content: "";
+  position: absolute; right: 0; bottom: -7px;
+  width: 13px; height: 13px;
+  border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+}
+.head-grid {
+  display: grid;
+  gap: clamp(20px, 3vw, 48px);
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  align-items: end;
+}
+@media (max-width: 860px) { .head-grid { grid-template-columns: 1fr; } }
+
+.title-block {
+  border: 1px solid var(--rule-soft);
+  background: var(--plate-soft);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.title-block > div {
+  padding: 9px 13px;
+  border-right: 1px solid var(--rule-faint);
+  border-bottom: 1px solid var(--rule-faint);
+  min-width: 0;
+}
+.title-block > div:nth-child(2n) { border-right: none; }
+.title-block > div:nth-last-child(-n+2) { border-bottom: none; }
+.title-block dt {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.6rem; letter-spacing: 0.17em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 2px;
+}
+.title-block dd {
+  margin: 0; font-family: "IBM Plex Mono", monospace;
+  font-size: 0.79rem; color: var(--ink); overflow-wrap: anywhere;
+}
+
+/* ---------- section rhythm ---------- */
+section { padding-top: clamp(52px, 7vh, 88px); }
+.sec-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.sec-head .num {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
+  color: var(--ink-3); letter-spacing: 0.12em;
+  border: 1px solid var(--rule-soft); padding: 2px 7px;
+}
+
+/* ---------- the plate ---------- */
+.plate-shell {
+  margin-top: 22px;
+  border: 1px solid var(--rule-soft);
+  background:
+    linear-gradient(180deg, var(--plate-soft), transparent 62%),
+    var(--card);
+  position: relative;
+}
+.plate-shell::before, .plate-shell::after {
+  content: ""; position: absolute; width: 11px; height: 11px; pointer-events: none;
+}
+.plate-shell::before { top: 7px; left: 7px; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.plate-shell::after  { bottom: 7px; right: 7px; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+
+.plate-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 352px;
+}
+@media (max-width: 1080px) { .plate-grid { grid-template-columns: 1fr; } }
+
+.plate-view {
+  position: relative;
+  min-width: 0;
+  border-right: 1px solid var(--rule-faint);
+  overflow: hidden;
+  touch-action: pan-y;
+}
+@media (max-width: 1080px) { .plate-view { border-right: none; border-bottom: 1px solid var(--rule-faint); } }
+
+#plate { display: block; width: 100%; height: clamp(440px, 62vh, 720px); cursor: grab; }
+#plate.dragging { cursor: grabbing; }
+#plate text { user-select: none; }
+
+.plate-tools {
+  position: absolute; top: 12px; right: 12px;
+  display: flex; gap: 6px; z-index: 3;
+}
+.plate-tools button {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.74rem;
+  width: 30px; height: 30px; line-height: 1;
+  background: var(--plate); color: var(--ink-2);
+  border: 1px solid var(--rule-soft); cursor: pointer;
+}
+.plate-tools button:hover { color: var(--ink); border-color: var(--rule); }
+
+.plate-hint {
+  position: absolute; left: 14px; bottom: 12px; z-index: 3;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.66rem;
+  color: var(--ink-3); letter-spacing: 0.06em; pointer-events: none;
+}
+
+/* ---------- explainer panel ---------- */
+.panel {
+  padding: 18px 20px 22px;
+  min-width: 0;
+  display: flex; flex-direction: column; gap: 14px;
+  max-height: clamp(440px, 62vh, 720px);
+  overflow-y: auto;
+}
+@media (max-width: 1080px) { .panel { max-height: none; } }
+.panel-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.62rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+}
+.panel-tag i { width: 9px; height: 9px; display: block; border: 1px solid currentColor; }
+.panel h3 { font-size: 1.18rem; font-variation-settings: "wdth" 116; }
+.panel .path {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.76rem;
+  color: var(--control-deep); overflow-wrap: anywhere;
+}
+:root[data-theme="dark"] .panel .path { color: var(--control); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .panel .path { color: var(--control); } }
+.panel p { font-size: 0.9rem; margin: 0; }
+
+.kv { margin: 0; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 3px 12px; }
+.kv dt { font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.kv dd { margin: 0; font-size: 0.76rem; color: var(--ink-2); overflow-wrap: anywhere; }
+
+.wire-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.wire-list li {
+  display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 9px;
+  font-size: 0.78rem; color: var(--ink-2); align-items: start;
+}
+.wire-list li i {
+  display: block; height: 2px; margin-top: 8px;
+  background: var(--control);
+}
+.wire-list li[data-kind="data"] i {
+  background: repeating-linear-gradient(90deg, var(--data) 0 3px, transparent 3px 5px);
+}
+.wire-list li b { color: var(--ink); font-weight: 500; }
+.wire-list li .payload {
+  display: block;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--ink-3);
+}
+
+.bite {
+  border-left: 2px solid var(--ax-x);
+  padding: 8px 0 8px 12px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ax-x) 9%, transparent), transparent 70%);
+}
+.bite .eyebrow { color: var(--ax-x); font-size: 0.6rem; }
+.bite p { font-size: 0.82rem; margin-top: 3px; }
+
+/* ---------- legend rail ---------- */
+.legend {
+  border-top: 1px solid var(--rule-faint);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.legend > div {
+  padding: 15px 18px 17px;
+  border-right: 1px solid var(--rule-faint);
+  min-width: 0;
+}
+.legend > div:last-child { border-right: none; }
+.legend h4 {
+  margin: 0 0 10px; font-family: "IBM Plex Mono", monospace;
+  font-size: 0.62rem; font-weight: 500; letter-spacing: 0.17em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.legend ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.legend li { display: flex; gap: 9px; align-items: flex-start; font-size: 0.76rem; color: var(--ink-2); line-height: 1.42; }
+.legend li b { color: var(--ink); font-weight: 500; }
+
+.swatch { width: 15px; height: 15px; flex: 0 0 15px; margin-top: 2px; border: 1px solid var(--rule-soft); }
+.glyph { width: 22px; height: 18px; flex: 0 0 22px; margin-top: 1px; }
+
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.toggles button, .trace-bar button {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem;
+  padding: 5px 10px; cursor: pointer;
+  background: transparent; color: var(--ink-2);
+  border: 1px solid var(--rule-soft);
+  letter-spacing: 0.03em;
+}
+.toggles button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--control) 15%, transparent);
+  border-color: var(--control); color: var(--ink);
+}
+.toggles button:hover, .trace-bar button:hover { border-color: var(--rule); color: var(--ink); }
+
+/* ---------- trace bar ---------- */
+.trace-bar {
+  border-top: 1px solid var(--rule-faint);
+  padding: 14px 18px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+}
+.trace-bar .label {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.62rem;
+  letter-spacing: 0.17em; text-transform: uppercase; color: var(--ink-3);
+  margin-right: 4px;
+}
+.trace-bar button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--data) 18%, transparent);
+  border-color: var(--data); color: var(--ink);
+}
+.trace-step {
+  flex: 1 1 100%;
+  font-size: 0.82rem; color: var(--ink-2);
+  border-left: 2px solid var(--data); padding-left: 11px;
+  min-height: 1px;
+}
+.trace-step:empty { display: none; }
+.trace-step b { color: var(--ink); font-weight: 500; }
+.trace-step .cite { display: block; margin-top: 2px; }
+
+/* ---------- pipeline strip ---------- */
+.pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: var(--rule-faint); border: 1px solid var(--rule-soft); }
+.pipeline > div { background: var(--card); padding: 17px 18px 19px; }
+.pipeline .tick { font-size: 0.66rem; color: var(--ink-3); letter-spacing: 0.12em; }
+.pipeline h3 { margin: 5px 0 7px; font-size: 0.98rem; }
+.pipeline p { font-size: 0.81rem; margin: 0 0 8px; }
+.pipeline .stage-bar { height: 3px; background: var(--rule-faint); margin-bottom: 13px; }
+.pipeline .stage-bar i { display: block; height: 100%; }
+
+/* ---------- rule cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start; }
+.card {
+  border: 1px solid var(--rule-soft);
+  background: var(--card);
+  padding: 19px 20px 21px;
+  position: relative;
+}
+.card h3 { margin-bottom: 7px; }
+.card p { font-size: 0.85rem; margin-bottom: 10px; }
+.card .cite { display: block; }
+.card::after {
+  content: ""; position: absolute; top: -1px; left: -1px; width: 26px; height: 2px;
+  background: var(--accent, var(--control));
+}
+
+pre {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: var(--plate-soft);
+  border: 1px solid var(--rule-faint);
+  overflow-x: auto;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.62;
+  color: var(--ink-2);
+}
+pre b { color: var(--control-deep); font-weight: 500; }
+:root[data-theme="dark"] pre b { color: var(--control); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) pre b { color: var(--control); } }
+pre .c { color: var(--ink-3); }
+
+.table-scroll { overflow-x: auto; border: 1px solid var(--rule-soft); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.8rem; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--rule-faint); }
+th {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-3); font-weight: 500;
+  background: var(--plate-soft);
+}
+td { color: var(--ink-2); }
+td.mono { color: var(--ink); }
+tbody tr:last-child td { border-bottom: none; }
+
+footer {
+  margin-top: clamp(56px, 8vh, 96px);
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 20px;
+  display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: baseline;
+}
+footer p { font-size: 0.78rem; margin: 0; }
+
+:where(button, [tabindex="0"], a):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="sheet-head">
+    <div class="head-grid">
+      <div>
+        <p class="eyebrow">Complex Noise &middot; system plate 01</p>
+        <h1>Forty-one solids on a bone plate.</h1>
+        <p class="lede">A zero-dependency noise generator for sleep, drawn as a site plan.
+        Every solid is a real file, its height is that file&rsquo;s line count, and its shape says
+        what kind of thing it is. Every wire is an import, a call or a payload that exists in
+        the source. Hover a solid to isolate its wiring; run a trace to watch a payload move.</p>
+      </div>
+      <dl class="title-block">
+        <div><dt>Drawing</dt><dd>System plate 01 &mdash; rev A</dd></div>
+        <div><dt>Subject</dt><dd>Blazenetic/complex-noise</dd></div>
+        <div><dt>Projection</dt><dd>Dimetric 2:1, north-east</dd></div>
+        <div><dt>Height datum</dt><dd>&radic;(lines / 1870)</dd></div>
+        <div><dt>Solids</dt><dd>41 across 4 districts</dd></div>
+        <div><dt>Wires</dt><dd>20 control &middot; 14 payload</dd></div>
+        <div><dt>Build step</dt><dd>None. Static files.</dd></div>
+        <div><dt>Contract</dt><dd>AGENTS.md</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <!-- ===================== THE PLATE ===================== -->
+  <section id="plate-section">
+    <div class="sec-head">
+      <span class="num">01</span>
+      <h2>The site plan</h2>
+    </div>
+    <p>The app ships as static files from GitHub Pages &mdash; no bundler, no runtime package,
+    no build step (<span class="cite"><b>AGENTS.md</b>, &ldquo;What this is&rdquo;</span>). That makes the
+    module graph the whole infrastructure diagram: there is no server tier to draw, because there
+    isn&rsquo;t one. What follows is that graph, at scale.</p>
+
+    <div class="plate-shell">
+      <div class="plate-grid">
+        <div class="plate-view">
+          <svg id="plate" role="img" aria-label="Isometric site plan of the Complex Noise module graph. Use the module table below the plate for the same information as text."></svg>
+          <div class="plate-tools">
+            <button type="button" id="zoomIn" title="Zoom in" aria-label="Zoom in">+</button>
+            <button type="button" id="zoomOut" title="Zoom out" aria-label="Zoom out">&minus;</button>
+            <button type="button" id="zoomReset" title="Reset view" aria-label="Reset view">&#8634;</button>
+          </div>
+          <p class="plate-hint">drag to pan &middot; scroll to zoom &middot; tab to walk the solids</p>
+        </div>
+
+        <aside class="panel" id="panel" aria-live="polite">
+          <!-- filled by script -->
+        </aside>
+      </div>
+
+      <div class="trace-bar">
+        <span class="label">Trace</span>
+        <button type="button" class="trace-btn" data-trace="boot" aria-pressed="false">Cold boot</button>
+        <button type="button" class="trace-btn" data-trace="play" aria-pressed="false">Press play</button>
+        <button type="button" class="trace-btn" data-trace="frame" aria-pressed="false">One frame @ 30 fps</button>
+        <button type="button" class="trace-btn" data-trace="slider" aria-pressed="false">Drag the depth slider</button>
+        <button type="button" class="trace-btn" data-trace="stop" aria-pressed="false">Stop</button>
+        <p class="trace-step" id="traceStep"></p>
+      </div>
+
+      <div class="legend">
+        <div>
+          <h4>Districts</h4>
+          <ul>
+            <li><span class="swatch" style="background: var(--d1-t)"></span><span><b>Shell</b> &mdash; markup, tokens, manifest. The page itself.</span></li>
+            <li><span class="swatch" style="background: var(--d2-t)"></span><span><b>Plant</b> &mdash; transport, generators, persistence, DOM.</span></li>
+            <li><span class="swatch" style="background: var(--d3-t)"></span><span><b>Field</b> &mdash; the renderer, one module per concern.</span></li>
+            <li><span class="swatch" style="background: var(--d4-t)"></span><span><b>Proving ground</b> &mdash; tests, CI, contract, record.</span></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Form is meaning</h4>
+          <ul id="formLegend"></ul>
+        </div>
+        <div>
+          <h4>Wires</h4>
+          <ul>
+            <li><svg class="glyph" viewBox="0 0 22 18" aria-hidden="true"><path d="M1 9h20" stroke="var(--control)" stroke-width="2" fill="none"/></svg><span><b>Control</b> &mdash; a call or an import. Who makes whom do something.</span></li>
+            <li><svg class="glyph" viewBox="0 0 22 18" aria-hidden="true"><path d="M1 9h20" stroke="var(--data)" stroke-width="2" stroke-dasharray="3 3" fill="none"/><circle cx="13" cy="9" r="2.6" fill="var(--data)"/></svg><span><b>Payload</b> &mdash; a value crossing a boundary. The dot is the value.</span></li>
+            <li><svg class="glyph" viewBox="0 0 22 18" aria-hidden="true"><path d="M2 15 L11 3 L20 15" stroke="var(--ink-3)" stroke-width="1.2" fill="none"/></svg><span>Height is <b>lines of source</b>, on a square-root scale so <code>styles.css</code> at 1,870 doesn&rsquo;t flatten <code>math.js</code> at 23.</span></li>
+          </ul>
+          <div class="toggles" style="margin-top: 12px">
+            <button type="button" id="tControl" aria-pressed="true">control</button>
+            <button type="button" id="tData" aria-pressed="true">payload</button>
+            <button type="button" id="tLabels" aria-pressed="true">labels</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FRAME PIPELINE ===================== -->
+  <section>
+    <div class="sec-head">
+      <span class="num">02</span>
+      <h2>One frame, in fixed order</h2>
+    </div>
+    <p><code>js/still-field/loop.js</code> is the only place a frame is defined. It runs at a
+    user-chosen cap of 30, 45 or 60&nbsp;fps &mdash; defaulting to 30, because this thing runs for
+    eight hours on a phone. Because the cap is a setting, nothing inside may be expressed
+    &ldquo;per frame&rdquo;: every decay, fade and smoothing is a rate per second run through
+    <code>1&nbsp;&minus;&nbsp;exp(&minus;rate&nbsp;&middot;&nbsp;dt)</code>.
+    Each stage below writes its own smoothed millisecond figure into <code>telemetry</code>,
+    which is what the Code view of the in-app stats panel reads back.</p>
+
+    <div class="pipeline">
+      <div>
+        <p class="tick">STAGE 0 &middot; telemetry.msUpdate</p>
+        <h3>Update</h3>
+        <div class="stage-bar"><i style="width: 34%; background: var(--ax-z)"></i></div>
+        <p>Audio metrics in; node step, depth projection and the spatial grid out. One pass over
+        the population, then <code>buildGrid()</code>.</p>
+        <span class="cite"><b>loop.js:106&ndash;120</b> &middot; <b>nodes.js:329</b></span>
+      </div>
+      <div>
+        <p class="tick">STAGE 1 &middot; telemetry.msLinks</p>
+        <h3>Links</h3>
+        <div class="stage-bar"><i style="width: 62%; background: var(--control)"></i></div>
+        <p>The 5-cell half-neighbourhood is visited once. Envelopes, batching, painted edges
+        <em>and</em> all graph telemetry come out of this single scan &mdash; a second O(n&sup2;) pass
+        would be an overnight battery regression.</p>
+        <span class="cite"><b>link-pass.js:65</b></span>
+      </div>
+      <div>
+        <p class="tick">STAGE 2 &middot; telemetry.msNodes</p>
+        <h3>Nodes</h3>
+        <div class="stage-bar"><i style="width: 28%; background: var(--data)"></i></div>
+        <p>Flat pass first, then a rationed glow pass carrying <code>shadowBlur</code>. The glow
+        pass stops at 10 nodes and is skipped outright under reduced motion, so nothing may be
+        deferred to it unconditionally.</p>
+        <span class="cite"><b>node-pass.js:27,38</b></span>
+      </div>
+      <div>
+        <p class="tick">STAGE 3 &middot; telemetry.msInfo</p>
+        <h3>Info layer</h3>
+        <div class="stage-bar"><i style="width: 47%; background: var(--ax-y)"></i></div>
+        <p>A separate canvas, cleared outright each frame. The source listing claims its corner
+        first, then edge dimensions, then callouts, then the listing paints on top.</p>
+        <span class="cite"><b>loop.js:190&ndash;209</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== THE RULE ===================== -->
+  <section>
+    <div class="sec-head">
+      <span class="num">03</span>
+      <h2>The one architectural rule</h2>
+    </div>
+    <div class="cards">
+      <div class="card" style="--accent: var(--ax-x)">
+        <h3>State modules publish. <code>app.js</code> renders.</h3>
+        <p><code>audio.js</code>, <code>still-field.js</code>, <code>theme.js</code> and
+        <code>ui-chrome.js</code> each expose <code>getState()</code> and <code>subscribe(fn)</code>.
+        <code>subscribe</code> fires immediately with the current snapshot and again on every change.
+        Event handlers never touch the UI.</p>
+        <pre><span class="c">// Wrong: misses every change that
+// has no click behind it.</span>
+btn.onclick = () =&gt; {
+  audio.play();
+  btn.innerHTML = PAUSE_ICON;
+};
+
+<span class="c">// Right: one render path, whatever
+// caused the change.</span>
+btn.onclick = () =&gt; audio.play();
+audio.<b>subscribe</b>(s =&gt; {
+  btn.innerHTML = s.isPlaying
+    ? PAUSE_ICON : PLAY_ICON;
+});</pre>
+        <p>This is not taste. Playback stops on its own when the sleep timer fires, and updating
+        the button inside its click handler is exactly how it ends up frozen on &ldquo;pause&rdquo;
+        over silent audio at 3&nbsp;a.m. That bug shipped once.</p>
+        <span class="cite"><b>AGENTS.md</b> &middot; guarded by <b>tests/run.mjs</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--control)">
+        <h3>One writer per shared object</h3>
+        <p>An imported binding is read-only in ES modules, so <code>export&nbsp;let</code> cannot be
+        assigned across files. <code>settings</code>, <code>view</code>, <code>world</code>,
+        <code>grid</code>, <code>clock</code>, <code>telemetry</code>, <code>population</code> and
+        <code>paint</code> are each a plain object owned by exactly one module and read by many.
+        On the plate they are the <b>silos</b>. To change one, you add a function to its owner &mdash;
+        you never add a second writer.</p>
+        <span class="cite"><b>docs/still-field-architecture.md:88</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--data)">
+        <h3>Imports point one way</h3>
+        <p>The renderer&rsquo;s import graph is a DAG and must stay one. The leaves &mdash;
+        <code>math</code>, <code>clock</code>, <code>telemetry</code>, <code>grid</code>,
+        <code>keep-outs</code>, <code>palette</code>, <code>view</code> &mdash; import nothing from the
+        field. <code>stats.js</code> is allowed to know about everything and is imported only by the
+        front door. When a change would need a cycle, the shared thing wants its own module:
+        <code>modes.js</code> exists for exactly that reason.</p>
+        <span class="cite"><b>docs/still-field-architecture.md:129</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--ax-y)">
+        <h3>Side effects compose in the front door</h3>
+        <p>A setter in <code>settings.js</code> clamps and persists, full stop. Knowing that a depth
+        change <em>also</em> means remeasuring the world and then re-counting the nodes lives in
+        <code>js/still-field.js</code>, where it reads as a list rather than a call chain.</p>
+        <pre>export function setStillFieldDepth(v) {
+  prefs.<b>setDepth</b>(v);   <span class="c">// clamp + persist</span>
+  <b>measureWorld</b>(population.nodes.length);
+  <b>applyNodeCount</b>();
+  <b>emit</b>();              <span class="c">// tell everyone</span>
+}</pre>
+        <span class="cite"><b>js/still-field.js:280&ndash;285</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== INVARIANTS ===================== -->
+  <section>
+    <div class="sec-head">
+      <span class="num">04</span>
+      <h2>Load-bearing weirdness</h2>
+    </div>
+    <p>Several solids on the plate are shaped by a bug that already happened. These are the ones a
+    reader of the diagram would otherwise assume were arbitrary.</p>
+
+    <div class="cards">
+      <div class="card" style="--accent: var(--ax-x)">
+        <h3>The analyser sits <em>before</em> the gain node</h3>
+        <p>So the visualisation tracks the noise itself, not the listening volume. Turning the
+        volume down does not calm the field.</p>
+        <pre>stillEqLow &rarr; stillEqMid &rarr; stillEqHigh
+   &rarr; <b>analyser</b> &rarr; gain &rarr; destination</pre>
+        <span class="cite"><b>js/audio.js:189,203</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--control)">
+        <h3>The buffer must be <em>periodic</em>, not merely long</h3>
+        <p>A 12-second buffer loops all night, so a filter started from zero state puts a step in
+        the level every twelve seconds until morning. Every stateful generator runs a second pass
+        over the head of its white-noise sequence to carry state round the join, and LFO rates come
+        from <code>lfoStep()</code>, which rounds to whole cycles.</p>
+        <span class="cite"><b>js/noise.js:66&ndash;119</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--data)">
+        <h3>Text and the trail cannot share a canvas</h3>
+        <p><code>#stillField</code> subtracts alpha every frame with <code>destination-out</code>;
+        a moving label drawn onto it leaves half a second of decaying copies of itself. All
+        instrumentation goes on <code>#stillFieldInfo</code>, cleared outright, never blurred.
+        Legibility comes from a plate behind the text, not a glow.</p>
+        <span class="cite"><b>AGENTS.md</b> &middot; <b>docs/info-layer.md:19</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--ax-z)">
+        <h3>Canvas labels dodge the interface</h3>
+        <p>The canvas paints <em>behind</em> the controls, so a label under a card is a
+        <code>fillText</code> nobody can see. <code>app.js</code> measures the chrome and pushes
+        rectangles to <code>setLabelKeepOuts()</code> on resize, scroll, panel toggle and minimise
+        &mdash; the renderer never measures the document itself, because a
+        <code>getBoundingClientRect</code> per frame forces layout.</p>
+        <span class="cite"><b>js/app.js:488&ndash;510</b> &rarr; <b>keep-outs.js:31</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--ax-y)">
+        <h3>A lazily allocated cache must be lazily released</h3>
+        <p>The source listing rasterises into an <code>OffscreenCanvas</code> &mdash; 434&nbsp;KiB at
+        DPR&nbsp;1, <b>1.7&nbsp;MiB</b> at the DPR&nbsp;2 cap. The first version was never freed, so a
+        phone locked at 3&nbsp;a.m. held it all night. <code>layoutCodeTicker()</code> releases it
+        whenever the listing is not printing, and <code>stopLoop()</code> releases it on every way
+        the loop can stop.</p>
+        <span class="cite"><b>code-ticker.js:174,222</b> &middot; <b>loop.js:218</b></span>
+      </div>
+
+      <div class="card" style="--accent: var(--control-deep)">
+        <h3><code>setTimeout</code> is not a promise about time</h3>
+        <p>A backgrounded tab throttles timers to once a minute; a suspended phone does not run them
+        at all. The sleep timer stores an absolute wall-clock <code>timerEndsAt</code> and treats the
+        timeout as a hint, re-checking the deadline on every visibility change. The overshoot it
+        prevents is the app playing for hours past the hour somebody asked for.</p>
+        <span class="cite"><b>js/audio.js:424&ndash;495</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== INDEX ===================== -->
+  <section>
+    <div class="sec-head">
+      <span class="num">05</span>
+      <h2>Schedule of solids</h2>
+    </div>
+    <p>Every solid on the plate, as text &mdash; the same data, sortable by eye. <em>Lines</em> is the
+    height datum.</p>
+    <div class="table-scroll">
+      <table id="scheduleTable">
+        <thead>
+          <tr><th>Solid</th><th>Path</th><th>Lines</th><th>Form</th><th>District</th><th>Role</th></tr>
+        </thead>
+        <tbody id="scheduleBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p class="eyebrow">Plate 01 &middot; rev A</p>
+    <p>Drawn from <code>AGENTS.md</code>, <code>docs/still-field-architecture.md</code>,
+    <code>docs/info-layer.md</code> and the source at the commit this page was committed against.
+    Line counts are literal. If a solid looks wrong, the source moved.</p>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ============================================================
+// 1. THE SCHEDULE OF SOLIDS
+//    loc  = literal `wc -l` at the drawn commit; it is the height datum.
+//    form = what kind of thing it is (see FORMS).
+//    gx/gy/w/d = plan position and footprint, in tile units.
+// ============================================================
+
+const DISTRICTS = {
+  // `tag` nudges the zone name clear of whatever happens to be beneath it.
+  1: { name: 'Shell',          tag: [-22, -38], blurb: 'The page itself: markup, tokens, manifest.' },
+  2: { name: 'Plant',          tag: [-8, -34],  blurb: 'Transport, generators, persistence, DOM.' },
+  3: { name: 'Field',          tag: [10, -17],  blurb: 'The renderer — one module per concern.' },
+  4: { name: 'Proving ground', tag: [11, 23], edge: 'sw', blurb: 'Tests, CI, contract, record.' },
+};
+
+const FORMS = {
+  stack:   'Orchestrator — composes other modules and owns the wiring.',
+  silo:    'Shared state object with exactly one writer.',
+  saw:     'A draw pass. Runs inside every frame.',
+  mast:    'Leaf — imports nothing from its own district.',
+  hall:    'Content surface — markup, tokens, strings, snapshots.',
+  vault:   'Verification — proves the rest of the plate still holds.',
+  obelisk: 'The contract. Read before the first edit.',
+};
+
+const M = [
+// ---------- district 1 · SHELL ----------
+{ id:'index', name:'index.html', path:'index.html', loc:545, dis:1, form:'hall', gx:0, gy:0, w:2.6, d:2.0,
+  role:'Markup only, plus a boot guard for the file:// case.',
+  note:'Two canvases, the control column, the stats panel and the Field Lab. It carries no behaviour: every control is bound from a data attribute by app.js, so adding a noise colour is three lines of markup and no event wiring.',
+  facts:[['Owns','#stillField, #stillFieldInfo, #nerdHud, #labPanel'],['Boots','<script type="module" src="js/app.js">']],
+  bite:'ES modules are fetched with CORS, so opening this from the filesystem does not work. It needs http://.',
+  cite:'AGENTS.md, "Run it"' },
+
+{ id:'styles', name:'styles.css', path:'css/styles.css', loc:1870, dis:1, form:'hall', gx:3.2, gy:0, w:2.0, d:2.0,
+  role:'Every theme token and all layout. The tallest solid on the plate.',
+  note:'Themes and glass modes are independent axes on <html>: data-still-theme (dark | bone) and data-glass (standard | ultra). The renderer reads --still-field-node, --still-field-edge, --still-field-mid, --still-field-spark and --still-field-glow once per theme change and pre-builds a 16-step quantised ramp from them. Restyling the field is a CSS edit, not a JS one.',
+  facts:[['Rebrand','every colour is a custom property in the :root blocks'],['Read by','palette.js, once per theme change']],
+  bite:'This page borrows its palette from here — the bone ground, the titanium rule, the violet and the cyan spark are the app’s own tokens.',
+  cite:'css/styles.css:19-105' },
+
+{ id:'manifest', name:'manifest.json', path:'manifest.json', loc:19, dis:1, form:'mast', gx:5.8, gy:0, w:1.2, d:1.2,
+  role:'PWA manifest. Standalone display, portrait, inline SVG icon.',
+  note:'The icon is a data: URI so the app still ships as pure static files with nothing to fetch alongside them.',
+  facts:[['start_url','./'],['theme_color','#0C0C11']],
+  cite:'manifest.json' },
+
+// ---------- district 2 · PLANT ----------
+{ id:'app', name:'app.js', path:'js/app.js', loc:1017, dis:2, form:'stack', gx:0, gy:3.6, w:3.0, d:2.2,
+  role:'DOM wiring — the only module that touches the app’s DOM.',
+  note:'It subscribes to all four state modules and does every DOM write inside those callbacks. It also measures the interface and hands the renderer a list of rectangles to keep labels out of, and it drives the stats panel on a 250 ms interval — never in the render loop, and only for the view that is actually showing.',
+  facts:[['Subscribes to','audio · still-field · theme · ui-chrome'],['Panel tick','setInterval(updateNerdHud, 250) — app.js:465'],['Keep-outs','measured on resize, scroll, toggle, minimise']],
+  bite:'The play button animates forever, so Playwright never considers it stable. The tests click it with { force: true }.',
+  cite:'js/app.js:26-31, 465, 488-510, 972-1013' },
+
+{ id:'audio', name:'audio.js', path:'js/audio.js', loc:565, dis:2, form:'stack', gx:3.8, gy:3.6, w:2.4, d:2.2,
+  role:'Web Audio graph, transport, EQ, sleep timer, wake lock.',
+  note:'The permanent chain is built once and never rebuilt: lowshelf 220 Hz → peaking 1 kHz → highshelf 3.5 kHz → analyser → gain → destination. Only the buffer source is created and disposed. Both the wake lock and the fades are asynchronous, and both have a race that already cost a night of battery.',
+  facts:[['Publishes','{ isPlaying, type, volume, eq, timerHours, status }'],['Analyser','fftSize 256 · smoothing 0.82 · before the gain node'],['Timer','absolute wall-clock deadline, re-checked on visibility']],
+  bite:'navigator.wakeLock.request() resolves after the click that asked for it, so playback can already have stopped. requestWakeLock() re-checks isPlaying after the await and releases immediately if it lost the race.',
+  cite:'js/audio.js:163-208, 424-495' },
+
+{ id:'noise', name:'noise.js', path:'js/noise.js', loc:363, dis:2, form:'hall', gx:6.9, gy:3.6, w:2.0, d:2.2,
+  role:'The six generators: brown, pink, white, green, fan, rain.',
+  note:'Each colour is written out inline rather than handed to one shared loop taking a step function — the tidier version measured six times slower, because the shared call site sees a different closure per colour and nothing inlines. Buffer generation blocks the main thread inside a 150 ms cross-fade, so that difference is audible.',
+  facts:[['Buffer','ctx.createBuffer(1, sampleRate × 12, sampleRate)'],['Loudness','matched A-weighted, not on RMS'],['Headroom','peaks near 5.15× RMS, so RMS stays under ~0.2']],
+  bite:'The buffer loops forever, so it must be periodic — long is not enough. Stateful generators run a second pass over the head of their white-noise sequence to carry filter state round the join, and LFO rates round to whole cycles.',
+  cite:'js/noise.js:66-119, 349-362' },
+
+{ id:'storage', name:'storage.js', path:'js/storage.js', loc:204, dis:2, form:'mast', gx:0, gy:6.4, w:1.8, d:1.6,
+  role:'Safe typed localStorage access. Never call localStorage directly.',
+  note:'It throws — it does not return null — when storage is disabled, and every module reads persisted state at import time, so one unguarded read takes the whole app down before first paint. write() is for discrete choices; writeThrottled() is for continuous controls, and read() consults the pending value first so a setting is live immediately.',
+  facts:[['Why throttled','a slider fires input at pointer-move rate, and setItem is synchronous'],['Flushed on','pagehide and the hidden transition']],
+  bite:'parseFloat(x) || fallback silently discards a stored 0 — which is exactly what a muted volume looks like.',
+  cite:'js/storage.js:60-163' },
+
+{ id:'constants', name:'constants.js', path:'js/constants.js', loc:125, dis:2, form:'mast', gx:2.4, gy:6.4, w:1.8, d:1.6,
+  role:'Durations, defaults, valid ranges, storage keys, icons.',
+  note:'Every Field Lab range must match its STILL_*_MIN / STILL_*_MAX pair here and every default the matching DEFAULTS entry. The browser suite asserts the defaults, so changing one without updating the assertion fails CI.',
+  facts:[['Defaults','volume 0.22 · field on · intensity 0.7 · speed 2.0 · 30 fps'],['Ranges','speed 0.7–4.8 · density 0.5–2.2 · trail 2–26/s']],
+  cite:'js/constants.js:27-95' },
+
+{ id:'theme', name:'theme.js', path:'js/theme.js', loc:112, dis:2, form:'silo', gx:4.8, gy:6.4, w:1.5, d:1.6,
+  role:'Dark ↔ bone theme, and standard ↔ ultra glass.',
+  note:'Two independent axes stamped on <html>. Applied before anything measures colours, because palette.js reads computed custom properties.',
+  facts:[['Publishes','{ theme, glass }'],['Bone','#E0D6C8 ground, #7C3AED accent, #0E9BB5 spark']],
+  cite:'js/theme.js:21-101' },
+
+{ id:'uichrome', name:'ui-chrome.js', path:'js/ui-chrome.js', loc:58, dis:2, form:'silo', gx:6.9, gy:6.4, w:1.5, d:1.6,
+  role:'Immersion — hide and show the main controls.',
+  note:'The smallest state module on the plate, and it still follows the rule: it publishes, app.js renders. Hiding the chrome changes where canvas labels are allowed to go, so a toggle here re-measures the keep-outs.',
+  facts:[['Publishes','{ hidden }'],['Escape','always restores the full interface']],
+  cite:'js/ui-chrome.js:20-57' },
+
+{ id:'hud', name:'hud.js', path:'js/hud.js', loc:310, dis:2, form:'hall', gx:8.9, gy:6.4, w:1.8, d:1.6,
+  role:'The stats panel’s strings. Pure, and owns no DOM.',
+  note:'It turns a stats snapshot into an object of strings; app.js maps each key to an element. A hud.js that wrote into #nerdHud would be a second module touching the app’s DOM, and the exception would then be citable by a third.',
+  facts:[['Contract','HUD_ROW_KEYS — defineRowMap() rejects a missing or retired key at boot'],['Views','Live (grouped) · Math (live operands) · Code (per-stage ms)']],
+  bite:'The browser suite fails naming any row still reading the — that index.html seeded, after the field has started.',
+  cite:'js/hud.js:37-60, 159' },
+
+// ---------- district 3 · FIELD ----------
+{ id:'stillfield', name:'still-field.js', path:'js/still-field.js', loc:390, dis:3, form:'stack', gx:0, gy:9.6, w:3.0, d:2.0,
+  role:'The front door. Owns the public API and nothing else.',
+  note:'This is what app.js imports. Side effects compose here: a setter in settings.js clamps and persists, full stop — knowing that a depth change also means remeasuring the world and then re-counting the nodes lives in this file, where it reads as a list rather than a call chain.',
+  facts:[['Exports','the whole surface tests/run.mjs names'],['Composes','prefs.setX → measureWorld → applyNodeCount → emit']],
+  cite:'js/still-field.js:52-68, 280-285' },
+
+{ id:'loop', name:'loop.js', path:'js/still-field/loop.js', loc:252, dis:3, form:'stack', gx:3.8, gy:9.6, w:2.4, d:2.0,
+  role:'One frame, and the loop control around it.',
+  note:'Defaults to 30 fps, stops outright when the page is hidden, allocates nothing per frame and rations shadowBlur. Motion is integrated from elapsed time capped at 100 ms, so a stall or a hidden tab cannot fling the field across the screen when it comes back.',
+  facts:[['Order','trail → links → nodes → info layer'],['Cap','30 / 45 / 60, a user setting'],['Hidden','stopLoop() — requesting frames the browser will throttle still wakes the compositor']],
+  bite:'Because the cap is a setting, nothing may be expressed "per frame". Decays, fades and smoothing all use 1 − exp(−rate · dt).',
+  cite:'js/still-field/loop.js:56-102, 218-251' },
+
+{ id:'settings', name:'settings.js', path:'js/still-field/settings.js', loc:243, dis:3, form:'silo', gx:6.8, gy:9.6, w:2.0, d:2.0,
+  role:'What the user chose, and the snapshot the UI renders.',
+  note:'Owns the `settings` object — one writer, many readers. Every setter clamps and persists and does nothing else. subscribe() fires immediately with the current snapshot and again on every change, which is why it is also the initial render.',
+  facts:[['Keys','11 complexNoise_stillField* entries'],['Snapshot','plain object, so a field can be added without every caller changing shape']],
+  cite:'js/still-field/settings.js:48-149' },
+
+{ id:'nodes', name:'nodes.js', path:'js/still-field/nodes.js', loc:415, dis:3, form:'silo', gx:9.4, gy:9.6, w:2.2, d:2.0,
+  role:'The population: model, lifecycle, one simulation step.',
+  note:'stepNodes() walks the population once: lifecycle envelope, damped random walk in world units per second, world wrap, a bounded sinusoidal depth, then the perspective projection — computed here once and reused by the edge, node and callout passes.',
+  facts:[['Projection','scale = 1 / (1 + z · depth); sx = cx + x · scale'],['Depth','a bounded sinusoid, not an integrated velocity — nothing escapes the volume over eight hours'],['Ends with','buildGrid(nodes, n, …) — nodes.js:414']],
+  bite:'Linking only visits the 5-cell half-neighbourhood, so a pair that stops being visited freezes its envelope. Every discontinuous move — respawn, world wrap, rescale — must clear that node’s links.',
+  cite:'js/still-field/nodes.js:329-415' },
+
+{ id:'world', name:'world.js', path:'js/still-field/world.js', loc:96, dis:3, form:'silo', gx:12.2, gy:9.6, w:1.8, d:2.0,
+  role:'The world plane, the projection, the link radius.',
+  note:'The link radius is derived from the mean spacing between nodes rather than fixed in pixels: the expected neighbours inside radius r is π·(r/spacing)² − 1, so tying r to spacing keeps a phone and a desktop at the same ≈3 connections per node instead of a dense mesh on one and dust on the other.',
+  facts:[['linkRadius','spacing × (0.8 + intensity × 0.5) × reach'],['Call after','resize, depth, reach, intensity, density, population']],
+  bite:'Node density multiplies the clamped 26–44 window, not the raw viewport area. Applying it to the raw figure opens a 1440×900 display on 132 nodes at the default setting.',
+  cite:'js/still-field/world.js:44-95' },
+
+{ id:'grid', name:'grid.js', path:'js/still-field/grid.js', loc:144, dis:3, form:'silo', gx:14.6, gy:9.6, w:1.8, d:2.0,
+  role:'A uniform spatial grid over a rectangle.',
+  note:'This is what turns the lattice from O(n²) into roughly ten times fewer pair tests at higher densities. Only the 5-cell half-neighbourhood is visited, which is what makes each pair appear exactly once.',
+  facts:[['Neighbourhood','NEIGHBOUR_DX/DY — 5 cells, half the ring'],['Growth','high-water-marked and rounded up to the next sixteen']],
+  bite:'The grid arrays are longer than the live count, so anything clearing one must clear a bounded range — counts.fill(0, 0, cells).',
+  cite:'js/still-field/grid.js:17-115' },
+
+{ id:'stats', name:'stats.js', path:'js/still-field/stats.js', loc:157, dis:3, form:'hall', gx:17.0, gy:9.6, w:1.8, d:2.0,
+  role:'The public statistics snapshot.',
+  note:'Allowed to know about everything, and imported only by the front door — that is what keeps the rest of the graph a DAG. It returns one shared object overwritten on each call, because the render loop may allocate nothing.',
+  facts:[['Reads','settings · view · world · grid · clock · population · telemetry · energy'],['Buffers row','link buffer + grid arrays + the 1.7 MiB listing raster']],
+  bite:'A Buffers row that omits the largest buffer is worse than no Buffers row.',
+  cite:'js/still-field/stats.js:16-30, 65' },
+
+{ id:'linkpass', name:'link-pass.js', path:'js/still-field/link-pass.js', loc:237, dis:3, form:'saw', gx:0, gy:12.2, w:2.0, d:1.8,
+  role:'The lattice, its envelopes, batching and telemetry.',
+  note:'One scan does everything: pair checks, envelope integration, colour batching, the painted edges, and every graph number the readout shows. A second O(n²) scan, sorting by strength, or building an edge list would turn an information feature into an overnight battery regression.',
+  facts:[['Per pair','d = hypot(dx, dy, dz · zWorld); t = (1 − d/r)^0.65'],['Envelope','s += (t − s) · (1 − exp(−λ · dt))'],['Batching','16 quantised colour steps, one stroke each']],
+  bite:'Graph telemetry belongs inside drawLinks(). It reuses values the renderer has already computed; nothing else may recompute them.',
+  cite:'js/still-field/link-pass.js:65-236' },
+
+{ id:'nodepass', name:'node-pass.js', path:'js/still-field/node-pass.js', loc:125, dis:3, form:'saw', gx:2.6, gy:12.2, w:1.8, d:1.8,
+  role:'The nodes: flat first, then glowing.',
+  note:'High-energy nodes are deferred to a second pass that carries shadowBlur — the expensive one. That pass stops at MAX_GLOW_NODES and is skipped entirely under prefers-reduced-motion.',
+  facts:[['MAX_GLOW_NODES','10'],['Shade','pow(node.energy, 1.35), quantised to 16 steps']],
+  bite:'The glow pass is not guaranteed to run. Anything deferred to it unconditionally is deferred into nothing, and the brightest nodes vanish. Draw them flat in pass 0 instead.',
+  cite:'js/still-field/node-pass.js:27-124' },
+
+{ id:'callouts', name:'callouts.js', path:'js/still-field/callouts.js', loc:475, dis:3, form:'saw', gx:5.0, gy:12.2, w:2.2, d:1.8,
+  role:'Node callouts: selection, placement, paint.',
+  note:'An engineering-drawing callout: node handle, leader line, plate, up to four key/value rows. Caps are 8 / 6 / 4 by viewport width, reduced further by screen bounds, interface keep-outs, and collisions with the source listing and with other callouts.',
+  facts:[['Placement','retries the remembered side first, mirrors only when it truly cannot fit'],['Committed','preferSide is written only after a placement actually draws']],
+  bite:'Callout side is hysteretic, and the hysteresis is the point. Deriving the side from position each frame throws a 132 px plate across its own leader line several times a second. Block-on-block collisions deliberately do not flip it.',
+  cite:'js/still-field/callouts.js:202-474' },
+
+{ id:'calloutcontent', name:'callout-content.js', path:'js/still-field/callout-content.js', loc:175, dis:3, form:'mast', gx:7.8, gy:12.2, w:2.0, d:1.8,
+  role:'What a callout says: the eight detail-mode branches.',
+  note:'Energy, transform, velocity, projection, wave, links, lifecycle, seed. The mode a node shows is the globally rotating base index offset by that node’s own modeOffset, derived from its lifetime ID through φ — so several different quantities are on screen at once while the base still rotates.',
+  facts:[['Modes','8, up to 4 rows each, first 3 axis-colourable'],['Refresh','once a second, cached on the node — not at frame rate']],
+  bite:'Add a mode here, not in callouts.js — that file is placement and paint and has no business in the diff for a new mode.',
+  cite:'js/still-field/callout-content.js:70-161' },
+
+{ id:'edgelabels', name:'edge-labels.js', path:'js/still-field/edge-labels.js', loc:473, dis:3, form:'saw', gx:10.4, gy:12.2, w:2.2, d:1.8,
+  role:'Edge dimensions: slots, quantised text, paint.',
+  note:'Up to six dimensions, rotated onto the lines they measure, gathered inside the existing link pass. Each carries one of four kinds — span, coupling, reach, energy — chosen from the pair’s identity, so it is stable for the life of the pair.',
+  facts:[['Text','every string comes from a quantised lookup table built on first draw'],['Bound','assertEdgeMeasurementBound() must pass before anything can paint']],
+  bite:'An overlay slot that cannot draw must not keep its slot. A pair whose midpoint lands under the source listing is unpaintable, and the listing changes corner when the interface is minimised.',
+  cite:'js/still-field/edge-labels.js:154-190, 356-472' },
+
+{ id:'codeticker', name:'code-ticker.js', path:'js/still-field/code-ticker.js', loc:593, dis:3, form:'saw', gx:13.2, gy:12.2, w:2.4, d:1.8,
+  role:'The on-canvas source listing.',
+  note:'It rasterises its stable transcript into an OffscreenCanvas — 434 KiB at DPR 1, 1.7 MiB at the DPR 2 cap. It claims its corner before anything else is placed, so callouts and dimensions can treat it as one more region to stay out of.',
+  facts:[['Fold','a hit test on the body, not a control — session-only'],['Raster','allocated lazily and released the moment it stops printing']],
+  bite:'A cache that is conditional on the way in must be conditional on the way out. The first version was never freed, so a phone locked at 3 a.m. held 1.7 MiB all night.',
+  cite:'js/still-field/code-ticker.js:174-268, 369' },
+
+{ id:'codelines', name:'code-lines.js', path:'js/still-field/code-lines.js', loc:143, dis:3, form:'mast', gx:16.2, gy:12.2, w:1.8, d:1.8,
+  role:'The transcript the source overlay prints.',
+  note:'Twenty-four lines of the renderer’s own arithmetic, each optionally bound to one live value slot. The paint path uses integer slots because it runs every visible frame, but CODE_VALUE_SLOT is the shared vocabulary between the transcript and its once-per-second producers.',
+  facts:[['Guard','a duplicated or unused slot throws at module load, not at paint time'],['Stages','4 — update, links, nodes, info']],
+  bite:'Do not restore parallel lists of numeric indices. They can print the wrong live number beside the right source statement without throwing.',
+  cite:'js/still-field/code-lines.js:79-126' },
+
+{ id:'energy', name:'energy.js', path:'js/still-field/energy.js', loc:67, dis:3, form:'silo', gx:0, gy:14.6, w:1.6, d:1.6,
+  role:'The three energy layers, and the CSS mirror.',
+  note:'A node’s energy is 0.30 breath + 0.24 travelling wave + 0.46 audio. With nothing playing the audio term is zero, so energy tops out at 0.54 — the field is deliberately alive when paused.',
+  facts:[['Wave','0.55 rad/s, kx 0.0042, ky = kx · φ'],['Publishes','--still-energy on <html>, rationed by an epsilon']],
+  bite:'Writing a CSS custom property forces a style recalculation for the whole document. This is one of the two things in the render loop deliberately rationed; the other is getComputedStyle.',
+  cite:'js/still-field/energy.js:34-66' },
+
+{ id:'modes', name:'modes.js', path:'js/still-field/modes.js', loc:101, dis:3, form:'mast', gx:2.2, gy:14.6, w:1.6, d:1.6,
+  role:'The callout detail modes and their rotation.',
+  note:'It exists because both callouts.js and edge-labels.js needed the mode set, and a shared import from either would have put a cycle in the graph. When a change would need a cycle, the shared thing wants its own module — this is the worked example.',
+  facts:[['Dwell','D · (0.72 + 0.56 · frac(kφ)) — procedural, not an interval'],['MODE_WEIGHTS','re-derives and normalises itself to a mean of one']],
+  cite:'js/still-field/modes.js:19-100' },
+
+{ id:'palette', name:'palette.js', path:'js/still-field/palette.js', loc:170, dis:3, form:'silo', gx:4.4, gy:14.6, w:1.6, d:1.6,
+  role:'Theme colours, pre-quantised into ramps.',
+  note:'Reads five custom properties once per theme change and pre-builds a 16-step node ramp and a 16-step edge ramp from them. The field rests in cool violet-silver and only reaches cyan on peaks.',
+  facts:[['COLOR_STEPS','16'],['Reads','--still-field-node / -edge / -mid / -spark / -glow']],
+  bite:'getComputedStyle forces style recalculation, so this happens on a theme change and never in the loop.',
+  cite:'js/still-field/palette.js:20-169' },
+
+{ id:'view', name:'view.js', path:'js/still-field/view.js', loc:122, dis:3, form:'silo', gx:6.6, gy:14.6, w:1.6, d:1.6,
+  role:'The two canvases, the viewport, the device.',
+  note:'Owns the device-pixel-ratio cap, the reduced-motion watch, and snap() — which puts glyph origins on whole device pixels so the info layer stays sharp.',
+  facts:[['Breakpoints','WIDE 1180 · MEDIUM 720'],['DPR','capped at 2']],
+  cite:'js/still-field/view.js:25-121' },
+
+{ id:'clock', name:'clock.js', path:'js/still-field/clock.js', loc:34, dis:3, form:'silo', gx:8.8, gy:14.6, w:1.4, d:1.6,
+  role:'The drift clock and the diagnostics clock.',
+  note:'Two clocks, deliberately. The drift clock advances at the user’s speed and drives motion; the real clock advances at wall time and drives envelopes and the readout.',
+  facts:[['clock.drift','+= dt × speed'],['clock.real','+= dt']],
+  bite:'Never assert app behaviour against wall-clock time. On a loaded machine the drift clock advances slower than the clock on the wall — a test that says "this rotates within five seconds" is testing the host’s spare CPU.',
+  cite:'js/still-field/clock.js:20-33' },
+
+{ id:'math', name:'math.js', path:'js/still-field/math.js', loc:23, dis:3, form:'mast', gx:10.6, gy:14.6, w:1.4, d:1.6,
+  role:'φ, τ, smoothstep. The smallest solid on the plate.',
+  note:'A true leaf: it imports nothing and is imported by nearly everything. φ is load-bearing rather than decorative — it spreads the per-node mode offsets and weights the dwell so the rotation never lands in step with itself.',
+  facts:[['PHI','1.6180339887498949'],['Imported by','math is downstream of nothing']],
+  cite:'js/still-field/math.js:11-22' },
+
+{ id:'telemetry', name:'telemetry.js', path:'js/still-field/telemetry.js', loc:108, dis:3, form:'silo', gx:12.4, gy:14.6, w:1.6, d:1.6,
+  role:'Counters the renderer writes and the readout reads.',
+  note:'The one-way valve between the hot loop and the panel. The loop writes raw counters; nothing in the loop ever reads them back to make a decision.',
+  facts:[['Smoothing','FPS_SMOOTH 3, applied as 1 − exp(−k · dt)'],['Stages','msUpdate · msLinks · msNodes · msInfo']],
+  cite:'js/still-field/telemetry.js:17-107' },
+
+{ id:'keepouts', name:'keep-outs.js', path:'js/still-field/keep-outs.js', loc:59, dis:3, form:'mast', gx:14.6, gy:14.6, w:1.6, d:1.6,
+  role:'Screen rectangles the info layer must avoid.',
+  note:'Rectangles arrive from app.js as live DOMRects and are copied into plain objects — a retained DOMRect keeps its element alive and goes stale the moment anything reflows.',
+  facts:[['Test','hitsKeepOut takes the text’s own box, not the node’s'],['Cleared','by passing an empty array']],
+  bite:'On a phone with the interface up there is nowhere for labels to go, so none are drawn. That is the honest consequence, not a bug — minimise the interface and they appear.',
+  cite:'js/still-field/keep-outs.js:31-58' },
+
+{ id:'audiometrics', name:'audio-metrics.js', path:'js/still-field/audio-metrics.js', loc:48, dis:3, form:'mast', gx:16.8, gy:14.6, w:1.8, d:1.6,
+  role:'Frequency-band energy from the analyser.',
+  note:'The only place the renderer reaches back into the audio module. It returns a live object rewritten in place on each call, so the render loop allocates nothing — copy what you need rather than holding the reference across frames.',
+  facts:[['Bands','low < 12% · mid < 45% · high — of 128 bins'],['Silent','all four fields are 0 when nothing is playing']],
+  cite:'js/still-field/audio-metrics.js:21-47' },
+
+// ---------- district 4 · PROVING GROUND ----------
+{ id:'runmjs', name:'run.mjs', path:'tests/run.mjs', loc:1566, dis:4, form:'vault', gx:12.6, gy:0, w:2.8, d:2.2,
+  role:'The browser smoke suite. Real Chromium, real Web Audio graph.',
+  note:'It starts its own server on a free port, so nothing needs to be running first, and it runs in a worker pool of four — each worker owning a fresh BrowserContext, which is the isolation boundary. Several of these tests exist because a plausible-looking refactor broke playback in a way that only shows up minutes later.',
+  facts:[['Wall clock','the single longest test, not the sum'],['unit:','three tests import a module and call it directly, no DOM'],['Names','the front door’s whole export surface']],
+  bite:'Prefer until(page, fn, ms, msg) to waitForTimeout. Polling with a deadline fails no later than the sleep would have and passes as soon as the app is ready.',
+  cite:'tests/run.mjs' },
+
+{ id:'agents', name:'AGENTS.md', path:'AGENTS.md', loc:598, dis:4, form:'obelisk', gx:16.6, gy:0, w:1.3, d:1.3,
+  role:'The authoritative technical contract. Read before the first edit.',
+  note:'Layout, the one architectural rule, the three renderer rules, common tasks, and a long section titled "Things that will bite you" — every entry of which is a bug that already shipped. Most of this plate is drawn from it.',
+  facts:[['Rule','always re-fetch; never rely on memory of an older version'],['Companion','docs/agent-operations.md for the session workflow']],
+  cite:'AGENTS.md' },
+
+{ id:'profile', name:'profile-still-field.mjs', path:'tests/profile-still-field.mjs', loc:427, dis:4, form:'vault', gx:12.6, gy:2.8, w:2.4, d:1.8,
+  role:'The repeatable performance harness. Evidence, not pass/fail.',
+  note:'Warms each scenario for eight seconds, samples smoothed telemetry 48 times over twelve, forces GC around its heap observation, and includes native and throttled desktop and mobile controls. It has no thresholds: timing describes the current browser and machine.',
+  facts:[['Compare','PROFILE_ROOT=/another/worktree for a same-harness before/after'],['--churn','12 fold/unfold and stop/start cycles'],['--dpr=2','exercises the device-pixel-ratio cap']],
+  cite:'tests/profile-still-field.mjs · AGENTS.md, "Test it"' },
+
+{ id:'shots', name:'capture-screenshots.mjs', path:'scripts/capture-screenshots.mjs', loc:293, dis:4, form:'vault', gx:15.6, gy:2.8, w:2.4, d:1.8,
+  role:'The stable screenshot catalogue.',
+  note:'Drives the real page to a known state and captures the documented set — hero in both themes, the info layer in four modes, callout variety, residual outlines, immersion on phone and desktop.',
+  facts:[['Output','docs/screenshots/*.png'],['Catalogue','docs/screenshots.md']],
+  cite:'scripts/capture-screenshots.mjs' },
+
+{ id:'server', name:'server.mjs', path:'tests/server.mjs', loc:62, dis:4, form:'vault', gx:12.6, gy:5.4, w:1.6, d:1.6,
+  role:'A static server on a free port, started by the suite.',
+  note:'Sixty-two lines, and the reason npm test needs nothing running first.',
+  facts:[['Why','ES modules are fetched with CORS; file:// will not do']],
+  cite:'tests/server.mjs' },
+
+{ id:'ci', name:'ci.yml', path:'.github/workflows/ci.yml', loc:228, dis:4, form:'vault', gx:14.8, gy:5.4, w:1.8, d:1.6,
+  role:'Lint + the browser suite on every PR and every push to main.',
+  note:'Skipping is decided inside the workflow, never with paths-ignore. A workflow filtered out by paths-ignore does not run, and a job that does not run reports no status — so a required check waits forever and the PR can never merge. The gate job always runs and decides; the CI job always runs and reports.',
+  facts:[['Docs-only','allow-list: docs/* · *.md · LICENSE · .gitignore'],['Not listed','.github/** — a change to the workflow runs the suite whose rules it changes'],['Branch protection','point it at CI, never at Browser smoke tests']],
+  bite:'Every uncertain case resolves to running the suite. A skip rule that guesses wrong in the other direction ships untested code.',
+  cite:'.github/workflows/ci.yml:20-141' },
+
+{ id:'docs', name:'docs/', path:'docs/', loc:3385, dis:4, form:'hall', gx:17.0, gy:5.4, w:1.8, d:1.6,
+  role:'Eighteen documents: requirements, architecture, history, record.',
+  note:'The software stays calm; the documentation is allowed to be chaotic. That is the stated deal. The agent-facing surfaces — still-field-architecture.md, info-layer.md, agent-operations.md — stay sterile; the narrative ones do not.',
+  facts:[['Agent surface','still-field-architecture.md · info-layer.md · agent-operations.md'],['Narrative','history · meet-the-lab · teachings · blame · archaeology']],
+  cite:'docs/readme.md' },
+];
+
+// ============================================================
+// 2. THE WIRES
+//    kind 'control' — a call or an import. Who makes whom do something.
+//    kind 'data'    — a value crossing a boundary. `payload` is what moves.
+// ============================================================
+
+const L = [
+// --- control ---
+{ id:'c1',  a:'index',      b:'app',          k:'control', label:'boots',                  detail:'<script type="module" src="js/app.js"> — module scripts are deferred, so the DOM is already parsed when boot() runs.', cite:'index.html · app.js:1016' },
+{ id:'c2',  a:'app',        b:'theme',        k:'control', label:'applyStillTheme()',      detail:'Applied before anything measures colours, because palette.js reads computed custom properties off the root.', cite:'app.js:974' },
+{ id:'c3',  a:'app',        b:'stillfield',   k:'control', label:'initStillField()',       detail:'Hands the renderer its two canvases. The render loop starts inside this call.', cite:'app.js:980' },
+{ id:'c4',  a:'app',        b:'audio',        k:'control', label:'play / setType / setVolume', detail:'Handlers call the state module and stop. They never touch the button — that happens in the subscribe callback.', cite:'app.js:781-801' },
+{ id:'c5',  a:'app',        b:'uichrome',     k:'control', label:'setHidden()',            detail:'Minimise and restore. Escape always restores the full interface.', cite:'app.js:932-947' },
+{ id:'c6',  a:'app',        b:'hud',          k:'control', label:'liveRows / mathRows',    detail:'Called on a 250 ms interval, only for the view that is showing, and not at all while the panel is folded or the page is hidden.', cite:'app.js:387-420, 465' },
+{ id:'c7',  a:'stillfield', b:'loop',         k:'control', label:'startLoop / stopLoop',   detail:'The front door decides when the loop runs; the loop decides what a frame is.', cite:'still-field.js:127' },
+{ id:'c8',  a:'stillfield', b:'settings',     k:'control', label:'prefs.setDepth(v)',      detail:'Clamp and persist. The setter does nothing else — that is the point of the split.', cite:'still-field.js:281' },
+{ id:'c9',  a:'stillfield', b:'world',        k:'control', label:'measureWorld()',         detail:'Re-derives the world plane, the link radius and the spatial grid after anything that moves them.', cite:'still-field.js:282' },
+{ id:'c10', a:'stillfield', b:'nodes',        k:'control', label:'applyNodeCount()',       detail:'The far plane moved, so the target population moved with it.', cite:'still-field.js:283' },
+{ id:'c11', a:'loop',       b:'nodes',        k:'control', label:'stepNodes()',            detail:'One pass over the population: lifecycle, drift, wrap, depth, projection.', cite:'loop.js:120' },
+{ id:'c12', a:'loop',       b:'linkpass',     k:'control', label:'drawLinks()',            detail:'Stage 1. The single scan that produces the lattice and every graph number.', cite:'loop.js:152' },
+{ id:'c13', a:'loop',       b:'nodepass',     k:'control', label:'drawNodes()',            detail:'Stage 2. Flat pass, then the rationed glow pass.', cite:'loop.js:155' },
+{ id:'c14', a:'loop',       b:'callouts',     k:'control', label:'drawCallouts()',         detail:'Stage 3b. Placement runs against the listing’s corner and the interface keep-outs.', cite:'loop.js:206' },
+{ id:'c15', a:'loop',       b:'edgelabels',   k:'control', label:'drawEdgeAnnotations()',  detail:'Stage 3a. Runs before the callouts so a dimension owns its slot first.', cite:'loop.js:205' },
+{ id:'c16', a:'loop',       b:'codeticker',   k:'control', label:'layoutCodeTicker()',     detail:'Claims its corner before anything else is placed, then paints last, on top.', cite:'loop.js:199, 208' },
+{ id:'c17', a:'audio',      b:'noise',        k:'control', label:'generateNoiseBuffer()',  detail:'Synchronous, inside a 150 ms gain dip. That is why every generator is written out inline.', cite:'audio.js:220' },
+{ id:'c18', a:'nodes',      b:'grid',         k:'control', label:'buildGrid()',            detail:'The last thing the node step does. Roughly ten times fewer pair tests at higher densities.', cite:'nodes.js:414' },
+{ id:'c19', a:'runmjs',     b:'index',        k:'control', label:'drives Chromium',        detail:'A real browser against a real Web Audio graph, on a server the suite starts itself.', cite:'tests/run.mjs' },
+{ id:'c20', a:'ci',         b:'runmjs',       k:'control', label:'npm run check',          detail:'Lint plus the browser suite. The gate job decides; the CI job always reports.', cite:'.github/workflows/ci.yml' },
+
+// --- payload ---
+{ id:'d1',  a:'noise',      b:'audio',        k:'data', label:'AudioBuffer',       payload:'1 ch × 12 s × sampleRate, periodic over the loop', detail:'Looped forever, so it must be periodic rather than merely long. A filter started from zero state puts a step in the level every twelve seconds, all night.', cite:'noise.js:349-362' },
+{ id:'d2',  a:'audio',      b:'audiometrics', k:'data', label:'AnalyserNode',      payload:'fftSize 256 → Uint8Array(128)',                    detail:'The analyser sits before the gain node on purpose, so the visualisation tracks the noise itself and not the listening volume.', cite:'audio.js:189-203' },
+{ id:'d3',  a:'audiometrics', b:'loop',       k:'data', label:'band energy',       payload:'{ low, mid, high, overall } — all 0–1',             detail:'A live object rewritten in place each call, so the render loop allocates nothing. All four are 0 when nothing is playing.', cite:'audio-metrics.js:21-47' },
+{ id:'d4',  a:'loop',       b:'energy',       k:'data', label:'--still-energy',    payload:'one CSS custom property on <html>',                 detail:'Written only when it has moved perceptibly: setting a custom property forces a style recalculation for the whole document.', cite:'energy.js:46-51' },
+{ id:'d5',  a:'settings',   b:'app',          k:'data', label:'field snapshot',    payload:'{ enabled, intensity, speed, density, reach, … }',  detail:'subscribe() fires immediately with the current snapshot, so this is also the initial render.', cite:'settings.js:102-135' },
+{ id:'d6',  a:'audio',      b:'app',          k:'data', label:'transport state',   payload:'{ isPlaying, type, volume, timerHours, status }',   detail:'The sleep timer stops playback with no click behind it. This wire is the only reason the button is ever right at 3 a.m.', cite:'audio.js:80-95' },
+{ id:'d7',  a:'storage',    b:'settings',     k:'data', label:'persisted state',   payload:'11 complexNoise_stillField* keys',                  detail:'Read at import time. localStorage throws — it does not return null — when storage is disabled, so an unguarded read takes the app down before first paint.', cite:'settings.js:23-46 · storage.js:60' },
+{ id:'d8',  a:'telemetry',  b:'stats',        k:'data', label:'counters',          payload:'fps, dt, ms per stage, pair tests, batches, …',     detail:'The loop writes these and never reads them back to make a decision. One-way, by construction.', cite:'stats.js:65' },
+{ id:'d9',  a:'stats',      b:'hud',          k:'data', label:'stats snapshot',    payload:'one shared object, overwritten per call',           detail:'Read what you need immediately rather than holding on to it — the render loop may allocate nothing, so the snapshot is reused.', cite:'stats.js:30-64' },
+{ id:'d10', a:'hud',        b:'app',          k:'data', label:'rows of strings',   payload:'{ fps, work, nodes, … } → #nerdHud, every 250 ms',  detail:'hud.js touches no DOM. app.js is the only file that knows a key corresponds to an element.', cite:'hud.js:159 · app.js:339' },
+{ id:'d11', a:'app',        b:'keepouts',     k:'data', label:'keep-out rects',    payload:'DOMRect[] → plain { left, top, right, bottom }',    detail:'Measured on resize, scroll, panel toggle and minimise — never per frame, because getBoundingClientRect forces layout just like getComputedStyle.', cite:'app.js:488-510' },
+{ id:'d12', a:'codelines',  b:'codeticker',   k:'data', label:'transcript',        payload:'24 lines + CODE_VALUE_SLOT bindings',               detail:'Values are named before they are numbered. A duplicated or unused slot throws at module load rather than printing the wrong number all session.', cite:'code-lines.js:79-126' },
+{ id:'d13', a:'palette',    b:'linkpass',     k:'data', label:'quantised ramp',    payload:'16 pre-built rgb() strings, node + edge',           detail:'Built once per theme change. Nothing in the loop parses or builds a colour string.', cite:'palette.js:113-135' },
+{ id:'d14', a:'world',      b:'grid',         k:'data', label:'plane + radius',    payload:'linkRadius, zWorld, world.w × world.h',             detail:'The grid arrays high-water-mark and round the node count up to the next sixteen, so every density drag after the first allocates nothing.', cite:'world.js:88-94 · grid.js:53' },
+];
+
+// ============================================================
+// 3. TRACES — real sequences, in order
+// ============================================================
+
+const TRACES = {
+  boot: { name:'Cold boot', steps:[
+    { l:'c1',  t:'The page parses. Module scripts are deferred, so <b>boot()</b> runs against a DOM that already exists.', c:'index.html → js/app.js:1016' },
+    { l:'c2',  t:'The persisted theme is applied <b>first</b> — before anything measures a colour.', c:'app.js:974' },
+    { l:'d7',  t:'Every module reads its persisted state at import time, through the typed wrapper. An unguarded <code>localStorage</code> read here takes the app down before first paint.', c:'settings.js:23-46' },
+    { l:'c3',  t:'<b>initStillField()</b> takes the two canvases. The render loop starts inside this call.', c:'app.js:980' },
+    { l:'d5',  t:'<b>subscribe()</b> fires immediately with the current snapshot — so registering the renderer <i>is</i> the initial render.', c:'app.js:983-986' },
+    { l:'d11', t:'Keep-outs are measured <b>synchronously</b>, not on an animation frame: scheduling it later lets the loop’s first frames paint labels under the controls.', c:'app.js:982 → keep-outs.js:31' },
+  ]},
+  play: { name:'Press play', steps:[
+    { l:'c4',  t:'The click handler calls <b>audio.play()</b> and stops. It does not touch the button.', c:'app.js:781' },
+    { l:'c17', t:'<b>ensureAudio()</b> builds the permanent chain once, then a fresh 12-second buffer is generated <b>synchronously</b> inside a 150 ms gain dip.', c:'audio.js:163-220' },
+    { l:'d1',  t:'The buffer loops forever, so it is built <b>periodic</b> — stateful generators carry filter state round the join and LFO rates round to whole cycles.', c:'noise.js:349' },
+    { l:'d2',  t:'Signal reaches the analyser <b>before</b> the gain node, so turning the volume down does not calm the field.', c:'audio.js:189-204' },
+    { l:'d6',  t:'The state module publishes. <i>Now</i> the button becomes a pause icon — through the same path the sleep timer will use at 3 a.m.', c:'audio.js:80 → app.js' },
+  ]},
+  frame: { name:'One frame @ 30 fps', steps:[
+    { l:'d3',  t:'<b>update()</b> starts by reading band energy. The object is rewritten in place; nothing is allocated.', c:'loop.js:106 → audio-metrics.js:21' },
+    { l:'c11', t:'<b>stepNodes()</b> — one pass: lifecycle envelope, damped drift, world wrap, bounded depth, and the perspective projection, computed once and reused by every later pass.', c:'loop.js:120 → nodes.js:329' },
+    { l:'c18', t:'The spatial grid is rebuilt. Only the 5-cell half-neighbourhood is ever visited, which is what makes each pair appear exactly once.', c:'nodes.js:414 → grid.js:116' },
+    { l:'c12', t:'<b>Stage 1 — links.</b> Envelopes, batching, painted edges <i>and</i> all graph telemetry come out of this single scan.', c:'loop.js:152 → link-pass.js:65' },
+    { l:'c13', t:'<b>Stage 2 — nodes.</b> Flat first; high-energy nodes defer to a glow pass that stops at ten and is skipped under reduced motion.', c:'loop.js:155 → node-pass.js:38' },
+    { l:'c15', t:'<b>Stage 3 — info layer</b>, on its own canvas, cleared outright. Dimensions claim their six slots first.', c:'loop.js:205 → edge-labels.js:356' },
+    { l:'c14', t:'Then callouts place themselves around the listing, the keep-outs and each other — retrying the remembered side before mirroring.', c:'loop.js:206 → callouts.js:202' },
+    { l:'d4',  t:'Finally the smoothed energy is mirrored to <b>--still-energy</b>, but only when it has moved perceptibly: the write forces a document-wide style recalculation.', c:'energy.js:46' },
+  ]},
+  slider: { name:'Drag the depth slider', steps:[
+    { l:'c8',  t:'<b>prefs.setDepth(v)</b> clamps and persists. It does nothing else — that is the whole job of a setter here.', c:'still-field.js:281 → settings.js:190' },
+    { l:'d7',  t:'The write is <b>throttled</b>. A slider fires <code>input</code> at pointer-move rate and <code>setItem</code> is synchronous, so a straight-through write was ~60 blocking disk writes a second competing with the loop.', c:'storage.js:112' },
+    { l:'c9',  t:'<b>measureWorld()</b> re-derives the world plane and the link radius — the world is sized so the far plane still fills the viewport, and the far plane moves when depth does.', c:'still-field.js:282 → world.js:70' },
+    { l:'d14', t:'The grid is reallocated <b>in bands</b>: high-water-marked and rounded up to the next sixteen, so a full sweep allocates on the first step and nothing after it.', c:'world.js:88 → grid.js:53' },
+    { l:'c10', t:'<b>applyNodeCount()</b> — density multiplies the clamped 26–44 window, never the raw viewport area.', c:'still-field.js:283 → world.js:44' },
+    { l:'d5',  t:'<b>emit()</b>. Every subscriber re-renders from one snapshot. Composing these four calls in the front door is why the setter stayed simple.', c:'still-field.js:284' },
+  ]},
+};
+
+// ============================================================
+// 4. PROJECTION — dimetric 2:1, viewed from the north-east.
+//    P(gx, gy, z) puts a plan coordinate on the sheet.
+// ============================================================
+
+const TW = 36, TH = 18;
+const NS = 'http://www.w3.org/2000/svg';
+const P = (gx, gy, z) => [(gx - gy) * TW, (gx + gy) * TH - z];
+const MAXLOC = 1870;                                  // css/styles.css, the tallest
+const height = loc => 14 + 60 * Math.sqrt(loc / MAXLOC);
+const byId = Object.fromEntries(M.map(m => [m.id, m]));
+
+const el = (tag, attrs) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+};
+const pts = list => list.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+
+/** Every polygon of one solid, far faces first. */
+function solidOf(m) {
+  const { gx, gy, w, d, dis, form } = m;
+  const h = height(m.loc);
+  const T = `var(--d${dis}-t)`, LF = `var(--d${dis}-l)`, RF = `var(--d${dis}-r)`;
+  const out = [];
+  const box = (x, y, bw, bd, z0, z1, ct, cl, cr) => {
+    out.push({ p: [P(x, y, z1), P(x + bw, y, z1), P(x + bw, y + bd, z1), P(x, y + bd, z1)], f: ct });
+    out.push({ p: [P(x, y + bd, z1), P(x + bw, y + bd, z1), P(x + bw, y + bd, z0), P(x, y + bd, z0)], f: cl });
+    out.push({ p: [P(x + bw, y, z1), P(x + bw, y + bd, z1), P(x + bw, y + bd, z0), P(x + bw, y, z0)], f: cr });
+  };
+
+  let lift = 0;
+
+  if (form === 'obelisk') {
+    // Tapered: a contract you can see from anywhere on the plate.
+    const s = 0.34, cx = gx + w / 2, cy = gy + d / 2;
+    const tw = w * s, td = d * s, tx = cx - tw / 2, ty = cy - td / 2;
+    out.push({ p: [P(tx, ty, h), P(tx + tw, ty, h), P(tx + tw, ty + td, h), P(tx, ty + td, h)], f: T });
+    out.push({ p: [P(gx, gy + d, 0), P(gx + w, gy + d, 0), P(tx + tw, ty + td, h), P(tx, ty + td, h)], f: LF });
+    out.push({ p: [P(gx + w, gy, 0), P(gx + w, gy + d, 0), P(tx + tw, ty + td, h), P(tx + tw, ty, h)], f: RF });
+    return { polys: out, lines: [], h, lift: 4 };
+  }
+
+  box(gx, gy, w, d, 0, h, T, LF, RF);
+  const lines = [];
+
+  if (form === 'stack') {
+    // Orchestrator: a setback storey. It sits on top of what it composes.
+    const i = Math.min(0.34, w * 0.19, d * 0.19);
+    const h2 = Math.max(11, h * 0.34);
+    box(gx + i, gy + i, w - 2 * i, d - 2 * i, h, h + h2, T, LF, RF);
+    lift = h2;
+  } else if (form === 'silo') {
+    // One writer, many readers — a sealed tank with a service band.
+    const i = Math.min(w, d) * 0.26;
+    const h2 = Math.max(10, h * 0.30);
+    box(gx + i, gy + i, w - 2 * i, d - 2 * i, h, h + h2, T, LF, RF);
+    for (const f of [0.36, 0.62]) {
+      const z = h * f;
+      lines.push([P(gx, gy + d, z), P(gx + w, gy + d, z), P(gx + w, gy, z)]);
+    }
+    lift = h2;
+  } else if (form === 'saw') {
+    // A draw pass: a factory shed, one ridge per stage of work.
+    const n = Math.max(3, Math.round(w / 0.62));
+    const rh = Math.max(7, h * 0.17), step = w / n;
+    for (let i = 0; i < n; i++) {
+      const x0 = gx + i * step, x1 = x0 + step;
+      out.push({ p: [P(x0, gy, h), P(x0, gy + d, h), P(x1, gy + d, h + rh), P(x1, gy, h + rh)], f: T });
+      out.push({ p: [P(x1, gy, h + rh), P(x1, gy + d, h + rh), P(x1, gy + d, h), P(x1, gy, h)], f: RF });
+    }
+    lift = rh;
+  } else if (form === 'hall') {
+    // Content surface: a pitched shed, ridge down the long axis.
+    const rh = Math.max(7, h * 0.13), mid = gy + d / 2;
+    out.push({ p: [P(gx, gy, h), P(gx + w, gy, h), P(gx + w, mid, h + rh), P(gx, mid, h + rh)], f: T });
+    out.push({ p: [P(gx, gy + d, h), P(gx + w, gy + d, h), P(gx + w, mid, h + rh), P(gx, mid, h + rh)], f: LF });
+    out.push({ p: [P(gx + w, gy, h), P(gx + w, mid, h + rh), P(gx + w, gy + d, h)], f: RF });
+    lift = rh;
+  } else if (form === 'vault') {
+    // Verification: a barrel roof. Nothing gets in without going through it.
+    const rh = Math.max(10, h * 0.24), N = 10;
+    const arc = x => { const a = []; for (let i = 0; i <= N; i++) { const t = i / N; a.push(P(x, gy + t * d, h + rh * Math.sin(Math.PI * t))); } return a; };
+    const near = arc(gx + w), far = arc(gx);
+    out.push({ p: far.concat(near.slice().reverse()), f: T });
+    out.push({ p: near.concat([P(gx + w, gy + d, h), P(gx + w, gy, h)]), f: RF });
+    lift = rh;
+  } else if (form === 'mast') {
+    // Leaf: nothing above it, so it carries the aerial.
+    const cx = gx + w / 2, cy = gy + d / 2;
+    const base = P(cx, cy, h), tipY = base[1] - (20 + h * 0.22);
+    lines.push([base, [base[0], tipY]]);
+    lines.push([[base[0] - 5, tipY + 7], [base[0] + 5, tipY + 7]]);
+    out.push({ p: null, dot: [base[0], tipY], f: `var(--d${dis}-r)` });
+    lift = 20 + h * 0.22 + 4;
+  }
+
+  return { polys: out, lines, h, lift };
+}
+
+// ============================================================
+// 5. DRAW THE PLATE
+// ============================================================
+
+const svg = document.getElementById('plate');
+const gGround = el('g', {}), gZones = el('g', {}), gWireLo = el('g', {}), gSolids = el('g', {}),
+      gWireHi = el('g', {}), gLabels = el('g', {}), gPackets = el('g', {});
+// Wires ride *over* the solids: an import is overhead cabling, not a footpath.
+svg.append(gGround, gSolids, gZones, gWireLo, gWireHi, gPackets, gLabels);
+
+// --- district plates ---------------------------------------------------
+for (const key of Object.keys(DISTRICTS)) {
+  const dis = Number(key);
+  const mem = M.filter(m => m.dis === dis);
+  const x0 = Math.min(...mem.map(m => m.gx)) - 0.7;
+  const x1 = Math.max(...mem.map(m => m.gx + m.w)) + 0.7;
+  const y0 = Math.min(...mem.map(m => m.gy)) - 0.7;
+  const y1 = Math.max(...mem.map(m => m.gy + m.d)) + 0.7;
+
+  gGround.appendChild(el('polygon', {
+    points: pts([P(x0, y0, 0), P(x1, y0, 0), P(x1, y1, 0), P(x0, y1, 0)]),
+    fill: 'var(--ground)', stroke: 'var(--ground-line)', 'stroke-width': 1,
+  }));
+  for (let x = Math.ceil(x0); x <= x1; x += 2)
+    gGround.appendChild(el('line', { x1: P(x, y0, 0)[0], y1: P(x, y0, 0)[1], x2: P(x, y1, 0)[0], y2: P(x, y1, 0)[1], stroke: 'var(--ground-line)', 'stroke-width': 0.5, 'stroke-opacity': 0.55 }));
+  for (let y = Math.ceil(y0); y <= y1; y += 2)
+    gGround.appendChild(el('line', { x1: P(x0, y, 0)[0], y1: P(x0, y, 0)[1], x2: P(x1, y, 0)[0], y2: P(x1, y, 0)[1], stroke: 'var(--ground-line)', 'stroke-width': 0.5, 'stroke-opacity': 0.55 }));
+
+  // Zone name set along one of the plate's outer edges, on the iso axis — which
+  // edge is per district, because they are packed tightly enough to matter.
+  const D = DISTRICTS[dis];
+  const down = D.edge === 'sw';           // run along the south-west edge instead
+  const wv = P(x0, y1, 0);                // every caption starts at the west vertex
+  const ang = Math.atan2(down ? TH : -TH, TW) * 180 / Math.PI;
+  const t = el('text', { x: 0, y: 0, fill: 'var(--ink-3)', 'font-size': 10.5,
+    'font-family': '"IBM Plex Mono", monospace', 'letter-spacing': 2.4,
+    transform: `translate(${(wv[0] + D.tag[0]).toFixed(1)} ${(wv[1] + D.tag[1]).toFixed(1)}) rotate(${ang.toFixed(2)})` });
+  t.textContent = D.name.toUpperCase();
+  gZones.appendChild(t);
+}
+
+// --- solids ------------------------------------------------------------
+const anchors = {}, solidEls = {};
+const ordered = M.slice().sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy) || a.gx - b.gx);
+
+// Position within its own terrace, so labels can alternate height along a row.
+const rowRank = {};
+for (const row of new Set(M.map(m => m.gy))) {
+  M.filter(m => m.gy === row).sort((a, b) => a.gx - b.gx).forEach((m, i) => { rowRank[m.id] = i; });
+}
+
+for (const m of ordered) {
+  const { polys, lines, h, lift } = solidOf(m);
+  const g = el('g', { class: 'solid', 'data-id': m.id, tabindex: '0', role: 'button',
+    'aria-label': `${m.name}, ${m.loc} lines, ${DISTRICTS[m.dis].name} district` });
+  g.style.cursor = 'pointer';
+
+  // ground shadow, offset down-right
+  g.appendChild(el('polygon', {
+    points: pts([P(m.gx, m.gy, -5), P(m.gx + m.w, m.gy, -5), P(m.gx + m.w, m.gy + m.d, -5), P(m.gx, m.gy + m.d, -5)]),
+    fill: 'var(--shadow)', transform: 'translate(5 0)',
+  }));
+
+  for (const p of polys) {
+    if (p.dot) { g.appendChild(el('circle', { cx: p.dot[0], cy: p.dot[1], r: 3, fill: p.f })); continue; }
+    g.appendChild(el('polygon', { points: pts(p.p), fill: p.f,
+      stroke: 'var(--ink)', 'stroke-opacity': 0.26, 'stroke-width': 0.8, 'stroke-linejoin': 'round' }));
+  }
+  for (const ln of lines) {
+    g.appendChild(el('polyline', { points: pts(ln), fill: 'none',
+      stroke: 'var(--ink)', 'stroke-opacity': 0.22, 'stroke-width': 0.8 }));
+  }
+
+  gSolids.appendChild(g);
+  solidEls[m.id] = g;
+  anchors[m.id] = P(m.gx + m.w / 2, m.gy + m.d / 2, h + lift + 6);
+
+  // Label on a plate, not a glow — the same trick the app uses to keep its own
+  // callouts sharp. Neighbours in a row alternate height so two plates never
+  // land on the same baseline.
+  const [ax, ay0] = anchors[m.id];
+  const ay = ay0 - (rowRank[m.id] % 2 ? 17 : 0);
+  const short = m.name.replace(/\.m?js$/, '');
+  const lg = el('g', { class: 'label', 'data-id': m.id });
+  const tw = short.length * 5.5 + 11;
+  lg.appendChild(el('line', { x1: ax, y1: ay0, x2: ax, y2: ay - 11, stroke: 'var(--ink-3)', 'stroke-width': 0.8 }));
+  lg.appendChild(el('rect', { x: ax - tw / 2, y: ay - 25, width: tw, height: 14,
+    fill: 'var(--plate)', stroke: 'var(--rule-soft)', 'stroke-width': 0.7 }));
+  const tx = el('text', { x: ax, y: ay - 15, fill: 'var(--ink-2)', 'font-size': 9.2,
+    'font-family': '"IBM Plex Mono", monospace', 'text-anchor': 'middle' });
+  tx.textContent = short;
+  lg.appendChild(tx);
+  gLabels.appendChild(lg);
+}
+
+// --- wires -------------------------------------------------------------
+const wireEls = {};
+for (const l of L) {
+  const A = anchors[l.a], B = anchors[l.b];
+  if (!A || !B) continue;
+  const dx = B[0] - A[0], dy = B[1] - A[1];
+  const dist = Math.hypot(dx, dy);
+  // Arc over the plate rather than through it, so a wire never reads as a wall.
+  const cp = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - (28 + dist * 0.20)];
+  const dAttr = `M${A[0].toFixed(1)},${A[1].toFixed(1)} Q${cp[0].toFixed(1)},${cp[1].toFixed(1)} ${B[0].toFixed(1)},${B[1].toFixed(1)}`;
+  const stroke = l.k === 'control' ? 'var(--control)' : 'var(--data)';
+  const common = { d: dAttr, fill: 'none', stroke, 'stroke-linecap': 'round', 'data-id': l.id, 'data-kind': l.k };
+
+  const lo = el('path', Object.assign({}, common, { 'stroke-width': 1.5, 'stroke-opacity': 0.34 }));
+  if (l.k === 'data') lo.setAttribute('stroke-dasharray', '4 5');
+  gWireLo.appendChild(lo);
+
+  const hi = el('path', Object.assign({}, common, { 'stroke-width': 2.2, 'stroke-opacity': 0, class: 'wire-hi' }));
+  if (l.k === 'data') hi.setAttribute('stroke-dasharray', '5 5');
+  gWireHi.appendChild(hi);
+
+  wireEls[l.id] = { lo, hi, len: hi.getTotalLength ? hi.getTotalLength() : 0 };
+}
+
+// --- fit the sheet -----------------------------------------------------
+const bbox = gSolids.getBBox();
+const lbox = gLabels.getBBox();
+const gbox = gGround.getBBox();
+const zbox = gZones.getBBox();
+const minX = Math.min(bbox.x, lbox.x, gbox.x, zbox.x) - 40;
+const minY = Math.min(bbox.y, lbox.y, gbox.y, zbox.y) - 34;
+const maxX = Math.max(bbox.x + bbox.width, lbox.x + lbox.width, gbox.x + gbox.width, zbox.x + zbox.width) + 40;
+const maxY = Math.max(bbox.y + bbox.height, lbox.y + lbox.height, gbox.y + gbox.height, zbox.y + zbox.height) + 34;
+const HOME = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+let vb = Object.assign({}, HOME);
+const applyVB = () => svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+applyVB();
+
+// ============================================================
+// 6. THE EXPLAINER PANEL
+// ============================================================
+
+const panel = document.getElementById('panel');
+const traceStepEl = document.getElementById('traceStep');
+const esc = s => String(s).replace(/&(?![a-z#]+;)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const show = { control: true, data: true, labels: true };
+let pinned = null, active = null, trace = null;
+
+function wiresOf(id) {
+  return L.filter(l => l.a === id || l.b === id);
+}
+
+function overview() {
+  const counts = Object.keys(DISTRICTS).map(k =>
+    `${M.filter(m => m.dis === Number(k)).length} ${DISTRICTS[k].name.toLowerCase()}`).join(' · ');
+  panel.innerHTML = `
+    <p class="panel-tag"><i style="background: var(--control)"></i>the plate</p>
+    <h3>41 solids, 34 wires</h3>
+    <p>${counts}. Height is lines of source; shape is what kind of thing it is.
+    Hover or focus a solid to isolate its wiring and read what it owns.</p>
+    <dl class="kv">
+      <dt>Tallest</dt><dd>css/styles.css — 1,870 lines</dd>
+      <dt>Shortest</dt><dd>still-field/math.js — 23 lines</dd>
+      <dt>Renderer</dt><dd>22 modules, one front door</dd>
+      <dt>Runtime deps</dt><dd>none — static files, no build step</dd>
+    </dl>
+    <div class="bite">
+      <p class="eyebrow">why it is drawn this way</p>
+      <p>There is no server tier on this plate because there isn’t one in the product.
+      The app is fetched once and then runs alone for eight hours — so every solid is a
+      file, and every wire is something that happens in the browser.</p>
+    </div>
+    <p class="cite">Drawn from <b>AGENTS.md</b>, <b>still-field-architecture.md</b>,
+    <b>info-layer.md</b> and the source.</p>`;
+}
+
+function renderPanel(id) {
+  const m = byId[id];
+  if (!m) return overview();
+  const wires = wiresOf(id);
+  const rows = (m.facts || []).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+  const wireHtml = wires.map(l => {
+    const other = byId[l.a === id ? l.b : l.a];
+    const dir = l.a === id ? '→' : '←';
+    return `<li data-kind="${l.k}"><i></i><span><b>${dir} ${esc(other.name)}</b> — ${esc(l.label)}
+      ${l.payload ? `<span class="payload">${esc(l.payload)}</span>` : ''}</span></li>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <p class="panel-tag"><i style="background: var(--d${m.dis}-t)"></i>${esc(DISTRICTS[m.dis].name)} · ${esc(m.form)}</p>
+    <h3>${esc(m.name)}</h3>
+    <p class="path">${esc(m.path)} · ${m.loc.toLocaleString()} lines</p>
+    <p><b>${esc(m.role)}</b></p>
+    <p>${esc(m.note)}</p>
+    ${rows ? `<dl class="kv">${rows}</dl>` : ''}
+    ${wireHtml ? `<p class="panel-tag" style="margin-top:2px"><i style="background: var(--data)"></i>wires — ${wires.length}</p>
+      <ul class="wire-list">${wireHtml}</ul>` : ''}
+    ${m.bite ? `<div class="bite"><p class="eyebrow">this bit is load-bearing</p><p>${esc(m.bite)}</p></div>` : ''}
+    <p class="cite"><b>${esc(m.cite)}</b></p>`;
+}
+
+// ============================================================
+// 7. HIGHLIGHTING
+// ============================================================
+
+function paint() {
+  const focusId = active || pinned;
+  const traceLink = trace ? TRACES[trace.key].steps[trace.i].l : null;
+  const traceEnds = traceLink ? [L.find(x => x.id === traceLink).a, L.find(x => x.id === traceLink).b] : [];
+
+  for (const l of L) {
+    const w = wireEls[l.id];
+    if (!w) continue;
+    const kindOn = show[l.k];
+    const touches = focusId && (l.a === focusId || l.b === focusId);
+    const isTrace = l.id === traceLink;
+
+    w.lo.setAttribute('stroke-opacity', !kindOn ? 0 : (focusId || trace) ? (touches ? 0.30 : 0.06) : 0.34);
+    w.hi.setAttribute('stroke-opacity', !kindOn ? 0 : isTrace ? 0.95 : touches ? 0.8 : 0);
+    w.hi.setAttribute('stroke-width', isTrace ? 3 : 2.2);
+  }
+
+  for (const m of M) {
+    const g = solidEls[m.id];
+    const lit = focusId === m.id || traceEnds.includes(m.id);
+    const dim = (focusId || trace) && !lit &&
+      !(focusId && wiresOf(focusId).some(l => l.a === m.id || l.b === m.id));
+    g.setAttribute('opacity', dim ? 0.3 : 1);
+    g.style.filter = lit ? 'drop-shadow(0 0 4px var(--control))' : 'none';
+  }
+
+  gLabels.setAttribute('opacity', show.labels ? 1 : 0);
+  gLabels.querySelectorAll('.label').forEach(n => {
+    const id = n.getAttribute('data-id');
+    const lit = focusId === id || traceEnds.includes(id);
+    n.setAttribute('opacity', (focusId || trace) ? (lit ? 1 : 0.34) : 1);
+  });
+}
+
+function setActive(id) {
+  active = id;
+  renderPanel(id || pinned);
+  paint();
+}
+
+for (const m of M) {
+  const g = solidEls[m.id];
+  g.addEventListener('pointerenter', () => { if (!trace) setActive(m.id); });
+  g.addEventListener('focus', () => { if (!trace) setActive(m.id); });
+  g.addEventListener('click', e => {
+    e.stopPropagation();
+    stopTrace();
+    pinned = pinned === m.id ? null : m.id;
+    setActive(pinned || m.id);
+  });
+  g.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); g.click(); }
+  });
+}
+svg.addEventListener('pointerleave', () => { if (!trace) setActive(null); });
+svg.addEventListener('click', () => { if (!trace) { pinned = null; setActive(null); } });
+
+// ============================================================
+// 8. PACKETS — the dot is the value
+// ============================================================
+
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ambient = [];
+if (!reduced) {
+  for (const l of L) {
+    if (l.k !== 'data') continue;
+    const w = wireEls[l.id];
+    const dot = el('circle', { r: 2.1, fill: 'var(--data)', 'fill-opacity': 0.5 });
+    gPackets.appendChild(dot);
+    ambient.push({ dot, path: w.hi, len: w.len, t: Math.random(), speed: 0.055 + Math.random() * 0.03, id: l.id });
+  }
+}
+
+const tracePacket = el('circle', { r: 4.4, fill: 'var(--data)', opacity: 0 });
+const tracePulse = el('circle', { r: 9, fill: 'none', stroke: 'var(--data)', 'stroke-width': 1.4, opacity: 0 });
+gPackets.append(tracePulse, tracePacket);
+
+let visible = true;
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(e => { visible = e[0].isIntersecting; }, { threshold: 0.02 })
+    .observe(document.getElementById('plate-section'));
+}
+
+let last = 0;
+function tick(now) {
+  requestAnimationFrame(tick);
+  const dt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  if (!visible || reduced) return;
+
+  const focusId = active || pinned;
+  for (const a of ambient) {
+    a.t = (a.t + a.speed * dt) % 1;
+    const p = a.path.getPointAtLength(a.t * a.len);
+    a.dot.setAttribute('cx', p.x);
+    a.dot.setAttribute('cy', p.y);
+    const l = L.find(x => x.id === a.id);
+    const touches = focusId && (l.a === focusId || l.b === focusId);
+    a.dot.setAttribute('fill-opacity', !show.data ? 0 : trace ? 0.05 : focusId ? (touches ? 0.9 : 0.05) : 0.42);
+  }
+
+  if (trace) {
+    const step = TRACES[trace.key].steps[trace.i];
+    const w = wireEls[step.l];
+    trace.t = Math.min(1, trace.t + dt / 1.55);
+    const eased = trace.t < 0.5 ? 2 * trace.t * trace.t : 1 - Math.pow(-2 * trace.t + 2, 2) / 2;
+    const p = w.hi.getPointAtLength(eased * w.len);
+    tracePacket.setAttribute('cx', p.x); tracePacket.setAttribute('cy', p.y);
+    tracePulse.setAttribute('cx', p.x);  tracePulse.setAttribute('cy', p.y);
+    tracePacket.setAttribute('opacity', 1);
+    tracePulse.setAttribute('opacity', Math.max(0, 0.55 - trace.t * 0.55));
+    tracePulse.setAttribute('r', 5 + trace.t * 11);
+  }
+}
+requestAnimationFrame(tick);
+
+// ============================================================
+// 9. TRACE PLAYER
+// ============================================================
+
+let traceTimer = null;
+
+function traceStep() {
+  const t = TRACES[trace.key], s = t.steps[trace.i];
+  const l = L.find(x => x.id === s.l);
+  traceStepEl.innerHTML =
+    `<b>${trace.i + 1}/${t.steps.length} &nbsp;${esc(byId[l.a].name)} → ${esc(byId[l.b].name)}</b> — ${s.t}
+     <span class="cite">${esc(s.c)}</span>`;
+  renderPanel(l.a);
+  trace.t = 0;
+  paint();
+  traceTimer = setTimeout(() => {
+    trace.i = (trace.i + 1) % t.steps.length;
+    traceStep();
+  }, reduced ? 4200 : 2450);
+}
+
+function startTrace(key) {
+  stopTrace();
+  pinned = null; active = null;
+  trace = { key, i: 0, t: 0 };
+  document.querySelectorAll('.trace-btn').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.trace === key)));
+  traceStep();
+}
+
+function stopTrace() {
+  if (traceTimer) { clearTimeout(traceTimer); traceTimer = null; }
+  trace = null;
+  tracePacket.setAttribute('opacity', 0);
+  tracePulse.setAttribute('opacity', 0);
+  traceStepEl.innerHTML = '';
+  document.querySelectorAll('.trace-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+  paint();
+}
+
+document.querySelectorAll('.trace-btn').forEach(b => {
+  b.addEventListener('click', e => {
+    e.stopPropagation();
+    const k = b.dataset.trace;
+    if (k === 'stop' || (trace && trace.key === k)) { stopTrace(); overview(); return; }
+    startTrace(k);
+  });
+});
+
+// ============================================================
+// 10. TOGGLES, PAN, ZOOM
+// ============================================================
+
+const bindToggle = (btnId, key) => {
+  const b = document.getElementById(btnId);
+  b.addEventListener('click', () => {
+    show[key] = !show[key];
+    b.setAttribute('aria-pressed', String(show[key]));
+    paint();
+  });
+};
+bindToggle('tControl', 'control');
+bindToggle('tData', 'data');
+bindToggle('tLabels', 'labels');
+
+function zoom(factor, cx, cy) {
+  const nw = Math.min(HOME.w * 2.2, Math.max(HOME.w * 0.22, vb.w * factor));
+  const k = nw / vb.w;
+  vb.x = cx - (cx - vb.x) * k;
+  vb.y = cy - (cy - vb.y) * k;
+  vb.w = nw; vb.h *= k;
+  applyVB();
+}
+const centre = () => [vb.x + vb.w / 2, vb.y + vb.h / 2];
+document.getElementById('zoomIn').addEventListener('click', () => zoom(0.8, ...centre()));
+document.getElementById('zoomOut').addEventListener('click', () => zoom(1.25, ...centre()));
+document.getElementById('zoomReset').addEventListener('click', () => { vb = Object.assign({}, HOME); applyVB(); });
+
+const toUser = e => {
+  const r = svg.getBoundingClientRect();
+  const scale = Math.max(vb.w / r.width, vb.h / r.height);   // xMidYMid meet
+  return [
+    vb.x + vb.w / 2 + (e.clientX - (r.left + r.width / 2)) * scale,
+    vb.y + vb.h / 2 + (e.clientY - (r.top + r.height / 2)) * scale,
+  ];
+};
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [ux, uy] = toUser(e);
+  zoom(e.deltaY > 0 ? 1.12 : 0.89, ux, uy);
+}, { passive: false });
+
+let drag = null;
+svg.addEventListener('pointerdown', e => {
+  if (e.target.closest('.solid')) return;
+  drag = { x: e.clientX, y: e.clientY, vx: vb.x, vy: vb.y, moved: false };
+  svg.setPointerCapture(e.pointerId);
+  svg.classList.add('dragging');
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const r = svg.getBoundingClientRect();
+  const scale = Math.max(vb.w / r.width, vb.h / r.height);
+  vb.x = drag.vx - (e.clientX - drag.x) * scale;
+  vb.y = drag.vy - (e.clientY - drag.y) * scale;
+  if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 3) drag.moved = true;
+  applyVB();
+});
+const endDrag = () => { svg.classList.remove('dragging'); drag = null; };
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+
+// ============================================================
+// 11. LEGEND AND SCHEDULE, generated from the same data
+// ============================================================
+
+const formGlyph = {
+  stack:   'M3 15h16M5 15V8h12v7M8 8V4h6v4',
+  silo:    'M4 15h14M6 15V6h10v9M6 10h10',
+  saw:     'M3 15h17M4 15V9l4-4v6l4-4v6l4-4v9',
+  mast:    'M5 15h12M7 15V9h8v6M11 9V2M8 4h6',
+  hall:    'M3 15h17M5 15V9l6-5 6 5v6',
+  vault:   'M3 15h17M5 15V9a6 6 0 0 1 12 0v6',
+  obelisk: 'M5 15h12M7 15L9 3h4l2 12',
+};
+const formLegend = document.getElementById('formLegend');
+for (const [k, v] of Object.entries(FORMS)) {
+  const li = document.createElement('li');
+  li.innerHTML = `<svg class="glyph" viewBox="0 0 22 18" aria-hidden="true">
+      <path d="${formGlyph[k]}" fill="none" stroke="var(--ink-2)" stroke-width="1.3"
+            stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <span><b>${k}</b> — ${esc(v)}</span>`;
+  formLegend.appendChild(li);
+}
+
+const tbody = document.getElementById('scheduleBody');
+for (const m of M.slice().sort((a, b) => a.dis - b.dis || b.loc - a.loc)) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="mono">${esc(m.name)}</td>
+    <td class="mono">${esc(m.path)}</td>
+    <td class="mono">${m.loc.toLocaleString()}</td>
+    <td>${esc(m.form)}</td>
+    <td>${esc(DISTRICTS[m.dis].name)}</td>
+    <td>${esc(m.role)}</td>`;
+  tbody.appendChild(tr);
+}
+
+overview();
+paint();
+})();
+</script>
+</body>
+</html>

@@ -1156,13 +1156,18 @@ test('rapid colour changes coalesce and cannot replace a resumed source', async 
 
 test('audio recovery resumes the existing loop after context suspension', async page => {
   await page.click('#playBtn', { force: true });
-  const result = await page.evaluate(async () => {
+  const remaining = await page.evaluate(async () => {
     const audio = await import('/js/audio.js');
     audio.setTimerHours(1);
-    const ctx = audio.getAudioContext();
     const remaining = audio.getTimerRemainingMs();
-    await ctx.suspend();
-    const interrupted = audio.getState();
+    await audio.getAudioContext().suspend();
+    return remaining;
+  });
+  await until(page, async () => /interrupted/.test((await import('/js/audio.js')).getState().status),
+    5000, 'context suspension should be visible in status');
+  const result = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    const ctx = audio.getAudioContext();
     document.dispatchEvent(new Event('visibilitychange'));
     // Wait on audio state, not a guessed duration for resume().
     if (ctx.state !== 'running') await new Promise((resolve, reject) => {
@@ -1179,15 +1184,14 @@ test('audio recovery resumes the existing loop after context suspension', async 
       ctx.addEventListener('statechange', listener);
     });
     await audio.play();
-    return { interrupted, state: audio.getState(), remaining,
+    return { state: audio.getState(),
       afterRemaining: audio.getTimerRemainingMs(), diagnostics: audio.getPlaybackDiagnostics() };
   });
-  assert(/interrupted/.test(result.interrupted.status), 'suspension should be visible in status');
   assertEqual(result.state.isPlaying, true, 'playback intent survives an interruption');
   assertEqual(result.diagnostics.contextState, 'running', 'same context resumes');
   assertEqual(result.diagnostics.events.filter(event => event.event === 'source-start').length, 1,
     'resume and repeated play must not regenerate or restart the native loop');
-  assert(result.afterRemaining <= result.remaining, 'recovery must not extend the sleep timer');
+  assert(result.afterRemaining <= remaining, 'recovery must not extend the sleep timer');
 });
 
 test('brown and white noise render native loops without inserted silence at common sample rates', async page => {

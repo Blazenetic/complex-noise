@@ -63,6 +63,59 @@ let fadeOutTimerId = null;    // teardown scheduled after a fade-out
 let fadingSourceNode = null;  // source still audible during a fade-out
 let typeSwitchTimerId = null; // delayed source replacement during a colour dip
 let wakeLock = null;
+let playRequest = 0;          // invalidates an async start when stop wins the race
+let resumePending = false;
+const playbackEvents = [];
+const PLAYBACK_EVENT_LIMIT = 32;
+
+function recordPlaybackEvent(event) {
+  if (playbackEvents.length === PLAYBACK_EVENT_LIMIT) playbackEvents.shift();
+  playbackEvents.push({ event, at: Date.now(), contextTime: audioCtx?.currentTime ?? 0,
+    contextState: audioCtx?.state ?? 'uninitialised' });
+}
+
+/**
+ * Bounded, local-only transport evidence for investigating intermittent sound.
+ * Context state is not an output recording: a running context can still suffer
+ * device/OS dropouts. No microphone, persistence, polling or network is used.
+ * @returns {object} a detached diagnostic snapshot
+ */
+export function getPlaybackDiagnostics() {
+  return {
+    contextState: audioCtx?.state ?? 'uninitialised',
+    sampleRate: audioCtx?.sampleRate ?? null,
+    baseLatency: audioCtx?.baseLatency ?? null,
+    outputLatency: audioCtx?.outputLatency ?? null,
+    isPlaying,
+    events: playbackEvents.map(event => ({ ...event })),
+  };
+}
+
+function playingStatus() {
+  return timerEndsAt ? `Playing · timer ${timerHours}h` : `${label(currentType)} noise playing`;
+}
+
+function handleContextState() {
+  recordPlaybackEvent('context-state');
+  if (!isPlaying) return;
+  if (audioCtx.state === 'running') setStatus(playingStatus());
+  else setStatus('Audio interrupted · pause and play to retry');
+}
+
+async function resumeExistingSource() {
+  if (!isPlaying || resumePending || !audioCtx
+      || !['suspended', 'interrupted'].includes(audioCtx.state)) return;
+  resumePending = true;
+  recordPlaybackEvent('resume-request');
+  try {
+    await audioCtx.resume();
+  } catch (err) {
+    recordPlaybackEvent('resume-failed');
+    if (isPlaying) setStatus('Audio interrupted · pause and play to retry');
+  } finally {
+    resumePending = false;
+  }
+}
 
 function clampEq(v) {
   return clamp(v, EQ_MIN_DB, EQ_MAX_DB);
@@ -165,7 +218,11 @@ async function ensureAudio() {
   if (!audioCtx) {
     const Ctor = window.AudioContext || window.webkitAudioContext;
     if (!Ctor) throw new Error('Web Audio API is not available in this browser');
-    audioCtx = new Ctor();
+    // Sleep playback values glitch resistance and power use over instrument-
+    // style response latency. This is a browser hint, not a dropout guarantee.
+    audioCtx = new Ctor({ latencyHint: 'playback' });
+    audioCtx.addEventListener('statechange', handleContextState);
+    recordPlaybackEvent('context-created');
 
     // Still EQ nodes
     stillEqLowNode = audioCtx.createBiquadFilter();
@@ -203,7 +260,7 @@ async function ensureAudio() {
     analyser.connect(gainNode);
     gainNode.connect(audioCtx.destination);
   }
-  if (audioCtx.state === 'suspended') {
+  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
     await audioCtx.resume();
   }
 }
@@ -216,14 +273,16 @@ function disposeSource(node) {
 }
 
 function startSource() {
-  disposeSource(sourceNode);
+  // Keep the old source alive if buffer allocation/generation fails.
   const buffer = generateNoiseBuffer(audioCtx, currentType);
+  disposeSource(sourceNode);
   sourceNode = audioCtx.createBufferSource();
   sourceNode.buffer = buffer;
   sourceNode.loop = true;
   // Connect into the Still EQ head
   sourceNode.connect(stillEqLowNode);
   sourceNode.start();
+  recordPlaybackEvent('source-start');
 }
 
 /**
@@ -266,6 +325,13 @@ function cancelPendingTypeSwitch() {
  * @returns {Promise<void>} rejects if the AudioContext cannot be created/resumed
  */
 export async function play() {
+  // Repeated play requests must not reroll the noise or restart the sleep timer.
+  if (isPlaying) {
+    checkTimerDeadline();
+    await resumeExistingSource();
+    return;
+  }
+  const request = ++playRequest;
   // A pause started less than FADE_TIME ago has a teardown queued that would
   // otherwise stop the source we are about to create.
   cancelPendingFadeOut();
@@ -274,9 +340,11 @@ export async function play() {
   try {
     await ensureAudio();
   } catch (err) {
-    setStatus('Audio unavailable on this device');
+    if (request === playRequest) setStatus('Audio unavailable on this device');
     throw err;
   }
+
+  if (request !== playRequest) return;
 
   startSource();
 
@@ -298,6 +366,9 @@ export async function play() {
  * @param {string} [endStatus='Paused'] status shown once the fade completes
  */
 export function stop(fade = true, endStatus = 'Paused') {
+  // stop() can arrive before the first resume promise resolves, while
+  // isPlaying is still false. Invalidate that start before checking state.
+  playRequest++;
   if (!audioCtx || !isPlaying) return;
 
   cancelPendingTypeSwitch();
@@ -325,6 +396,7 @@ export function stop(fade = true, endStatus = 'Paused') {
   }
 
   isPlaying = false;
+  recordPlaybackEvent('stop');
   clearTimer();
   releaseWakeLock();
   setStatus(endStatus);
@@ -560,6 +632,9 @@ function releaseWakeLock() {
 // device was asleep.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
-  if (isPlaying && !wakeLock) requestWakeLock();
   checkTimerDeadline();
+  if (isPlaying && !wakeLock) requestWakeLock();
+  // Resume the same native looping source, never generate another buffer or
+  // reset the deadline. The expired-timer check deliberately runs first.
+  resumeExistingSource();
 });

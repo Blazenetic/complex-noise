@@ -1430,6 +1430,67 @@ test('a discrete setting still persists immediately', async page => {
   assert(writes.calls >= 1, 'a discrete setting should write straight through');
 });
 
+test('mobile Stats stays above controls and fits short screens', async page => {
+  for (const width of [320, 390, 520]) {
+    await page.setViewportSize({ width, height: 640 });
+    const layout = await page.evaluate(() => {
+      const hud = document.getElementById('nerdHud').getBoundingClientRect();
+      const header = document.querySelector('header').getBoundingClientRect();
+      return { right: hud.right, left: hud.left, bottom: hud.bottom, headerTop: header.top };
+    });
+    assert(layout.left >= 0 && layout.right <= width, `Stats overflows at ${width}px`);
+    assert(layout.bottom <= layout.headerTop, `Stats covers the header at ${width}px`);
+  }
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.click('#nerdFoldBtn');
+  const panel = await page.locator('#nerdHud').boundingBox();
+  assert(panel.y + panel.height <= 390, 'expanded Stats must fit a short landscape viewport');
+});
+
+test('mobile Stats launcher uses flow while immersion keeps it floating', async page => {
+  await page.click('#stillFieldNerdToggle');
+  const launcher = page.locator('.nerd-mobile-toggle');
+  assert(await launcher.isVisible(), 'Stats launcher should remain available');
+  const clear = await page.evaluate(() =>
+    document.querySelector('.nerd-mobile-toggle').getBoundingClientRect().bottom
+      <= document.querySelector('header').getBoundingClientRect().top);
+  assert(clear, 'Stats launcher must not cover the header');
+  await page.click('#uiChromeMinimise');
+  assertEqual(await launcher.evaluate(el => getComputedStyle(el).position), 'fixed',
+    'immersion keeps the Stats launcher within reach');
+  await launcher.click();
+  assert(await page.locator('#nerdHud').isVisible(), 'Stats should reopen in immersion');
+  await page.keyboard.press('Escape');
+  assertEqual(await page.locator('#nerdHud').evaluate(el => getComputedStyle(el).position), 'relative',
+    'restoring controls puts Stats back into the flow');
+});
+
+test('immersion focus follows the visible controls across repeated transitions', async page => {
+  assertEqual(await page.locator('.minimised-chrome').evaluate(el => el.inert), true,
+    'invisible mini player must be inert at boot');
+  await page.locator('#minimisedPlayBtn').evaluate(el => el.focus());
+  assertEqual(await page.evaluate(() => document.activeElement.id === 'minimisedPlayBtn'), false,
+    'the invisible mini player must not accept focus');
+  for (let i = 0; i < 3; i++) {
+    await page.click('#uiChromeMinimise');
+    assertEqual(await page.evaluate(() => document.activeElement.id), 'uiChromeToggle',
+      'minimising should focus the way back');
+    assertEqual(await page.locator('.minimised-chrome').evaluate(el => el.inert), false,
+      'visible mini player must be interactive');
+    await page.keyboard.press('Escape');
+    assertEqual(await page.evaluate(() => document.activeElement.id), 'uiChromeMinimise',
+      'Escape should restore focus to the full interface');
+    assertEqual(await page.locator('.minimised-chrome').evaluate(el => el.inert), true,
+      'restoring must remove the mini player from keyboard navigation');
+  }
+});
+
+test('mobile viewport permits browser zoom', async page => {
+  const viewport = await page.getAttribute('meta[name="viewport"]', 'content');
+  assert(!/user-scalable\s*=\s*(no|0)|maximum-scale\s*=\s*1(?:\D|$)/i.test(viewport),
+    'visitors must be able to enlarge small controls and text');
+});
+
 test('interactive controls are labelled and reach 44px touch targets', async page => {
   const audit = await page.evaluate(() => {
     const problems = [];

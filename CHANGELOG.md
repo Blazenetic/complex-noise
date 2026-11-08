@@ -9,6 +9,17 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Mobile controls and focus — 9 November 2026
+
+- Stats and its launcher now sit above the main controls on narrow screens,
+  rather than covering the title. Immersion keeps them floating.
+- Expanded Stats fits short landscape screens and can scroll internally.
+- Browser zoom is no longer disabled by the viewport declaration.
+- The hidden mini player is inert, and minimising/restoring transfers keyboard
+  focus to the visible controls. Four browser regressions cover these paths.
+
+---
+
 ## The Bound Tables & the Depth Arc — late 29 July 2026
 
 The perspective was already real. The tables already existed. What was missing was readability, named contracts, and a way for the next agent session to start without re-deriving the bootstrap every time.

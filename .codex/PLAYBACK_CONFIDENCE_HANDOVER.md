@@ -10,7 +10,7 @@ or build changes, sound/default changes, or unrelated cleanup is authorised.
 ## Units
 
 - EQ persistence: PR #54, `codex/playback-confidence-eq`, separate parent owner;
-  do not include or mutate it here.
+  it is now the base of the #54 → #55 → #56 review stack.
 - Source failure recovery: `codex/playback-confidence-recovery`; candidate
   starts before old source retirement, failures roll back and allow retry.
 - Timer status: `codex/playback-confidence-timer-status`, stacked on recovery;
@@ -28,6 +28,9 @@ responsibilities; the user retains authority over the new merges. Browser and
 fake-context tests do not establish physical output or overnight reliability.
 
 ## Next action
+
+This is the recovery checkpoint. The newer version of this same record on
+PR #56 is the campaign closeout authority; read that version before continuing.
 
 Review each PR against its actual base and head, including the stacked merge
 order, and reconcile the record after the implementation worker returns.

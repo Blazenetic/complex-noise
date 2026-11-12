@@ -952,9 +952,6 @@ function bindEvents() {
     }
   });
 
-  // Prevent accidental pinch-zoom on some Android browsers
-  document.addEventListener('gesturestart', e => e.preventDefault());
-
   window.addEventListener('resize', stillField.handleResize);
   window.addEventListener('orientationchange', stillField.handleResize);
 

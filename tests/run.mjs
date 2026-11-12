@@ -1621,6 +1621,12 @@ test('mobile viewport permits browser zoom', async page => {
   const viewport = await page.getAttribute('meta[name="viewport"]', 'content');
   assert(!/user-scalable\s*=\s*(no|0)|maximum-scale\s*=\s*1(?:\D|$)/i.test(viewport),
     'visitors must be able to enlarge small controls and text');
+  const prevented = await page.evaluate(() => {
+    const event = new Event('gesturestart', { bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  assertEqual(prevented, false, 'gesturestart must not be cancelled');
 });
 
 test('storage keeps failed writes live and retries after recovery', async page => {

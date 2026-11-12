@@ -427,7 +427,7 @@ section { padding-top: clamp(52px, 7vh, 88px); }
 .pipeline .stage-bar i { display: block; height: 100%; }
 
 /* ---------- rule cards ---------- */
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 18px; align-items: start; }
 .card {
   border: 1px solid var(--rule-soft);
   background: var(--card);
@@ -796,8 +796,8 @@ audio.<b>subscribe</b>(s =&gt; {
   <footer>
     <p class="eyebrow">Plate 01 &middot; rev A</p>
     <p>Drawn from <code>AGENTS.md</code>, <code>docs/still-field-architecture.md</code>,
-    <code>docs/info-layer.md</code> and the source at the commit this page was committed against.
-    Line counts are literal. If a solid looks wrong, the source moved.</p>
+    <code>docs/info-layer.md</code> and the source snapshot at <code>84bb978</code>.
+    Line counts and citations refer to that snapshot; later changes can move the source.</p>
   </footer>
 
 </div>
@@ -976,7 +976,7 @@ const M = [
   bite:'Callout side is hysteretic, and the hysteresis is the point. Deriving the side from position each frame throws a 132 px plate across its own leader line several times a second. Block-on-block collisions deliberately do not flip it.',
   cite:'js/still-field/callouts.js:202-474' },
 
-{ id:'calloutcontent', name:'callout-content.js', path:'js/still-field/callout-content.js', loc:175, dis:3, form:'mast', gx:7.8, gy:12.2, w:2.0, d:1.8,
+{ id:'calloutcontent', name:'callout-content.js', path:'js/still-field/callout-content.js', loc:175, dis:3, form:'hall', gx:7.8, gy:12.2, w:2.0, d:1.8,
   role:'What a callout says: the eight detail-mode branches.',
   note:'Energy, transform, velocity, projection, wave, links, lifecycle, seed. The mode a node shows is the globally rotating base index offset by that node’s own modeOffset, derived from its lifetime ID through φ — so several different quantities are on screen at once while the base still rotates.',
   facts:[['Modes','8, up to 4 rows each, first 3 axis-colourable'],['Refresh','once a second, cached on the node — not at frame rate']],
@@ -1011,7 +1011,7 @@ const M = [
   bite:'Writing a CSS custom property forces a style recalculation for the whole document. This is one of the two things in the render loop deliberately rationed; the other is getComputedStyle.',
   cite:'js/still-field/energy.js:34-66' },
 
-{ id:'modes', name:'modes.js', path:'js/still-field/modes.js', loc:101, dis:3, form:'mast', gx:2.2, gy:14.6, w:1.6, d:1.6,
+{ id:'modes', name:'modes.js', path:'js/still-field/modes.js', loc:101, dis:3, form:'silo', gx:2.2, gy:14.6, w:1.6, d:1.6,
   role:'The callout detail modes and their rotation.',
   note:'It exists because both callouts.js and edge-labels.js needed the mode set, and a shared import from either would have put a cycle in the graph. When a change would need a cycle, the shared thing wants its own module — this is the worked example.',
   facts:[['Dwell','D · (0.72 + 0.56 · frac(kφ)) — procedural, not an interval'],['MODE_WEIGHTS','re-derives and normalises itself to a mean of one']],
@@ -1132,7 +1132,7 @@ const L = [
 { id:'c14', a:'loop',       b:'callouts',     k:'control', label:'drawCallouts()',         detail:'Stage 3b. Placement runs against the listing’s corner and the interface keep-outs.', cite:'loop.js:206' },
 { id:'c15', a:'loop',       b:'edgelabels',   k:'control', label:'drawEdgeAnnotations()',  detail:'Stage 3a. Runs before the callouts so a dimension owns its slot first.', cite:'loop.js:205' },
 { id:'c16', a:'loop',       b:'codeticker',   k:'control', label:'layoutCodeTicker()',     detail:'Claims its corner before anything else is placed, then paints last, on top.', cite:'loop.js:199, 208' },
-{ id:'c17', a:'audio',      b:'noise',        k:'control', label:'generateNoiseBuffer()',  detail:'Synchronous, inside a 150 ms gain dip. That is why every generator is written out inline.', cite:'audio.js:220' },
+{ id:'c17', a:'audio',      b:'noise',        k:'control', label:'generateNoiseBuffer()',  detail:'Synchronous before the initial fade-in, or inside a 150 ms gain dip on a colour change. That is why every generator is written out inline.', cite:'audio.js:220' },
 { id:'c18', a:'nodes',      b:'grid',         k:'control', label:'buildGrid()',            detail:'The last thing the node step does. Roughly ten times fewer pair tests at higher densities.', cite:'nodes.js:414' },
 { id:'c19', a:'runmjs',     b:'index',        k:'control', label:'drives Chromium',        detail:'A real browser against a real Web Audio graph, on a server the suite starts itself.', cite:'tests/run.mjs' },
 { id:'c20', a:'ci',         b:'runmjs',       k:'control', label:'npm run check',          detail:'Lint plus the browser suite. The gate job decides; the CI job always reports.', cite:'.github/workflows/ci.yml' },
@@ -1160,29 +1160,29 @@ const L = [
 
 const TRACES = {
   boot: { name:'Cold boot', steps:[
-    { l:'c1',  t:'The page parses. Module scripts are deferred, so <b>boot()</b> runs against a DOM that already exists.', c:'index.html → js/app.js:1016' },
-    { l:'c2',  t:'The persisted theme is applied <b>first</b> — before anything measures a colour.', c:'app.js:974' },
+    { l:'c1',  t:'The page parses. Module scripts are deferred; their dependencies initialise before <b>boot()</b> runs against the completed DOM.', c:'index.html → js/app.js:1016' },
     { l:'d7',  t:'Every module reads its persisted state at import time, through the typed wrapper. An unguarded <code>localStorage</code> read here takes the app down before first paint.', c:'settings.js:23-46' },
+    { l:'c2',  t:'The persisted theme is applied <b>first</b> — before anything measures a colour.', c:'app.js:974' },
     { l:'c3',  t:'<b>initStillField()</b> takes the two canvases. The render loop starts inside this call.', c:'app.js:980' },
     { l:'d5',  t:'<b>subscribe()</b> fires immediately with the current snapshot — so registering the renderer <i>is</i> the initial render.', c:'app.js:983-986' },
     { l:'d11', t:'Keep-outs are measured <b>synchronously</b>, not on an animation frame: scheduling it later lets the loop’s first frames paint labels under the controls.', c:'app.js:982 → keep-outs.js:31' },
   ]},
   play: { name:'Press play', steps:[
     { l:'c4',  t:'The click handler calls <b>audio.play()</b> and stops. It does not touch the button.', c:'app.js:781' },
-    { l:'c17', t:'<b>ensureAudio()</b> builds the permanent chain once, then a fresh 12-second buffer is generated <b>synchronously</b> inside a 150 ms gain dip.', c:'audio.js:163-220' },
+    { l:'c17', t:'<b>ensureAudio()</b> builds the permanent chain once, then a fresh 12-second buffer is generated <b>synchronously</b> before the 900 ms fade-in. The 150 ms gain dip belongs to later colour changes.', c:'audio.js:163-220' },
     { l:'d1',  t:'The buffer loops forever, so it is built <b>periodic</b> — stateful generators carry filter state round the join and LFO rates round to whole cycles.', c:'noise.js:349' },
     { l:'d2',  t:'Signal reaches the analyser <b>before</b> the gain node, so turning the volume down does not calm the field.', c:'audio.js:189-204' },
     { l:'d6',  t:'The state module publishes. <i>Now</i> the button becomes a pause icon — through the same path the sleep timer will use at 3 a.m.', c:'audio.js:80 → app.js' },
   ]},
   frame: { name:'One frame @ 30 fps', steps:[
     { l:'d3',  t:'<b>update()</b> starts by reading band energy. The object is rewritten in place; nothing is allocated.', c:'loop.js:106 → audio-metrics.js:21' },
+    { l:'d4',  t:'Before the node step, smoothed energy is mirrored to <b>--still-energy</b>, but only when it has moved perceptibly: the write forces a document-wide style recalculation.', c:'energy.js:46' },
     { l:'c11', t:'<b>stepNodes()</b> — one pass: lifecycle envelope, damped drift, world wrap, bounded depth, and the perspective projection, computed once and reused by every later pass.', c:'loop.js:120 → nodes.js:329' },
     { l:'c18', t:'The spatial grid is rebuilt. Only the 5-cell half-neighbourhood is ever visited, which is what makes each pair appear exactly once.', c:'nodes.js:414 → grid.js:116' },
     { l:'c12', t:'<b>Stage 1 — links.</b> Envelopes, batching, painted edges <i>and</i> all graph telemetry come out of this single scan.', c:'loop.js:152 → link-pass.js:65' },
     { l:'c13', t:'<b>Stage 2 — nodes.</b> Flat first; high-energy nodes defer to a glow pass that stops at ten and is skipped under reduced motion.', c:'loop.js:155 → node-pass.js:38' },
     { l:'c15', t:'<b>Stage 3 — info layer</b>, on its own canvas, cleared outright. Dimensions claim their six slots first.', c:'loop.js:205 → edge-labels.js:356' },
     { l:'c14', t:'Then callouts place themselves around the listing, the keep-outs and each other — retrying the remembered side before mirroring.', c:'loop.js:206 → callouts.js:202' },
-    { l:'d4',  t:'Finally the smoothed energy is mirrored to <b>--still-energy</b>, but only when it has moved perceptibly: the write forces a document-wide style recalculation.', c:'energy.js:46' },
   ]},
   slider: { name:'Drag the depth slider', steps:[
     { l:'c8',  t:'<b>prefs.setDepth(v)</b> clamps and persists. It does nothing else — that is the whole job of a setter here.', c:'still-field.js:281 → settings.js:190' },
@@ -1540,14 +1540,15 @@ for (const m of M) {
   const g = solidEls[m.id];
   g.addEventListener('pointerenter', () => { if (!trace) setActive(m.id); });
   g.addEventListener('focus', () => { if (!trace) setActive(m.id); });
-  g.addEventListener('click', e => {
+  const activate = e => {
     e.stopPropagation();
     stopTrace();
     pinned = pinned === m.id ? null : m.id;
     setActive(pinned || m.id);
-  });
+  };
+  g.addEventListener('click', activate);
   g.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); g.click(); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(e); }
   });
 }
 svg.addEventListener('pointerleave', () => { if (!trace) setActive(null); });

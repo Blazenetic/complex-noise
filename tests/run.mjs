@@ -1213,9 +1213,9 @@ test('a failed colour allocation restores the previous selection and can retry',
   await page.click('#playBtn', { force: true });
   await until(page, 'window.complexNoiseStill.getIsPlaying()', 3000, 'playback starts');
   await page.evaluate(() => {
-    const original = AudioContext.prototype.createBuffer;
-    AudioContext.prototype.createBuffer = function (...args) {
-      AudioContext.prototype.createBuffer = original;
+    const original = window.AudioContext.prototype.createBuffer;
+    window.AudioContext.prototype.createBuffer = function () {
+      window.AudioContext.prototype.createBuffer = original;
       throw new Error('injected allocation failure');
     };
     document.querySelector('.type-btn[data-type="white"]').click();

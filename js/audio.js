@@ -453,10 +453,14 @@ export function setType(type) {
     typeSwitchTimerId = null;
     // The user may have paused during the 160 ms dip.
     if (!isPlaying) return;
+    checkTimerDeadline();
+    if (!isPlaying) return;
     try {
       startSource();
     } catch (err) {
       recordPlaybackEvent('source-switch-failed');
+      checkTimerDeadline();
+      if (!isPlaying) return;
       currentType = sourceType;
       switchFailed = true;
       write(STORAGE_KEYS.type, currentType);
@@ -467,6 +471,8 @@ export function setType(type) {
       setStatus(playingStatus());
       return;
     }
+    checkTimerDeadline();
+    if (!isPlaying) return;
     gainNode.gain.linearRampToValueAtTime(
       currentVolume,
       audioCtx.currentTime + TYPE_SWITCH_FADE_IN,

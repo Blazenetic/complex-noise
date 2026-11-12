@@ -43,6 +43,7 @@ class FakeContext extends EventTarget {
       setValueAtTime() {}, linearRampToValueAtTime(value) { context.ramps.push(value); } } };
   }
   createBuffer(channels, length) {
+    this.onBuffer?.();
     if (this.fail === 'buffer') throw new Error('buffer');
     this.buffers++;
     const data = new Float32Array(length);
@@ -263,5 +264,26 @@ test('initial source failures remain stopped and can be retried', async () => {
     await audio.play();
     assert.equal(audio.getIsPlaying(), true);
     audio.stop(false);
+  }
+});
+
+test('a deadline crossed during replacement stops without restoring gain', async () => {
+  for (const fault of [false, true]) {
+    const audio = await freshAudio();
+    audio.setTimerHours(1);
+    await audio.play();
+    const now = Date.now;
+    instance.onBuffer = () => { Date.now = () => now() + 3601000; };
+    instance.fail = fault ? 'buffer' : null;
+    try {
+      audio.setType('white');
+      await until(() => !audio.getIsPlaying());
+      assert.equal(audio.getState().status, 'Sleep timer ended');
+      assert.equal(instance.ramps.at(-1), 0, 'no fade back after expiry');
+      assert.equal(audio.getTimerRemainingMs(), 0);
+    } finally {
+      Date.now = now;
+      audio.stop(false);
+    }
   }
 });

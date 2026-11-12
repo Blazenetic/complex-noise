@@ -25,8 +25,9 @@ Started from main `d986166` and merged mobile branch candidate
 `f46a3a205050d11cae581dce0add80ee16f724d5`. PRs #49–#53 are merged; final main `7ede410a6808aac8bad00fa15071e022e25a4a07`
 was merged into recovery. Their changes are no longer in the review diff. Recovery passed 9 lifecycle and 43 Chromium tests in `npm run check`; its
 focused colour run passed 9 lifecycle and 8 Chromium tests. Its failure tests
-failed against the prior source as a negative control. Timer status requires
-its own focused tests, `npm run check` and `git diff --check` on its final head. Independent review and CI are parent
+failed against the prior source as a negative control. Timer focused coverage passed 11 lifecycle and 2 Chromium tests; the
+status regression failed against the recovery base as a negative control.
+The timer final head requires `npm run check` and `git diff --check`. Independent review and CI are parent
 responsibilities; the user retains authority over the new merges. Browser and
 fake-context tests do not establish physical output or overnight reliability.
 

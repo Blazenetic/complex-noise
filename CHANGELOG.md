@@ -9,6 +9,12 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## EQ slider persistence — 12 November 2026
+
+- Coalesce EQ slider storage writes while applying filter gains immediately.
+  Pending values flush when the page is hidden or leaves, and remain available
+  for the session if storage fails.
+
 ## Session storage resilience — 9 November 2026
 
 - Keep the latest session setting readable when storage becomes full or access

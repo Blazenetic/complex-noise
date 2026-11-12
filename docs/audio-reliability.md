@@ -26,6 +26,13 @@ Confirmed lifecycle gaps corrected here:
   ignore it; it favours power/glitch resistance over musical-instrument latency.
   It is not a promise of fewer dropouts on any particular device.
 
+A colour replacement now prepares and starts a candidate before retiring the
+existing source. If buffer allocation, source creation, connection or start
+fails, the candidate is disposed, the previous selection is restored and the
+gain fades back to the current volume. Initial source failures leave playback
+stopped and offer a retry. These paths do not establish physical output or fix
+all possible AudioContext setup failures.
+
 ## Evidence and limits
 
 `npm run test:audio` runs deterministic fake-context lifecycle tests. These prove

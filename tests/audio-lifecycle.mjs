@@ -18,6 +18,8 @@ class FakeContext extends EventTarget {
     this.buffers = 0;
     this.sources = [];
     this.resumeCalls = 0;
+    this.fail = null;
+    this.ramps = [];
   }
   changeState(state) { this.state = state; this.dispatchEvent(new Event('statechange')); }
   resume() {
@@ -36,19 +38,34 @@ class FakeContext extends EventTarget {
   }
   createAnalyser() { return { connect() {} }; }
   createGain() {
+    const context = this;
     return { connect() {}, gain: { value: 0, cancelScheduledValues() {},
-      setValueAtTime() {}, linearRampToValueAtTime() {} } };
+      setValueAtTime() {}, linearRampToValueAtTime(value) { context.ramps.push(value); } } };
   }
   createBuffer(channels, length) {
+    if (this.fail === 'buffer') throw new Error('buffer');
     this.buffers++;
     const data = new Float32Array(length);
     return { getChannelData: () => data };
   }
   createBufferSource() {
-    const source = { stopped: false, connect() {}, disconnect() {}, start() {},
+    if (this.fail === 'create') throw new Error('create');
+    const context = this;
+    const source = { stopped: false, disconnected: false,
+      connect() { if (context.fail === 'connect') throw new Error('connect'); },
+      disconnect() { this.disconnected = true; },
+      start() { if (context.fail === 'start') throw new Error('start'); },
       stop() { this.stopped = true; } };
     this.sources.push(source);
     return source;
+  }
+}
+
+async function until(predicate) {
+  const deadline = Date.now() + 3000;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error('condition timed out');
+    await new Promise(resolve => setTimeout(resolve, 10));
   }
 }
 
@@ -60,6 +77,7 @@ async function freshAudio() {
   deferResume = false;
   const audio = await import(`../js/audio.js?test=${serial++}`);
   audio.setTimerHours(0);
+  audio.setType('brown');
   return audio;
 }
 
@@ -165,4 +183,55 @@ test('diagnostics are bounded and detached and do not claim output capture', asy
   assert.equal(audio.getPlaybackDiagnostics().events[0].event, 'context-state');
   assert.equal(snapshot.sampleRate, 48000);
   audio.stop(false);
+});
+
+test('source failures preserve the old loop and timer and allow a retry', async () => {
+  for (const fault of ['buffer', 'create', 'connect', 'start']) {
+    const audio = await freshAudio();
+    audio.setTimerHours(1);
+    await audio.play();
+    const previous = instance.sources[0];
+    const remaining = audio.getTimerRemainingMs();
+    instance.fail = fault;
+    audio.setType('white');
+    await until(() => /failed/.test(audio.getState().status));
+    assert.equal(audio.getState().type, 'brown', fault);
+    assert.equal(audio.getIsPlaying(), true, fault);
+    assert.equal(previous.stopped, false, fault);
+    assert.equal(previous.disconnected, false, fault);
+    assert.ok(audio.getTimerRemainingMs() > 0 && audio.getTimerRemainingMs() <= remaining, fault);
+    assert.equal(instance.ramps.at(-1), audio.getCurrentVolume(), fault);
+    if (fault === 'connect' || fault === 'start') {
+      assert.equal(instance.sources[1].stopped, true, fault);
+      assert.equal(instance.sources[1].disconnected, true, fault);
+    }
+    instance.fail = null;
+    audio.setType('white');
+    await until(() => /White noise playing/.test(audio.getState().status));
+    assert.equal(previous.stopped, true, fault);
+    audio.stop(false);
+  }
+});
+
+test('initial source failures remain stopped and can be retried', async () => {
+  for (const fault of ['buffer', 'create', 'connect', 'start']) {
+    const audio = await freshAudio();
+    // Initialise the context without creating a source.
+    deferResume = true;
+    const pending = audio.play();
+    instance.fail = fault;
+    instance.finishResume();
+    await assert.rejects(pending, new RegExp(fault));
+    assert.equal(audio.getIsPlaying(), false, fault);
+    assert.match(audio.getState().status, /press play to retry/);
+    assert.equal(audio.getTimerRemainingMs(), 0);
+    if (instance.sources.length) {
+      assert.equal(instance.sources[0].stopped, true);
+      assert.equal(instance.sources[0].disconnected, true);
+    }
+    instance.fail = null;
+    await audio.play();
+    assert.equal(audio.getIsPlaying(), true);
+    audio.stop(false);
+  }
 });

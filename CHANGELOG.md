@@ -9,6 +9,16 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Colour switch recovery — 12 November 2026
+
+- Keep the existing source and sleep deadline when a replacement source fails;
+  restore the previous colour and offer a retry. Initial source failures remain
+  stopped and can also be retried.
+- Cover buffer allocation, source creation, connection and start failures in
+  deterministic lifecycle tests, with a Chromium allocation-failure regression.
+
+---
+
 ## Mobile controls and focus — 9 November 2026
 
 - Stats and its launcher now sit above the main controls on narrow screens,

@@ -551,6 +551,61 @@ test('the Still Field facade keeps its whole public API', async page => {
 // tests would cost more in setup than the assertions are worth.
 // ----------------------------------------------------------
 
+test('Still Field frame cap preserves cadence across display refresh rates', async page => {
+  const result = await page.evaluate(async () => {
+    const loop = await import('/js/still-field/loop.js');
+    const field = await import('/js/still-field.js');
+    const { clock } = await import('/js/still-field/clock.js');
+    const { telemetry } = await import('/js/still-field/telemetry.js');
+    loop.stopLoop();
+    field.setStillFieldNerd(false);
+    field.setStillFieldDensity(0.5);
+    const request = window.requestAnimationFrame;
+    const cancel = window.cancelAnimationFrame;
+    let pending;
+    window.requestAnimationFrame = callback => { pending = callback; return 1; };
+    window.cancelAnimationFrame = () => { pending = null; };
+    const samples = [];
+    try {
+      for (const refresh of [60, 90, 120, 144]) {
+        for (const cap of [30, 45, 60]) {
+          loop.stopLoop();
+          field.setStillFieldFps(cap);
+          loop.startLoop();
+          const start = performance.now();
+          let frames = 0;
+          for (let i = 1; i <= refresh * 3; i++) {
+            const before = clock.real;
+            pending(start + i * 1000 / refresh);
+            if (clock.real > before) frames++;
+          }
+          samples.push({ refresh, cap, frames });
+        }
+      }
+      // A late callback must integrate only the existing 100ms maximum and
+      // schedule one successor, not replay the frames missed during the stall.
+      pending(performance.now() + 10000);
+      const stalledDt = telemetry.dt;
+      loop.stopLoop();
+      loop.startLoop();
+      pending(performance.now() + 17);
+      return { samples, stalledDt, restartedDt: telemetry.dt };
+    } finally {
+      loop.stopLoop();
+      window.requestAnimationFrame = request;
+      window.cancelAnimationFrame = cancel;
+      loop.startLoop();
+    }
+  });
+  for (const sample of result.samples) {
+    assert(Math.abs(sample.frames - sample.cap * 3) <= 1,
+      `${sample.cap} fps on ${sample.refresh} Hz drew ${sample.frames} frames in 3 simulated seconds`);
+  }
+  assertEqual(result.stalledDt, 0.1, 'a stall retains the bounded simulation timestep');
+  assert(result.restartedDt > 0 && result.restartedDt < 0.03,
+    'restart resets the elapsed clock instead of integrating the stopped period');
+});
+
 test('unit: the field maths — smoothstep, the mode schedule, the node target', async page => {
   const r = await page.evaluate(async () => {
     const { smoothstep, PHI, TAU } = await import('/js/still-field/math.js');

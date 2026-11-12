@@ -1504,7 +1504,11 @@ test('EQ slider bursts stay live and persist through flushes and storage failure
       const live = keys.map(key => store.read(key));
       const state = Object.values(audio.getStillEqValues());
       const gains = window.__eqFilters.map(node => node.gain.value);
-      await new Promise(resolve => setTimeout(resolve, 400));
+      const deadline = performance.now() + 3000;
+      while (keys.some((key, n) => localStorage.getItem(key) !== live[n])) {
+        if (performance.now() >= deadline) throw new Error('Final EQ values did not persist');
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
       const settled = keys.map(key => localStorage.getItem(key));
       const settledCalls = calls.length;
       input('Low', '-4');

@@ -493,7 +493,7 @@ export function setVolume(v) {
 
 function setEqBand(node, key, v) {
   const gain = clampEq(v);
-  write(key, gain);
+  writeThrottled(key, gain);
   if (node) node.gain.value = gain;
   return gain;
 }

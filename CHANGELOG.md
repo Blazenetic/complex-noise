@@ -9,6 +9,15 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Timer status — 12 November 2026
+
+- Keep timer status aligned with the active deadline after a colour change, and
+  update both playback displays immediately when the timer is turned off.
+- Preserve interruption and colour-change failure messages until their relevant
+  recovery, without restarting the timer on a colour change.
+
+---
+
 ## Colour switch recovery — 12 November 2026
 
 - Keep the existing source and sleep deadline when a replacement source fails;

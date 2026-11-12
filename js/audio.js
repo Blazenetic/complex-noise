@@ -52,6 +52,7 @@ let currentVolume = clamp(readNumber(STORAGE_KEYS.volume, DEFAULTS.volume), 0, 1
 let timerHours = Math.max(0, readNumber(STORAGE_KEYS.timer, DEFAULTS.timerHours));
 let isPlaying = false;
 let statusText = 'Ready';
+let switchFailed = false;
 
 // EQ state (dB)
 let stillEqLow = clampEq(readNumber(STORAGE_KEYS.stillEqLow, DEFAULTS.eq));
@@ -93,6 +94,8 @@ export function getPlaybackDiagnostics() {
 }
 
 function playingStatus() {
+  if (audioCtx && audioCtx.state !== 'running') return 'Audio interrupted · pause and play to retry';
+  if (switchFailed) return 'Colour change failed · try again';
   return timerEndsAt ? `Playing · timer ${timerHours}h` : `${label(currentType)} noise playing`;
 }
 
@@ -292,6 +295,7 @@ function startSource() {
   disposeSource(sourceNode);
   sourceNode = candidate;
   sourceType = currentType;
+  switchFailed = false;
   recordPlaybackEvent('source-start');
 }
 
@@ -370,7 +374,7 @@ export async function play() {
   gainNode.gain.linearRampToValueAtTime(currentVolume, now + FADE_TIME);
 
   isPlaying = true;
-  setStatus(`${label(currentType)} noise playing`);
+  setStatus(playingStatus());
 
   requestWakeLock();
   scheduleTimer(); // may replace the status with the timer confirmation
@@ -412,6 +416,7 @@ export function stop(fade = true, endStatus = 'Paused') {
   }
 
   isPlaying = false;
+  switchFailed = false;
   recordPlaybackEvent('stop');
   clearTimer();
   releaseWakeLock();
@@ -453,19 +458,20 @@ export function setType(type) {
     } catch (err) {
       recordPlaybackEvent('source-switch-failed');
       currentType = sourceType;
+      switchFailed = true;
       write(STORAGE_KEYS.type, currentType);
       const now = audioCtx.currentTime;
       gainNode.gain.cancelScheduledValues(now);
       gainNode.gain.setValueAtTime(gainNode.gain.value, now);
       gainNode.gain.linearRampToValueAtTime(currentVolume, now + TYPE_SWITCH_FADE_IN);
-      setStatus('Colour change failed · try again');
+      setStatus(playingStatus());
       return;
     }
     gainNode.gain.linearRampToValueAtTime(
       currentVolume,
       audioCtx.currentTime + TYPE_SWITCH_FADE_IN,
     );
-    setStatus(`${label(currentType)} noise playing`);
+    setStatus(playingStatus());
   }, TYPE_SWITCH_FADE_OUT * 1000 + 10);
 
   emit();
@@ -547,11 +553,11 @@ let timerEndsAt = 0;
 
 function scheduleTimer() {
   clearTimer();
-  if (timerHours <= 0) return;
-
-  timerEndsAt = Date.now() + timerHours * 3600 * 1000;
-  armTimer(timerHours * 3600 * 1000);
-  setStatus(`Playing · timer ${timerHours}h`);
+  if (timerHours > 0) {
+    timerEndsAt = Date.now() + timerHours * 3600 * 1000;
+    armTimer(timerHours * 3600 * 1000);
+  }
+  setStatus(playingStatus());
 }
 
 function armTimer(ms) {

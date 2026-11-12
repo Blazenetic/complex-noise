@@ -207,10 +207,40 @@ test('source failures preserve the old loop and timer and allow a retry', async 
     }
     instance.fail = null;
     audio.setType('white');
-    await until(() => /White noise playing/.test(audio.getState().status));
+    await until(() => previous.stopped);
     assert.equal(previous.stopped, true, fault);
     audio.stop(false);
   }
+});
+
+test('timer and switch status follow the active deadline and interruption', async () => {
+  const audio = await freshAudio();
+  const snapshots = [];
+  audio.subscribe(state => snapshots.push(state));
+  audio.setTimerHours(1);
+  await audio.play();
+  const remaining = audio.getTimerRemainingMs();
+  const previous = instance.sources[0];
+  audio.setType('white');
+  await until(() => previous.stopped);
+  assert.match(audio.getState().status, /timer 1h/);
+  assert.ok(audio.getTimerRemainingMs() <= remaining && audio.getTimerRemainingMs() > 0);
+  audio.setTimerHours(0);
+  assert.equal(audio.getTimerRemainingMs(), 0);
+  assert.equal(snapshots.at(-1).timerHours, 0);
+  assert.equal(snapshots.at(-1).status, 'White noise playing');
+  instance.changeState('interrupted');
+  audio.setTimerHours(1);
+  assert.match(snapshots.at(-1).status, /interrupted/);
+  instance.fail = 'buffer';
+  audio.setType('pink');
+  await until(() => audio.getPlaybackDiagnostics().events.some(e => e.event === 'source-switch-failed'));
+  assert.match(audio.getState().status, /interrupted/);
+  instance.changeState('running');
+  assert.match(audio.getState().status, /Colour change failed/);
+  audio.setTimerHours(0);
+  assert.match(snapshots.at(-1).status, /Colour change failed/);
+  audio.stop(false);
 });
 
 test('initial source failures remain stopped and can be retried', async () => {

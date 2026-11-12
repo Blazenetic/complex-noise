@@ -60,6 +60,11 @@ On/off is persisted (`complexNoise_stillFieldNerd`), as is each overlay
 (`complexNoise_stillFieldCallouts`, `…Edges`, `…Code`). Both folds are
 session-only.
 
+On screens up to 520px wide, the Stats panel and its launcher sit in the
+document flow above the controls, so they do not obscure the title or player.
+They float again in immersion mode. The expanded panel's scrollable body also
+fits short landscape screens using the dynamic viewport height.
+
 On a phone, minimising the interface removes the control-column keep-out and
 gives the field room for its capped set of callouts:
 

@@ -9,6 +9,17 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Mobile controls and focus — 9 November 2026
+
+- Stats and its launcher now sit above the main controls on narrow screens,
+  rather than covering the title. Immersion keeps them floating.
+- Expanded Stats fits short landscape screens and can scroll internally.
+- Browser zoom is no longer disabled by the viewport declaration.
+- The hidden mini player is inert, and minimising/restoring transfers keyboard
+  focus to the visible controls. Four browser regressions cover these paths.
+
+---
+
 ## Audio lifecycle investigation — 9 November 2026
 
 - Prevented an unresolved first play request from starting after stop, and made

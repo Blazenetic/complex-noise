@@ -284,6 +284,7 @@ body {
    pointer events on the view itself, since the panel is otherwise inert. */
 .nerd-hud-view {
   max-height: min(62vh, 560px);
+  max-height: min(62dvh, 560px, max(80px, calc(100dvh - 160px - var(--safe-top) - var(--safe-bottom))));
   overflow-y: auto;
   overscroll-behavior: contain;
   pointer-events: auto;
@@ -720,6 +721,19 @@ body {
 }
 
 @media (max-width: 520px) {
+  /* With the full controls visible, Stats belongs in the document flow.
+     A fixed card covered the title and playback controls on narrow phones.
+     Immersion retains the floating instrument panel. */
+  html:not([data-ui-chrome="hidden"]) .nerd-hud,
+  html:not([data-ui-chrome="hidden"]) .nerd-mobile-toggle {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    max-width: 420px;
+    flex-shrink: 0;
+  }
+
   .nerd-mobile-toggle {
     display: flex;
   }

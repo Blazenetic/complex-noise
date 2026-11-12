@@ -1235,6 +1235,38 @@ test('a failed colour allocation restores the previous selection and can retry',
     3000, 'retry succeeds');
 });
 
+test('timer status stays accurate through a colour switch and disabling', async page => {
+  await page.click('#playBtn', { force: true });
+  await until(page, 'window.complexNoiseStill.getIsPlaying()', 3000, 'playback starts');
+  const deadline = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    window.__timerTestAudio = audio;
+    audio.setTimerHours(1);
+    const deadline = Date.now() + audio.getTimerRemainingMs();
+    document.querySelector('.type-btn[data-type="white"]').click();
+    return deadline;
+  });
+  await until(page, `window.complexNoiseStill.getAudioState().status.includes('timer 1h') &&
+    window.complexNoiseStill.getAudioState().type === 'white'`, 3000, 'timer remains visible');
+  // Wait for the actual replacement, not just the immediate selection.
+  await until(page, `window.__timerTestAudio.getPlaybackDiagnostics().events
+    .filter(event => event.event === 'source-start').length === 2`, 3000, 'replacement starts');
+  const after = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    const deadline = Date.now() + audio.getTimerRemainingMs();
+    const status = audio.getState().status;
+    const timer = document.getElementById('timer');
+    timer.value = '0';
+    timer.dispatchEvent(new Event('input', { bubbles: true }));
+    return { deadline, status, primary: document.getElementById('status').textContent,
+      mini: document.getElementById('minimisedStatus').textContent };
+  });
+  assert(Math.abs(after.deadline - deadline) < 20, 'colour switch must preserve the deadline');
+  assert(/timer 1h/.test(after.status), 'completed switch must retain timer status');
+  assertEqual(after.primary, 'White noise playing', 'primary status reflects disabled timer');
+  assertEqual(after.mini, after.primary, 'mini status follows the same snapshot');
+});
+
 test('audio recovery resumes the existing loop after context suspension', async page => {
   await page.click('#playBtn', { force: true });
   const remaining = await page.evaluate(async () => {

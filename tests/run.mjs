@@ -551,6 +551,61 @@ test('the Still Field facade keeps its whole public API', async page => {
 // tests would cost more in setup than the assertions are worth.
 // ----------------------------------------------------------
 
+test('Still Field frame cap preserves cadence across display refresh rates', async page => {
+  const result = await page.evaluate(async () => {
+    const loop = await import('/js/still-field/loop.js');
+    const field = await import('/js/still-field.js');
+    const { clock } = await import('/js/still-field/clock.js');
+    const { telemetry } = await import('/js/still-field/telemetry.js');
+    loop.stopLoop();
+    field.setStillFieldNerd(false);
+    field.setStillFieldDensity(0.5);
+    const request = window.requestAnimationFrame;
+    const cancel = window.cancelAnimationFrame;
+    let pending;
+    window.requestAnimationFrame = callback => { pending = callback; return 1; };
+    window.cancelAnimationFrame = () => { pending = null; };
+    const samples = [];
+    try {
+      for (const refresh of [60, 90, 120, 144]) {
+        for (const cap of [30, 45, 60]) {
+          loop.stopLoop();
+          field.setStillFieldFps(cap);
+          loop.startLoop();
+          const start = performance.now();
+          let frames = 0;
+          for (let i = 1; i <= refresh * 3; i++) {
+            const before = clock.real;
+            pending(start + i * 1000 / refresh);
+            if (clock.real > before) frames++;
+          }
+          samples.push({ refresh, cap, frames });
+        }
+      }
+      // A late callback must integrate only the existing 100ms maximum and
+      // schedule one successor, not replay the frames missed during the stall.
+      pending(performance.now() + 10000);
+      const stalledDt = telemetry.dt;
+      loop.stopLoop();
+      loop.startLoop();
+      pending(performance.now() + 17);
+      return { samples, stalledDt, restartedDt: telemetry.dt };
+    } finally {
+      loop.stopLoop();
+      window.requestAnimationFrame = request;
+      window.cancelAnimationFrame = cancel;
+      loop.startLoop();
+    }
+  });
+  for (const sample of result.samples) {
+    assert(Math.abs(sample.frames - sample.cap * 3) <= 1,
+      `${sample.cap} fps on ${sample.refresh} Hz drew ${sample.frames} frames in 3 simulated seconds`);
+  }
+  assertEqual(result.stalledDt, 0.1, 'a stall retains the bounded simulation timestep');
+  assert(result.restartedDt > 0 && result.restartedDt < 0.03,
+    'restart resets the elapsed clock instead of integrating the stopped period');
+});
+
 test('unit: the field maths — smoothstep, the mode schedule, the node target', async page => {
   const r = await page.evaluate(async () => {
     const { smoothstep, PHI, TAU } = await import('/js/still-field/math.js');
@@ -1154,6 +1209,83 @@ test('rapid colour changes coalesce and cannot replace a resumed source', async 
   assertEqual(state.type, 'green', 'the selected colour should survive pause and immediate resume');
 });
 
+test('audio recovery resumes the existing loop after context suspension', async page => {
+  await page.click('#playBtn', { force: true });
+  const remaining = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    audio.setTimerHours(1);
+    const remaining = audio.getTimerRemainingMs();
+    await audio.getAudioContext().suspend();
+    return remaining;
+  });
+  await until(page, async () => /interrupted/.test((await import('/js/audio.js')).getState().status),
+    5000, 'context suspension should be visible in status');
+  const result = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    const ctx = audio.getAudioContext();
+    document.dispatchEvent(new Event('visibilitychange'));
+    // Wait on audio state, not a guessed duration for resume().
+    if (ctx.state !== 'running') await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ctx.removeEventListener('statechange', listener);
+        reject(new Error('context did not resume within 5 seconds'));
+      }, 5000);
+      const listener = () => {
+        if (ctx.state !== 'running') return;
+        clearTimeout(timeout);
+        ctx.removeEventListener('statechange', listener);
+        resolve();
+      };
+      ctx.addEventListener('statechange', listener);
+    });
+    await audio.play();
+    return { state: audio.getState(),
+      afterRemaining: audio.getTimerRemainingMs(), diagnostics: audio.getPlaybackDiagnostics() };
+  });
+  assertEqual(result.state.isPlaying, true, 'playback intent survives an interruption');
+  assertEqual(result.diagnostics.contextState, 'running', 'same context resumes');
+  assertEqual(result.diagnostics.events.filter(event => event.event === 'source-start').length, 1,
+    'resume and repeated play must not regenerate or restart the native loop');
+  assert(result.afterRemaining <= remaining, 'recovery must not extend the sleep timer');
+});
+
+test('brown and white noise render native loops without inserted silence at common sample rates', async page => {
+  const results = await page.evaluate(async () => {
+    const { generateNoiseBuffer } = await import('/js/noise.js');
+    const results = [];
+    for (const type of ['brown', 'white']) for (const sampleRate of [44100, 48000, 96000]) {
+      const length = sampleRate * 12;
+      const ctx = new OfflineAudioContext(1, length * 3 + 128, sampleRate);
+      const buffer = generateNoiseBuffer(ctx, type);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(ctx.destination);
+      source.start();
+      const output = (await ctx.startRendering()).getChannelData(0);
+      const input = buffer.getChannelData(0);
+      let maxError = 0;
+      let minimumWindowRms = Infinity;
+      for (let offset = 0; offset < output.length; offset += 128) {
+        const end = Math.min(output.length, offset + 128);
+        let energy = 0;
+        for (let i = offset; i < end; i++) {
+          maxError = Math.max(maxError, Math.abs(output[i] - input[i % length]));
+          energy += output[i] * output[i];
+        }
+        minimumWindowRms = Math.min(minimumWindowRms, Math.sqrt(energy / (end - offset)));
+      }
+      results.push({ type, sampleRate, maxError, minimumWindowRms });
+    }
+    return results;
+  });
+  for (const result of results) {
+    assert(result.maxError < 1e-6, `${result.type} ${result.sampleRate} Hz loop changed generated samples`);
+    assert(result.minimumWindowRms > 0.005,
+      `${result.type} ${result.sampleRate} Hz has a near-silent render quantum`);
+  }
+});
+
 test('every colour is level-matched, has headroom, and loops without a seam', async page => {
   // Three separate regressions live here, all of them things you only notice
   // hours in, which is exactly when this app is being used:
@@ -1489,6 +1621,74 @@ test('mobile viewport permits browser zoom', async page => {
   const viewport = await page.getAttribute('meta[name="viewport"]', 'content');
   assert(!/user-scalable\s*=\s*(no|0)|maximum-scale\s*=\s*1(?:\D|$)/i.test(viewport),
     'visitors must be able to enlarge small controls and text');
+});
+
+test('storage keeps failed writes live and retries after recovery', async page => {
+  const values = await page.evaluate(async () => {
+    const store = await import('/js/storage.js');
+    const original = Storage.prototype.setItem;
+    const key = 'storage-failure-regression';
+    const other = 'storage-unaffected-regression';
+    store.write(key, 'old');
+    store.write(other, 'still durable');
+    Storage.prototype.setItem = function (k, value) {
+      if (k === key) throw new window.DOMException('Storage is full', 'QuotaExceededError');
+      return original.call(this, k, value);
+    };
+    try {
+      store.write(key, 'immediate');
+      const immediate = store.read(key);
+      store.writeThrottled(key, 'queued');
+      const pending = store.read(key);
+      store.flushWrites();
+      const flushed = store.read(key);
+      const durable = localStorage.getItem(key);
+      const unaffected = store.read(other);
+      Storage.prototype.setItem = original;
+      // Repeating the same value must retry a failed write, not deduplicate it.
+      store.writeThrottled(key, 'queued');
+      store.flushWrites();
+      const recovered = localStorage.getItem(key);
+      localStorage.setItem(key, 'external');
+      const external = store.read(key);
+      return { immediate, pending, flushed, durable, unaffected, recovered, external };
+    } finally {
+      Storage.prototype.setItem = original;
+    }
+  });
+  assertEqual(values.immediate, 'immediate', 'failed discrete write must stay live');
+  assertEqual(values.pending, 'queued', 'queued write must stay live');
+  assertEqual(values.flushed, 'queued', 'failed flush must retain the latest session value');
+  assertEqual(values.durable, 'old', 'failure fixture must leave the old disk value');
+  assertEqual(values.unaffected, 'still durable', 'failure must not discard unrelated settings');
+  assertEqual(values.recovered, 'queued', 'same-value retry must persist after recovery');
+  assertEqual(values.external, 'external', 'successful recovery must stop shadowing external changes');
+});
+
+test('storage retains the last read when access is revoked', async page => {
+  const values = await page.evaluate(async () => {
+    const store = await import('/js/storage.js');
+    const original = Storage.prototype.getItem;
+    localStorage.setItem('storage-revoked', 'remembered');
+    store.read('storage-revoked');
+    localStorage.setItem('storage-removed', 'removed');
+    store.read('storage-removed');
+    localStorage.removeItem('storage-removed');
+    store.read('storage-removed');
+    Storage.prototype.getItem = () => { throw new window.DOMException('Access revoked', 'SecurityError'); };
+    try {
+      return {
+        remembered: store.read('storage-revoked'),
+        missing: store.read('storage-never-read'),
+        removed: store.read('storage-removed'),
+      };
+    } finally {
+      Storage.prototype.getItem = original;
+    }
+  });
+  assertEqual(values.remembered, 'remembered', 'last known stored value must survive denied reads');
+  assertEqual(values.missing, null, 'unseen keys must remain missing');
+  assertEqual(values.removed, null, 'a confirmed deletion must clear the cached value');
 });
 
 test('interactive controls are labelled and reach 44px touch targets', async page => {

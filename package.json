@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "start": "http-server . -p 8123 -c-1",
-    "test": "node tests/run.mjs",
+    "test": "node --test tests/audio-lifecycle.mjs && node tests/run.mjs",
+    "test:audio": "node --test tests/audio-lifecycle.mjs",
     "test:list": "node tests/run.mjs --list",
     "test:serial": "node tests/run.mjs --workers=1",
     "profile:still-field": "node tests/profile-still-field.mjs",

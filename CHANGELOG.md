@@ -9,6 +9,12 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## EQ slider persistence — 12 November 2026
+
+- Coalesce EQ slider storage writes while applying filter gains immediately.
+  Pending values flush when the page is hidden or leaves, and remain available
+  for the session if storage fails.
+
 ## Mobile controls and focus — 9 November 2026
 
 - Stats and its launcher now sit above the main controls on narrow screens,

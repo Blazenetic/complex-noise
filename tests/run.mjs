@@ -1485,6 +1485,74 @@ test('a discrete setting still persists immediately', async page => {
   assert(writes.calls >= 1, 'a discrete setting should write straight through');
 });
 
+test('storage keeps failed writes live and retries after recovery', async page => {
+  const values = await page.evaluate(async () => {
+    const store = await import('/js/storage.js');
+    const original = Storage.prototype.setItem;
+    const key = 'storage-failure-regression';
+    const other = 'storage-unaffected-regression';
+    store.write(key, 'old');
+    store.write(other, 'still durable');
+    Storage.prototype.setItem = function (k, value) {
+      if (k === key) throw new window.DOMException('Storage is full', 'QuotaExceededError');
+      return original.call(this, k, value);
+    };
+    try {
+      store.write(key, 'immediate');
+      const immediate = store.read(key);
+      store.writeThrottled(key, 'queued');
+      const pending = store.read(key);
+      store.flushWrites();
+      const flushed = store.read(key);
+      const durable = localStorage.getItem(key);
+      const unaffected = store.read(other);
+      Storage.prototype.setItem = original;
+      // Repeating the same value must retry a failed write, not deduplicate it.
+      store.writeThrottled(key, 'queued');
+      store.flushWrites();
+      const recovered = localStorage.getItem(key);
+      localStorage.setItem(key, 'external');
+      const external = store.read(key);
+      return { immediate, pending, flushed, durable, unaffected, recovered, external };
+    } finally {
+      Storage.prototype.setItem = original;
+    }
+  });
+  assertEqual(values.immediate, 'immediate', 'failed discrete write must stay live');
+  assertEqual(values.pending, 'queued', 'queued write must stay live');
+  assertEqual(values.flushed, 'queued', 'failed flush must retain the latest session value');
+  assertEqual(values.durable, 'old', 'failure fixture must leave the old disk value');
+  assertEqual(values.unaffected, 'still durable', 'failure must not discard unrelated settings');
+  assertEqual(values.recovered, 'queued', 'same-value retry must persist after recovery');
+  assertEqual(values.external, 'external', 'successful recovery must stop shadowing external changes');
+});
+
+test('storage retains the last read when access is revoked', async page => {
+  const values = await page.evaluate(async () => {
+    const store = await import('/js/storage.js');
+    const original = Storage.prototype.getItem;
+    localStorage.setItem('storage-revoked', 'remembered');
+    store.read('storage-revoked');
+    localStorage.setItem('storage-removed', 'removed');
+    store.read('storage-removed');
+    localStorage.removeItem('storage-removed');
+    store.read('storage-removed');
+    Storage.prototype.getItem = () => { throw new window.DOMException('Access revoked', 'SecurityError'); };
+    try {
+      return {
+        remembered: store.read('storage-revoked'),
+        missing: store.read('storage-never-read'),
+        removed: store.read('storage-removed'),
+      };
+    } finally {
+      Storage.prototype.getItem = original;
+    }
+  });
+  assertEqual(values.remembered, 'remembered', 'last known stored value must survive denied reads');
+  assertEqual(values.missing, null, 'unseen keys must remain missing');
+  assertEqual(values.removed, null, 'a confirmed deletion must clear the cached value');
+});
+
 test('interactive controls are labelled and reach 44px touch targets', async page => {
   const audit = await page.evaluate(() => {
     const problems = [];

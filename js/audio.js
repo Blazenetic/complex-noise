@@ -98,8 +98,10 @@ function playingStatus() {
 function handleContextState() {
   recordPlaybackEvent('context-state');
   if (!isPlaying) return;
-  if (audioCtx.state === 'running') setStatus(playingStatus());
-  else setStatus('Audio interrupted · pause and play to retry');
+  if (audioCtx.state === 'running') {
+    checkTimerDeadline();
+    if (isPlaying) setStatus(playingStatus());
+  } else setStatus('Audio interrupted · pause and play to retry');
 }
 
 async function resumeExistingSource() {
@@ -109,6 +111,7 @@ async function resumeExistingSource() {
   recordPlaybackEvent('resume-request');
   try {
     await audioCtx.resume();
+    checkTimerDeadline();
   } catch (err) {
     recordPlaybackEvent('resume-failed');
     if (isPlaying) setStatus('Audio interrupted · pause and play to retry');

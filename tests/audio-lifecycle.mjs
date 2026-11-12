@@ -23,7 +23,11 @@ class FakeContext extends EventTarget {
   resume() {
     this.resumeCalls++;
     return new Promise(resolve => {
-      this.finishResume = () => { this.changeState('running'); resolve(); };
+      this.finishResume = (notify = true) => {
+        if (notify) this.changeState('running');
+        else this.state = 'running';
+        resolve();
+      };
       if (!deferResume) this.finishResume();
     });
   }
@@ -122,6 +126,33 @@ test('expired sleep timer wins over visibility recovery', async () => {
   assert.equal(audio.getIsPlaying(), false);
   assert.equal(instance.resumeCalls, 1, 'expired sessions must not resume');
   assert.equal(audio.getState().status, 'Sleep timer ended');
+});
+
+test('deadline expires during deferred recovery before playing is published', async () => {
+  for (const notify of [false, true]) {
+    const audio = await freshAudio();
+    audio.setTimerHours(1);
+    await audio.play();
+    instance.changeState('interrupted');
+    deferResume = true;
+    const statuses = [];
+    audio.subscribe(state => statuses.push(state.status));
+    document.dispatchEvent(new Event('visibilitychange'));
+    const now = Date.now;
+    Date.now = () => now() + 3601000;
+    try {
+      instance.finishResume(notify);
+      await Promise.resolve();
+      assert.equal(audio.getIsPlaying(), false, `notify=${notify}`);
+      assert.equal(audio.getState().status, 'Sleep timer ended');
+      assert.equal(audio.getTimerRemainingMs(), 0);
+      assert.ok(!statuses.some(status => /playing/i.test(status)), 'must not publish playing');
+      assert.equal(instance.sources[0].stopped, false, 'timer stop retains fade semantics');
+    } finally {
+      Date.now = now;
+      audio.stop(false);
+    }
+  }
 });
 
 test('diagnostics are bounded and detached and do not claim output capture', async () => {

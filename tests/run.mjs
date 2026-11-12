@@ -1605,6 +1605,90 @@ test('dragging a slider does not write to localStorage once per pointer move', a
     'the final value must reach localStorage once the drag settles');
 });
 
+test('EQ slider bursts stay live and persist through flushes and storage failure', async page => {
+  await page.evaluate(() => {
+    const create = window.AudioContext.prototype.createBiquadFilter;
+    window.__eqFilters = [];
+    window.AudioContext.prototype.createBiquadFilter = function () {
+      const node = create.call(this);
+      window.__eqFilters.push(node);
+      return node;
+    };
+  });
+  await page.click('#playBtn', { force: true });
+  await until(page, () => window.__eqFilters.length === 3, 3000, 'EQ filters should be created');
+  const result = await page.evaluate(async () => {
+    const store = await import('/js/storage.js');
+    const audio = await import('/js/audio.js');
+    const bands = ['Low', 'Mid', 'High'];
+    const keys = bands.map(band => `complexNoise_stillEq${band}`);
+    const original = Storage.prototype.setItem;
+    const calls = [];
+    Storage.prototype.setItem = function (key, value) {
+      if (keys.includes(key)) calls.push([key, value]);
+      return original.call(this, key, value);
+    };
+    const input = (band, value) => {
+      const el = document.getElementById(`stillEq${band}`);
+      el.value = value;
+      el.dispatchEvent(new Event('input'));
+    };
+    try {
+      for (let i = 0; i < 20; i++) bands.forEach((band, n) => input(band, (i % 10) - n));
+      const during = calls.length;
+      const live = keys.map(key => store.read(key));
+      const state = Object.values(audio.getStillEqValues());
+      const gains = window.__eqFilters.map(node => node.gain.value);
+      const deadline = performance.now() + 3000;
+      while (keys.some((key, n) => localStorage.getItem(key) !== live[n])) {
+        if (performance.now() >= deadline) throw new Error('Final EQ values did not persist');
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      const settled = keys.map(key => localStorage.getItem(key));
+      const settledCalls = calls.length;
+      input('Low', '-4');
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      const hidden = localStorage.getItem(keys[0]);
+      delete document.visibilityState;
+      input('Mid', '5');
+      window.dispatchEvent(new Event('pagehide'));
+      const pagehide = localStorage.getItem(keys[1]);
+      Storage.prototype.setItem = function (key, value) {
+        if (key === keys[2]) throw new window.DOMException('Storage is full', 'QuotaExceededError');
+        return original.call(this, key, value);
+      };
+      input('High', '6');
+      window.dispatchEvent(new Event('pagehide'));
+      const failed = store.read(keys[2]);
+      const old = localStorage.getItem(keys[2]);
+      Storage.prototype.setItem = original;
+      input('High', '6');
+      window.dispatchEvent(new Event('pagehide'));
+      const recovered = localStorage.getItem(keys[2]);
+      return { during, live, state, gains, settled, settledCalls, hidden, pagehide, failed, old, recovered };
+    } finally {
+      Storage.prototype.setItem = original;
+      delete document.visibilityState;
+    }
+  });
+  assertEqual(result.during, 0, 'EQ input bursts must not synchronously write each value');
+  assertEqual(JSON.stringify(result.live), JSON.stringify(['9', '8', '7']), 'pending EQ values must be readable');
+  assertEqual(JSON.stringify(result.state), JSON.stringify([9, 8, 7]), 'EQ state must update immediately');
+  assertEqual(JSON.stringify(result.gains), JSON.stringify([9, 8, 7]), 'audio filters must update immediately');
+  assertEqual(JSON.stringify(result.settled), JSON.stringify(result.live), 'final EQ values must persist');
+  assertEqual(result.settledCalls, 3, 'a burst should settle to one write per EQ band');
+  assertEqual(result.hidden, '-4', 'hidden transition must flush the low band');
+  assertEqual(result.pagehide, '5', 'pagehide must flush the mid band');
+  assertEqual(result.failed, '6', 'failed EQ flush must preserve the session value');
+  assertEqual(result.old, '7', 'failed EQ flush must leave the prior stored value');
+  assertEqual(result.recovered, '6', 'same EQ value must persist after storage recovers');
+  await page.reload();
+  assertEqual(await page.inputValue('#stillEqLow'), '-4', 'low EQ should restore on reload');
+  assertEqual(await page.inputValue('#stillEqMid'), '5', 'mid EQ should restore on reload');
+  assertEqual(await page.inputValue('#stillEqHigh'), '6', 'high EQ should restore on reload');
+});
+
 test('a discrete setting still persists immediately', async page => {
   // The throttle is opt-in for continuous controls. Buttons and toggles keep the
   // straight-through write, so nothing that used to be durable on click stopped

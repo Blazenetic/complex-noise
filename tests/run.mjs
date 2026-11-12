@@ -1209,6 +1209,83 @@ test('rapid colour changes coalesce and cannot replace a resumed source', async 
   assertEqual(state.type, 'green', 'the selected colour should survive pause and immediate resume');
 });
 
+test('audio recovery resumes the existing loop after context suspension', async page => {
+  await page.click('#playBtn', { force: true });
+  const remaining = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    audio.setTimerHours(1);
+    const remaining = audio.getTimerRemainingMs();
+    await audio.getAudioContext().suspend();
+    return remaining;
+  });
+  await until(page, async () => /interrupted/.test((await import('/js/audio.js')).getState().status),
+    5000, 'context suspension should be visible in status');
+  const result = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    const ctx = audio.getAudioContext();
+    document.dispatchEvent(new Event('visibilitychange'));
+    // Wait on audio state, not a guessed duration for resume().
+    if (ctx.state !== 'running') await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ctx.removeEventListener('statechange', listener);
+        reject(new Error('context did not resume within 5 seconds'));
+      }, 5000);
+      const listener = () => {
+        if (ctx.state !== 'running') return;
+        clearTimeout(timeout);
+        ctx.removeEventListener('statechange', listener);
+        resolve();
+      };
+      ctx.addEventListener('statechange', listener);
+    });
+    await audio.play();
+    return { state: audio.getState(),
+      afterRemaining: audio.getTimerRemainingMs(), diagnostics: audio.getPlaybackDiagnostics() };
+  });
+  assertEqual(result.state.isPlaying, true, 'playback intent survives an interruption');
+  assertEqual(result.diagnostics.contextState, 'running', 'same context resumes');
+  assertEqual(result.diagnostics.events.filter(event => event.event === 'source-start').length, 1,
+    'resume and repeated play must not regenerate or restart the native loop');
+  assert(result.afterRemaining <= remaining, 'recovery must not extend the sleep timer');
+});
+
+test('brown and white noise render native loops without inserted silence at common sample rates', async page => {
+  const results = await page.evaluate(async () => {
+    const { generateNoiseBuffer } = await import('/js/noise.js');
+    const results = [];
+    for (const type of ['brown', 'white']) for (const sampleRate of [44100, 48000, 96000]) {
+      const length = sampleRate * 12;
+      const ctx = new OfflineAudioContext(1, length * 3 + 128, sampleRate);
+      const buffer = generateNoiseBuffer(ctx, type);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(ctx.destination);
+      source.start();
+      const output = (await ctx.startRendering()).getChannelData(0);
+      const input = buffer.getChannelData(0);
+      let maxError = 0;
+      let minimumWindowRms = Infinity;
+      for (let offset = 0; offset < output.length; offset += 128) {
+        const end = Math.min(output.length, offset + 128);
+        let energy = 0;
+        for (let i = offset; i < end; i++) {
+          maxError = Math.max(maxError, Math.abs(output[i] - input[i % length]));
+          energy += output[i] * output[i];
+        }
+        minimumWindowRms = Math.min(minimumWindowRms, Math.sqrt(energy / (end - offset)));
+      }
+      results.push({ type, sampleRate, maxError, minimumWindowRms });
+    }
+    return results;
+  });
+  for (const result of results) {
+    assert(result.maxError < 1e-6, `${result.type} ${result.sampleRate} Hz loop changed generated samples`);
+    assert(result.minimumWindowRms > 0.005,
+      `${result.type} ${result.sampleRate} Hz has a near-silent render quantum`);
+  }
+});
+
 test('every colour is level-matched, has headroom, and loops without a seam', async page => {
   // Three separate regressions live here, all of them things you only notice
   // hours in, which is exactly when this app is being used:
@@ -1567,6 +1644,73 @@ test('a discrete setting still persists immediately', async page => {
   });
   assertEqual(writes.stored, 'white', 'a colour choice must reach localStorage on the click');
   assert(writes.calls >= 1, 'a discrete setting should write straight through');
+});
+
+test('mobile Stats stays above controls and fits short screens', async page => {
+  for (const width of [320, 390, 520]) {
+    await page.setViewportSize({ width, height: 640 });
+    const layout = await page.evaluate(() => {
+      const hud = document.getElementById('nerdHud').getBoundingClientRect();
+      const header = document.querySelector('header').getBoundingClientRect();
+      return { right: hud.right, left: hud.left, bottom: hud.bottom, headerTop: header.top };
+    });
+    assert(layout.left >= 0 && layout.right <= width, `Stats overflows at ${width}px`);
+    assert(layout.bottom <= layout.headerTop, `Stats covers the header at ${width}px`);
+  }
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.click('#nerdFoldBtn');
+  const panel = await page.locator('#nerdHud').boundingBox();
+  assert(panel.y + panel.height <= 390, 'expanded Stats must fit a short landscape viewport');
+});
+
+test('mobile Stats launcher uses flow while immersion keeps it floating', async page => {
+  await page.click('#stillFieldNerdToggle');
+  const launcher = page.locator('.nerd-mobile-toggle');
+  assert(await launcher.isVisible(), 'Stats launcher should remain available');
+  const clear = await page.evaluate(() =>
+    document.querySelector('.nerd-mobile-toggle').getBoundingClientRect().bottom
+      <= document.querySelector('header').getBoundingClientRect().top);
+  assert(clear, 'Stats launcher must not cover the header');
+  await page.click('#uiChromeMinimise');
+  assertEqual(await launcher.evaluate(el => getComputedStyle(el).position), 'fixed',
+    'immersion keeps the Stats launcher within reach');
+  await launcher.click();
+  assert(await page.locator('#nerdHud').isVisible(), 'Stats should reopen in immersion');
+  await page.keyboard.press('Escape');
+  assertEqual(await page.locator('#nerdHud').evaluate(el => getComputedStyle(el).position), 'relative',
+    'restoring controls puts Stats back into the flow');
+});
+
+test('immersion focus follows the visible controls across repeated transitions', async page => {
+  assertEqual(await page.locator('.minimised-chrome').evaluate(el => el.inert), true,
+    'invisible mini player must be inert at boot');
+  await page.locator('#minimisedPlayBtn').evaluate(el => el.focus());
+  assertEqual(await page.evaluate(() => document.activeElement.id === 'minimisedPlayBtn'), false,
+    'the invisible mini player must not accept focus');
+  for (let i = 0; i < 3; i++) {
+    await page.click('#uiChromeMinimise');
+    assertEqual(await page.evaluate(() => document.activeElement.id), 'uiChromeToggle',
+      'minimising should focus the way back');
+    assertEqual(await page.locator('.minimised-chrome').evaluate(el => el.inert), false,
+      'visible mini player must be interactive');
+    await page.keyboard.press('Escape');
+    assertEqual(await page.evaluate(() => document.activeElement.id), 'uiChromeMinimise',
+      'Escape should restore focus to the full interface');
+    assertEqual(await page.locator('.minimised-chrome').evaluate(el => el.inert), true,
+      'restoring must remove the mini player from keyboard navigation');
+  }
+});
+
+test('mobile viewport permits browser zoom', async page => {
+  const viewport = await page.getAttribute('meta[name="viewport"]', 'content');
+  assert(!/user-scalable\s*=\s*(no|0)|maximum-scale\s*=\s*1(?:\D|$)/i.test(viewport),
+    'visitors must be able to enlarge small controls and text');
+  const prevented = await page.evaluate(() => {
+    const event = new Event('gesturestart', { bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  assertEqual(prevented, false, 'gesturestart must not be cancelled');
 });
 
 test('storage keeps failed writes live and retries after recovery', async page => {

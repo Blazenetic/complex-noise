@@ -694,6 +694,7 @@ function renderTheme(state) {
 /** @param {ReturnType<typeof uiChrome.getState>} state */
 function renderChrome(state) {
   const hidden = state.hidden;
+  const active = document.activeElement;
   document.documentElement.setAttribute('data-ui-chrome', hidden ? 'hidden' : 'visible');
 
   // Floating restore is the only way back; keep it correctly labelled and
@@ -712,7 +713,14 @@ function renderChrome(state) {
   }
 
   if (els.minimisedChrome) {
+    // Opacity and aria-hidden do not remove the mini player's tab stop.
+    // Keep the whole inactive control surface out of keyboard navigation.
+    els.minimisedChrome.inert = !hidden;
     els.minimisedChrome.setAttribute('aria-hidden', hidden ? 'false' : 'true');
+  }
+
+  if (hidden && active === els.chromeMinimise) {
+    els.chromeToggle?.focus({ preventScroll: true });
   }
 
   // Minimising frees most of the screen; restoring takes it back. Either way
@@ -722,7 +730,6 @@ function renderChrome(state) {
   // After restore, move focus to the minimise button so keyboard users
   // are not stranded on the now-inert floating control (or the body).
   if (!hidden && els.chromeMinimise) {
-    const active = document.activeElement;
     if (active === document.body || active === els.chromeToggle || active === els.minimisedPlayBtn) {
       els.chromeMinimise.focus({ preventScroll: true });
     }
@@ -944,9 +951,6 @@ function bindEvents() {
       uiChrome.setHidden(false);
     }
   });
-
-  // Prevent accidental pinch-zoom on some Android browsers
-  document.addEventListener('gesturestart', e => e.preventDefault());
 
   window.addEventListener('resize', stillField.handleResize);
   window.addEventListener('orientationchange', stillField.handleResize);

@@ -9,6 +9,16 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Session storage resilience — 9 November 2026
+
+- Keep the latest session setting readable when storage becomes full or access
+  is revoked after startup, including after a throttled slider write is flushed.
+- Retry an unchanged value after a failed write when storage recovers. Successful
+  persistence restores normal reads, including changes made outside this tab.
+- Add regression coverage for failed writes, recovery, denied reads and deleted
+  keys. In-memory recovery is session-only; it does not promise persistence after
+  a reload when the browser refuses storage.
+
 ## The Bound Tables & the Depth Arc — late 29 July 2026
 
 The perspective was already real. The tables already existed. What was missing was readability, named contracts, and a way for the next agent session to start without re-deriving the bootstrap every time.

@@ -18,6 +18,9 @@
 /** In-memory fallback used when localStorage is unavailable. */
 const memory = new Map();
 
+/** Keys whose latest session value has not been saved successfully. */
+const unsaved = new Set();
+
 /** @type {boolean|null} lazily probed once */
 let available = null;
 
@@ -62,11 +65,16 @@ export function read(key) {
   // an implementation detail of when the disk finds out, not of when the value
   // takes effect.
   if (pending.has(key)) return pending.get(key);
+  // A failed disk write must not make an older stored value authoritative again.
+  if (unsaved.has(key)) return memory.get(key);
   if (!hasLocalStorage()) return memory.has(key) ? memory.get(key) : null;
   try {
-    return window.localStorage.getItem(key);
+    const value = window.localStorage.getItem(key);
+    if (value === null) memory.delete(key);
+    else memory.set(key, value);
+    return value;
   } catch (err) {
-    return null;
+    return memory.has(key) ? memory.get(key) : null;
   }
 }
 
@@ -83,8 +91,10 @@ export function write(key, value) {
   if (!hasLocalStorage()) return;
   try {
     window.localStorage.setItem(key, str);
+    unsaved.delete(key);
   } catch (err) {
     // Quota exceeded or storage revoked mid-session — keep the in-memory copy.
+    unsaved.add(key);
   }
 }
 
@@ -111,7 +121,7 @@ export function write(key, value) {
  */
 export function writeThrottled(key, value) {
   const str = String(value);
-  if (memory.get(key) === str && !pending.has(key)) return;
+  if (memory.get(key) === str && !pending.has(key) && !unsaved.has(key)) return;
   memory.set(key, str);
 
   if (!hasLocalStorage()) return;
@@ -139,9 +149,11 @@ export function flushWrites() {
   for (const [key, value] of pending) {
     try {
       window.localStorage.setItem(key, value);
+      unsaved.delete(key);
     } catch (err) {
       // Quota exceeded or storage revoked mid-session — the in-memory copy in
       // `memory` still carries the value for the rest of the session.
+      unsaved.add(key);
     }
   }
   pending.clear();

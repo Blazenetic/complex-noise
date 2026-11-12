@@ -9,6 +9,15 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Colour switch recovery — 12 November 2026
+
+- Keep the existing source and sleep deadline when a replacement source fails;
+  restore the previous colour and offer a retry. Initial source failures remain
+  stopped and can also be retried.
+- Cover buffer allocation, source creation, connection and start failures in
+  deterministic lifecycle tests, with a Chromium allocation-failure regression.
+
+---
 ## EQ slider persistence — 12 November 2026
 
 - Coalesce EQ slider storage writes while applying filter gains immediately.

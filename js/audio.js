@@ -40,6 +40,7 @@ import { generateNoiseBuffer } from './noise.js';
 let audioCtx = null;
 let gainNode = null;
 let sourceNode = null;
+let sourceType = null;
 let stillEqLowNode = null;
 let stillEqMidNode = null;
 let stillEqHighNode = null;
@@ -276,15 +277,21 @@ function disposeSource(node) {
 }
 
 function startSource() {
-  // Keep the old source alive if buffer allocation/generation fails.
   const buffer = generateNoiseBuffer(audioCtx, currentType);
+  let candidate = null;
+  try {
+    candidate = audioCtx.createBufferSource();
+    candidate.buffer = buffer;
+    candidate.loop = true;
+    candidate.connect(stillEqLowNode);
+    candidate.start();
+  } catch (err) {
+    disposeSource(candidate);
+    throw err;
+  }
   disposeSource(sourceNode);
-  sourceNode = audioCtx.createBufferSource();
-  sourceNode.buffer = buffer;
-  sourceNode.loop = true;
-  // Connect into the Still EQ head
-  sourceNode.connect(stillEqLowNode);
-  sourceNode.start();
+  sourceNode = candidate;
+  sourceType = currentType;
   recordPlaybackEvent('source-start');
 }
 
@@ -349,7 +356,13 @@ export async function play() {
 
   if (request !== playRequest) return;
 
-  startSource();
+  try {
+    startSource();
+  } catch (err) {
+    recordPlaybackEvent('source-start-failed');
+    setStatus('Could not start audio · press play to retry');
+    throw err;
+  }
 
   const now = audioCtx.currentTime;
   gainNode.gain.cancelScheduledValues(now);
@@ -435,7 +448,19 @@ export function setType(type) {
     typeSwitchTimerId = null;
     // The user may have paused during the 160 ms dip.
     if (!isPlaying) return;
-    startSource();
+    try {
+      startSource();
+    } catch (err) {
+      recordPlaybackEvent('source-switch-failed');
+      currentType = sourceType;
+      write(STORAGE_KEYS.type, currentType);
+      const now = audioCtx.currentTime;
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+      gainNode.gain.linearRampToValueAtTime(currentVolume, now + TYPE_SWITCH_FADE_IN);
+      setStatus('Colour change failed · try again');
+      return;
+    }
     gainNode.gain.linearRampToValueAtTime(
       currentVolume,
       audioCtx.currentTime + TYPE_SWITCH_FADE_IN,

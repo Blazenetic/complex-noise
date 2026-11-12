@@ -1209,6 +1209,32 @@ test('rapid colour changes coalesce and cannot replace a resumed source', async 
   assertEqual(state.type, 'green', 'the selected colour should survive pause and immediate resume');
 });
 
+test('a failed colour allocation restores the previous selection and can retry', async page => {
+  await page.click('#playBtn', { force: true });
+  await until(page, 'window.complexNoiseStill.getIsPlaying()', 3000, 'playback starts');
+  await page.evaluate(() => {
+    const original = window.AudioContext.prototype.createBuffer;
+    window.AudioContext.prototype.createBuffer = function () {
+      window.AudioContext.prototype.createBuffer = original;
+      throw new Error('injected allocation failure');
+    };
+    document.querySelector('.type-btn[data-type="white"]').click();
+  });
+  await until(page, '/Colour change failed/.test(window.complexNoiseStill.getAudioState().status)',
+    3000, 'failure is reported');
+  const failed = await page.evaluate(async () => ({
+    state: (await import('/js/audio.js')).getState(),
+    stored: localStorage.getItem('complexNoise_type'),
+  }));
+  assertEqual(failed.state.type, 'brown', 'selection rolls back');
+  assertEqual(failed.stored, 'brown', 'persisted selection rolls back');
+  assertEqual(failed.state.isPlaying, true, 'transport remains active');
+  assertEqual(page.errors.length, 0, 'the callback handles the failure');
+  await page.click('.type-btn[data-type="white"]');
+  await until(page, '/White noise playing/.test(window.complexNoiseStill.getAudioState().status)',
+    3000, 'retry succeeds');
+});
+
 test('audio recovery resumes the existing loop after context suspension', async page => {
   await page.click('#playBtn', { force: true });
   const remaining = await page.evaluate(async () => {

@@ -22,6 +22,27 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 These changes address observed code paths, not a verified cure for long-session
 device cutouts. Real-device overnight testing remains required.
 
+## Still Field frame pacing — 9 November 2026
+
+- Fixed the frame limiter discarding fractional frame time. The 45 fps option
+  now follows a 45-frame average cadence on a 60 Hz display instead of falling
+  to 30 fps, with corresponding fixes for other non-divisor refresh rates.
+- Kept elapsed-time motion, the 100 ms stall limit, and pause/resume clock
+  resets. Missed display slots are skipped, not replayed in a catch-up burst.
+- Added deterministic render-loop coverage for every 30/45/60 fps cap against
+  60/90/120/144 Hz callback schedules, plus stall and restart checks. No audio,
+  defaults, interface, or renderer appearance changes.
+
+## Session storage resilience — 9 November 2026
+
+- Keep the latest session setting readable when storage becomes full or access
+  is revoked after startup, including after a throttled slider write is flushed.
+- Retry an unchanged value after a failed write when storage recovers. Successful
+  persistence restores normal reads, including changes made outside this tab.
+- Add regression coverage for failed writes, recovery, denied reads and deleted
+  keys. In-memory recovery is session-only; it does not promise persistence after
+  a reload when the browser refuses storage.
+
 ## The Bound Tables & the Depth Arc — late 29 July 2026
 
 The perspective was already real. The tables already existed. What was missing was readability, named contracts, and a way for the next agent session to start without re-deriving the bootstrap every time.

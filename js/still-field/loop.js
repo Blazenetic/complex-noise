@@ -68,14 +68,18 @@ function frame(nowMs) {
     return;
   }
 
-  // Frame cap. The `-1` absorbs the sub-millisecond jitter that would otherwise
-  // make every second frame miss its slot and halve the effective rate.
+  // Frame cap. Keep the fractional remainder against the display's RAF clock:
+  // resetting the slot to `nowMs` makes 45 fps on a 60 Hz display become 30.
+  // The one-ms tolerance absorbs timestamp jitter. Skip missed slots after a
+  // stall rather than rendering a burst to catch up; simulation still uses the
+  // actual elapsed time below, never this scheduling clock.
   const frameInterval = 1000 / settings.fps;
-  if (nowMs - lastDrawMs < frameInterval - 1) return;
+  const elapsed = nowMs - lastDrawMs;
+  if (elapsed < frameInterval - 1) return;
 
   const dt = Math.min((nowMs - lastFrameMs) / 1000, MAX_STEP_S);
   lastFrameMs = nowMs;
-  lastDrawMs = nowMs;
+  lastDrawMs += Math.floor((elapsed + 1) / frameInterval) * frameInterval;
   if (dt <= 0) return;
   telemetry.dt = dt;
 

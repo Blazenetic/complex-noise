@@ -9,6 +9,19 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/), with 
 
 ---
 
+## Audio lifecycle investigation — 9 November 2026
+
+- Prevented an unresolved first play request from starting after stop, and made
+  repeated play requests preserve their existing source and sleep deadline.
+- Added context interruption status, visibility recovery of the same source,
+  a playback latency hint and bounded, local-only diagnostic events.
+- Added deterministic lifecycle tests and offline brown/white loop tests.
+- Preserved the brown sound; documented the remaining device cutout investigation
+  and reversible white-sharpness experiment in [Audio reliability](docs/audio-reliability.md).
+
+These changes address observed code paths, not a verified cure for long-session
+device cutouts. Real-device overnight testing remains required.
+
 ## Still Field frame pacing — 9 November 2026
 
 - Fixed the frame limiter discarding fractional frame time. The 45 fps option

@@ -1209,6 +1209,83 @@ test('rapid colour changes coalesce and cannot replace a resumed source', async 
   assertEqual(state.type, 'green', 'the selected colour should survive pause and immediate resume');
 });
 
+test('audio recovery resumes the existing loop after context suspension', async page => {
+  await page.click('#playBtn', { force: true });
+  const remaining = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    audio.setTimerHours(1);
+    const remaining = audio.getTimerRemainingMs();
+    await audio.getAudioContext().suspend();
+    return remaining;
+  });
+  await until(page, async () => /interrupted/.test((await import('/js/audio.js')).getState().status),
+    5000, 'context suspension should be visible in status');
+  const result = await page.evaluate(async () => {
+    const audio = await import('/js/audio.js');
+    const ctx = audio.getAudioContext();
+    document.dispatchEvent(new Event('visibilitychange'));
+    // Wait on audio state, not a guessed duration for resume().
+    if (ctx.state !== 'running') await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ctx.removeEventListener('statechange', listener);
+        reject(new Error('context did not resume within 5 seconds'));
+      }, 5000);
+      const listener = () => {
+        if (ctx.state !== 'running') return;
+        clearTimeout(timeout);
+        ctx.removeEventListener('statechange', listener);
+        resolve();
+      };
+      ctx.addEventListener('statechange', listener);
+    });
+    await audio.play();
+    return { state: audio.getState(),
+      afterRemaining: audio.getTimerRemainingMs(), diagnostics: audio.getPlaybackDiagnostics() };
+  });
+  assertEqual(result.state.isPlaying, true, 'playback intent survives an interruption');
+  assertEqual(result.diagnostics.contextState, 'running', 'same context resumes');
+  assertEqual(result.diagnostics.events.filter(event => event.event === 'source-start').length, 1,
+    'resume and repeated play must not regenerate or restart the native loop');
+  assert(result.afterRemaining <= remaining, 'recovery must not extend the sleep timer');
+});
+
+test('brown and white noise render native loops without inserted silence at common sample rates', async page => {
+  const results = await page.evaluate(async () => {
+    const { generateNoiseBuffer } = await import('/js/noise.js');
+    const results = [];
+    for (const type of ['brown', 'white']) for (const sampleRate of [44100, 48000, 96000]) {
+      const length = sampleRate * 12;
+      const ctx = new OfflineAudioContext(1, length * 3 + 128, sampleRate);
+      const buffer = generateNoiseBuffer(ctx, type);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(ctx.destination);
+      source.start();
+      const output = (await ctx.startRendering()).getChannelData(0);
+      const input = buffer.getChannelData(0);
+      let maxError = 0;
+      let minimumWindowRms = Infinity;
+      for (let offset = 0; offset < output.length; offset += 128) {
+        const end = Math.min(output.length, offset + 128);
+        let energy = 0;
+        for (let i = offset; i < end; i++) {
+          maxError = Math.max(maxError, Math.abs(output[i] - input[i % length]));
+          energy += output[i] * output[i];
+        }
+        minimumWindowRms = Math.min(minimumWindowRms, Math.sqrt(energy / (end - offset)));
+      }
+      results.push({ type, sampleRate, maxError, minimumWindowRms });
+    }
+    return results;
+  });
+  for (const result of results) {
+    assert(result.maxError < 1e-6, `${result.type} ${result.sampleRate} Hz loop changed generated samples`);
+    assert(result.minimumWindowRms > 0.005,
+      `${result.type} ${result.sampleRate} Hz has a near-silent render quantum`);
+  }
+});
+
 test('every colour is level-matched, has headroom, and loops without a seam', async page => {
   // Three separate regressions live here, all of them things you only notice
   // hours in, which is exactly when this app is being used:
